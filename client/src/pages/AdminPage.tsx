@@ -51,7 +51,7 @@ export default function AdminPage() {
   // Create gym mutation
   const createGymMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('POST', '/api/gyms', data);
+      return apiRequest('/api/gyms', 'POST', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
@@ -73,7 +73,7 @@ export default function AdminPage() {
   // Update gym mutation
   const updateGymMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: any }) => {
-      return apiRequest('PUT', `/api/gyms/${id}`, data);
+      return apiRequest(`/api/gyms/${id}`, 'PUT', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
@@ -96,7 +96,7 @@ export default function AdminPage() {
   // Delete gym mutation
   const deleteGymMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest('DELETE', `/api/gyms/${id}`);
+      return apiRequest(`/api/gyms/${id}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
