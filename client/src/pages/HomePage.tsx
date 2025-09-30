@@ -55,10 +55,7 @@ export default function HomePage() {
   ];
 
   // todo: remove mock functionality - Mock bookings
-  const [bookings, setBookings] = useState([
-    { id: '1', gymName: 'PowerFit Gym', gymImage: gymImage, date: '10 Okt', time: '18:00', qrCode: 'qr123' },
-    { id: '2', gymName: 'Zen Yoga Studio', gymImage: yogaImage, date: '12 Okt', time: '10:00', qrCode: 'qr456' },
-  ]);
+  const [bookings, setBookings] = useState([]);
 
   const filteredGyms = gyms.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.category === selectedCategory;
