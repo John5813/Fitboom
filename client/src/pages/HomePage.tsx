@@ -40,10 +40,10 @@ export default function HomePage() {
   ];
 
   // todo: remove mock functionality - Mock bookings
-  const mockBookings = [
+  const [bookings, setBookings] = useState([
     { id: '1', gymName: 'PowerFit Gym', gymImage: gymImage, date: '10 Okt', time: '18:00', qrCode: 'qr123' },
     { id: '2', gymName: 'Zen Yoga Studio', gymImage: yogaImage, date: '12 Okt', time: '10:00', qrCode: 'qr456' },
-  ];
+  ]);
 
   const filteredGyms = mockGyms.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.category === selectedCategory;
@@ -55,6 +55,18 @@ export default function HomePage() {
     const gym = mockGyms.find(g => g.id === gymId);
     if (gym && credits >= gym.credits) {
       setCredits(credits - gym.credits);
+      
+      // Add new booking
+      const newBooking = {
+        id: `booking_${Date.now()}`,
+        gymName: gym.name,
+        gymImage: gym.imageUrl,
+        date: new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' }),
+        time: '18:00',
+        qrCode: `qr_${Date.now()}`
+      };
+      setBookings([...bookings, newBooking]);
+      
       toast({
         title: "Muvaffaqiyatli bron qilindi!",
         description: `${gym.name} uchun ${gym.credits} kredit ishlatildi.`,
@@ -64,6 +76,25 @@ export default function HomePage() {
         title: "Kredit yetarli emas",
         description: "Iltimos, kredit sotib oling.",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (booking) {
+      // Remove booking from list
+      setBookings(bookings.filter(b => b.id !== bookingId));
+      
+      // Find the gym to refund credits
+      const gym = mockGyms.find(g => g.name === booking.gymName);
+      if (gym) {
+        setCredits(credits + gym.credits);
+      }
+      
+      toast({
+        title: "Bron bekor qilindi",
+        description: "Kreditingiz qaytarildi.",
       });
     }
   };
@@ -183,22 +214,17 @@ export default function HomePage() {
           <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
           
           <div className="space-y-3">
-            {mockBookings.map((booking) => (
+            {bookings.map((booking) => (
               <BookingCard 
                 key={booking.id}
                 {...booking}
                 onScanQR={() => setIsScannerOpen(true)}
-                onCancel={(id) => {
-                  toast({
-                    title: "Bron bekor qilindi",
-                    description: "Kreditingiz qaytarildi.",
-                  });
-                }}
+                onCancel={handleCancelBooking}
               />
             ))}
           </div>
 
-          {mockBookings.length === 0 && (
+          {bookings.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Bronlar yo'q</p>
             </div>
