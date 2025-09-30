@@ -36,6 +36,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/gyms/:id", async (req, res) => {
+    try {
+      const updateData = insertGymSchema.partial().parse(req.body);
+      const gym = await storage.updateGym(req.params.id, updateData);
+      if (!gym) {
+        return res.status(404).json({ error: "Gym not found" });
+      }
+      res.json({ gym });
+    } catch (error) {
+      res.status(400).json({ error: "Invalid gym data" });
+    }
+  });
+
+  app.delete("/api/gyms/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteGym(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Gym not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete gym" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

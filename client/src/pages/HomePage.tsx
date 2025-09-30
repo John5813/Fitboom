@@ -10,6 +10,8 @@ import BottomNav from "@/components/BottomNav";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import type { Gym } from "@shared/schema";
 
 import gymImage from "@assets/generated_images/Standard_gym_facility_interior_f255ae25.png";
 import poolImage from "@assets/generated_images/Swimming_pool_facility_9aea752a.png";
@@ -25,13 +27,24 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
-  // todo: remove mock functionality - Mock gym data
-  const mockGyms = [
-    { id: '1', name: 'PowerFit Gym', category: 'Gym', credits: 4, distance: '1.2 km', hours: '06:00 - 23:00', imageUrl: gymImage, address: 'Amir Temur ko\'chasi' },
-    { id: '2', name: 'AquaFit Basseyn', category: 'Suzish', credits: 12, distance: '2.5 km', hours: '07:00 - 22:00', imageUrl: poolImage, address: 'Mustaqillik ko\'chasi' },
-    { id: '3', name: 'Zen Yoga Studio', category: 'Yoga', credits: 8, distance: '0.8 km', hours: '08:00 - 21:00', imageUrl: yogaImage, address: 'Navoi ko\'chasi' },
-    { id: '4', name: 'Elite Fitness', category: 'Gym', credits: 6, distance: '3.1 km', hours: '24/7', imageUrl: gymImage, address: 'Shota Rustaveli ko\'chasi' },
-  ];
+  // Fetch gyms from API
+  const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
+    queryKey: ['/api/gyms'],
+  });
+
+  const gyms = gymsData?.gyms || [];
+
+  // Fallback images for gyms based on category
+  const getGymImage = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'suzish':
+        return poolImage;
+      case 'yoga':
+        return yogaImage;
+      default:
+        return gymImage;
+    }
+  };
 
   // todo: remove mock functionality - Mock online classes
   const mockClasses = [
@@ -47,14 +60,14 @@ export default function HomePage() {
     { id: '2', gymName: 'Zen Yoga Studio', gymImage: yogaImage, date: '12 Okt', time: '10:00', qrCode: 'qr456' },
   ]);
 
-  const filteredGyms = mockGyms.filter(gym => {
+  const filteredGyms = gyms.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.category === selectedCategory;
     const matchesSearch = gym.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const handleBookGym = (gymId: string) => {
-    const gym = mockGyms.find(g => g.id === gymId);
+    const gym = gyms.find(g => g.id === gymId);
     if (gym && credits >= gym.credits) {
       setCredits(credits - gym.credits);
       
@@ -62,7 +75,7 @@ export default function HomePage() {
       const newBooking = {
         id: `booking_${Date.now()}`,
         gymName: gym.name,
-        gymImage: gym.imageUrl,
+        gymImage: gym.imageUrl || getGymImage(gym.category),
         date: new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' }),
         time: '18:00',
         qrCode: `qr_${Date.now()}`
@@ -89,7 +102,7 @@ export default function HomePage() {
       setBookings(bookings.filter(b => b.id !== bookingId));
       
       // Find the gym to refund credits
-      const gym = mockGyms.find(g => g.name === booking.gymName);
+      const gym = gyms.find(g => g.name === booking.gymName);
       if (gym) {
         setCredits(credits + gym.credits);
       }
@@ -129,7 +142,7 @@ export default function HomePage() {
               <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
             </div>
             <Link href="/admin">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" data-testid="button-admin-panel">
                 Admin Panel
               </Button>
             </Link>
@@ -142,15 +155,27 @@ export default function HomePage() {
 
           <div>
             <h2 className="font-display font-semibold text-xl mb-4">Yaqin atrofdagi zallar</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mockGyms.slice(0, 3).map((gym) => (
-                <GymCard 
-                  key={gym.id}
-                  {...gym}
-                  onBook={handleBookGym}
-                />
-              ))}
-            </div>
+            {gymsLoading ? (
+              <p className="text-muted-foreground">Yuklanmoqda...</p>
+            ) : gyms.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gyms.slice(0, 3).map((gym) => (
+                  <GymCard 
+                    key={gym.id}
+                    id={gym.id}
+                    name={gym.name}
+                    category={gym.category}
+                    credits={gym.credits}
+                    distance={gym.distance}
+                    hours={gym.hours}
+                    imageUrl={gym.imageUrl || getGymImage(gym.category)}
+                    onBook={handleBookGym}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Hali sport zallar qo'shilmagan. Admin paneldan qo'shing.</p>
+            )}
           </div>
         </div>
       )}
@@ -168,20 +193,32 @@ export default function HomePage() {
             onSearchChange={setSearchQuery}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredGyms.map((gym) => (
-              <GymCard 
-                key={gym.id}
-                {...gym}
-                onBook={handleBookGym}
-              />
-            ))}
-          </div>
+          {gymsLoading ? (
+            <p className="text-muted-foreground">Yuklanmoqda...</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredGyms.map((gym) => (
+                  <GymCard 
+                    key={gym.id}
+                    id={gym.id}
+                    name={gym.name}
+                    category={gym.category}
+                    credits={gym.credits}
+                    distance={gym.distance}
+                    hours={gym.hours}
+                    imageUrl={gym.imageUrl || getGymImage(gym.category)}
+                    onBook={handleBookGym}
+                  />
+                ))}
+              </div>
 
-          {filteredGyms.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Hech qanday zal topilmadi</p>
-            </div>
+              {filteredGyms.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">Hech qanday zal topilmadi</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

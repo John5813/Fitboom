@@ -15,10 +15,14 @@ export const gyms = pgTable("gyms", {
   name: text("name").notNull(),
   category: text("category").notNull(),
   credits: integer("credits").notNull(),
-  distance: text("distance").notNull(),
-  hours: text("hours").notNull(),
+  distance: text("distance").notNull().default("0 km"),
+  hours: text("hours").notNull().default("00:00 - 24:00"),
   imageUrl: text("image_url").notNull(),
   address: text("address").notNull(),
+  description: text("description"),
+  rating: integer("rating").notNull().default(5),
+  facilities: text("facilities"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const onlineClasses = pgTable("online_classes", {
@@ -43,7 +47,7 @@ export const bookings = pgTable("bookings", {
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
-export const insertGymSchema = createInsertSchema(gyms).omit({ id: true });
+export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
 export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ id: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
 

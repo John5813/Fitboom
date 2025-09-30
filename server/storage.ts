@@ -11,6 +11,8 @@ export interface IStorage {
   getGyms(): Promise<Gym[]>;
   getGym(id: string): Promise<Gym | undefined>;
   createGym(gym: InsertGym): Promise<Gym>;
+  updateGym(id: string, updateData: Partial<InsertGym>): Promise<Gym | undefined>;
+  deleteGym(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -50,12 +52,34 @@ export class MemStorage implements IStorage {
   async createGym(insertGym: InsertGym): Promise<Gym> {
     const id = randomUUID();
     const gym: Gym = { 
-      ...insertGym, 
       id,
-      createdAt: new Date()
+      name: insertGym.name,
+      category: insertGym.category,
+      credits: insertGym.credits,
+      distance: insertGym.distance ?? "0 km",
+      hours: insertGym.hours ?? "00:00 - 24:00",
+      imageUrl: insertGym.imageUrl,
+      address: insertGym.address,
+      description: insertGym.description ?? null,
+      rating: insertGym.rating ?? 5,
+      facilities: insertGym.facilities ?? null,
+      createdAt: new Date(),
     };
     this.gyms.set(id, gym);
     return gym;
+  }
+
+  async updateGym(id: string, updateData: Partial<InsertGym>): Promise<Gym | undefined> {
+    const gym = this.gyms.get(id);
+    if (!gym) return undefined;
+    
+    const updatedGym: Gym = { ...gym, ...updateData };
+    this.gyms.set(id, updatedGym);
+    return updatedGym;
+  }
+
+  async deleteGym(id: string): Promise<boolean> {
+    return this.gyms.delete(id);
   }
 }
 
