@@ -1,5 +1,6 @@
-import { type User, type InsertUser, type Gym, type InsertGym } from "@shared/schema";
+import { type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass } from "@shared/schema";
 import { randomUUID } from "crypto";
+import Database from "@replit/database";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -13,15 +14,20 @@ export interface IStorage {
   createGym(gym: InsertGym): Promise<Gym>;
   updateGym(id: string, updateData: Partial<InsertGym>): Promise<Gym | undefined>;
   deleteGym(id: string): Promise<boolean>;
+  getClasses(): Promise<OnlineClass[]>;
+  createClass(onlineClass: InsertOnlineClass): Promise<OnlineClass>;
+  deleteClass(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private gyms: Map<string, Gym>;
+  private db: Database;
 
   constructor() {
     this.users = new Map();
     this.gyms = new Map();
+    this.db = new Database();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -46,7 +52,8 @@ export class MemStorage implements IStorage {
   }
 
   async getGym(id: string): Promise<Gym | undefined> {
-    return this.gyms.get(id);
+    const gyms = await this.getGyms();
+    return gyms.find(gym => gym.id === id);
   }
 
   async createGym(insertGym: InsertGym): Promise<Gym> {
@@ -72,7 +79,7 @@ export class MemStorage implements IStorage {
   async updateGym(id: string, updateData: Partial<InsertGym>): Promise<Gym | undefined> {
     const gym = this.gyms.get(id);
     if (!gym) return undefined;
-    
+
     const updatedGym: Gym = { ...gym, ...updateData };
     this.gyms.set(id, updatedGym);
     return updatedGym;
@@ -80,6 +87,32 @@ export class MemStorage implements IStorage {
 
   async deleteGym(id: string): Promise<boolean> {
     return this.gyms.delete(id);
+  }
+
+  async getClasses(): Promise<OnlineClass[]> {
+    try {
+      const classes = await this.db.get("classes");
+      return classes || [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createClass(insertClass: InsertOnlineClass): Promise<OnlineClass> {
+    const id = randomUUID();
+    const onlineClass: OnlineClass = { ...insertClass, id };
+
+    const classes = await this.getClasses();
+    classes.push(onlineClass);
+    await this.db.set("classes", classes);
+
+    return onlineClass;
+  }
+
+  async deleteClass(id: string): Promise<void> {
+    const classes = await this.getClasses();
+    const filteredClasses = classes.filter(cls => cls.id !== id);
+    await this.db.set("classes", filteredClasses);
   }
 }
 

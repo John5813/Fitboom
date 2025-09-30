@@ -48,6 +48,13 @@ export default function AdminPage() {
 
   const gyms = gymsData?.gyms || [];
 
+  // Fetch all classes
+  const { data: classesData, isLoading: classesLoading } = useQuery<{ classes: any[] }>({
+    queryKey: ['/api/classes'],
+  });
+
+  const classes = classesData?.classes || [];
+
   // Create gym mutation
   const createGymMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -261,20 +268,44 @@ export default function AdminPage() {
     resetGymForm();
   };
 
+  // Create class mutation
+  const createClassMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('/api/classes', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      toast({
+        title: "Online dars qo'shildi",
+        description: `${classForm.title} muvaffaqiyatli qo'shildi.`,
+      });
+      setClassForm({
+        title: '',
+        category: '',
+        duration: '',
+        instructor: '',
+        thumbnailUrl: '',
+        videoUrl: ''
+      });
+    },
+  });
+
+  // Delete class mutation
+  const deleteClassMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/classes/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      toast({
+        title: "Dars o'chirildi",
+        description: "Online dars muvaffaqiyatli o'chirildi.",
+      });
+    },
+  });
+
   const handleAddClass = () => {
-    // TODO: API call to add class
-    toast({
-      title: "Online dars qo'shildi",
-      description: `${classForm.title} muvaffaqiyatli qo'shildi.`,
-    });
-    setClassForm({
-      title: '',
-      category: '',
-      duration: '',
-      instructor: '',
-      thumbnailUrl: '',
-      videoUrl: ''
-    });
+    createClassMutation.mutate(classForm);
   };
 
   return (
@@ -606,9 +637,56 @@ export default function AdminPage() {
                 onClick={handleAddClass} 
                 className="w-full"
                 data-testid="button-add-class"
+                disabled={createClassMutation.isPending}
               >
-                Online Dars Qo'shish
+                {createClassMutation.isPending ? 'Qo\'shilmoqda...' : 'Online Dars Qo\'shish'}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Classes List */}
+        {activeTab === 'classes' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Mavjud Online Darslar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {classesLoading ? (
+                <p className="text-muted-foreground">Yuklanmoqda...</p>
+              ) : classes.length > 0 ? (
+                <div className="space-y-4">
+                  {classes.map((classItem) => (
+                    <div key={classItem.id} className="border rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {classItem.thumbnailUrl && (
+                          <img 
+                            src={classItem.thumbnailUrl} 
+                            alt={classItem.title}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <h3 className="font-semibold">{classItem.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {classItem.category} • {classItem.duration} • {classItem.instructor}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteClassMutation.mutate(classItem.id)}
+                        disabled={deleteClassMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Hali online darslar qo'shilmagan.</p>
+              )}
             </CardContent>
           </Card>
         )}

@@ -46,13 +46,12 @@ export default function HomePage() {
     }
   };
 
-  // todo: remove mock functionality - Mock online classes
-  const mockClasses = [
-    { id: '1', title: 'HIIT Mashq', category: 'Cardio', duration: '30 min', instructor: 'Aziza Karimova', thumbnailUrl: classImage, videoUrl: '' },
-    { id: '2', title: 'Yoga Asoslari', category: 'Yoga', duration: '45 min', instructor: 'Nodira Yusupova', thumbnailUrl: classImage, videoUrl: '' },
-    { id: '3', title: 'Kuch Mashqlari', category: 'Strength', duration: '40 min', instructor: 'Alisher Sadikov', thumbnailUrl: classImage, videoUrl: '' },
-    { id: '4', title: 'Pilates', category: 'Flexibility', duration: '35 min', instructor: 'Dilnoza Rahimova', thumbnailUrl: classImage, videoUrl: '' },
-  ];
+  // Fetch online classes from API
+  const { data: classesData, isLoading: classesLoading } = useQuery<{ classes: any[] }>({
+    queryKey: ['/api/classes'],
+  });
+
+  const onlineClasses = classesData?.classes || [];
 
   // todo: remove mock functionality - Mock bookings
   const [bookings, setBookings] = useState([]);
@@ -225,8 +224,11 @@ export default function HomePage() {
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Online Darslar</h1>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockClasses.map((classItem) => (
+          {classesLoading ? (
+            <p className="text-muted-foreground">Yuklanmoqda...</p>
+          ) : onlineClasses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {onlineClasses.map((classItem) => (
               <OnlineClassCard 
                 key={classItem.id}
                 {...classItem}
@@ -246,8 +248,13 @@ export default function HomePage() {
                   }
                 }}
               />
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Hali online darslar qo'shilmagan. Admin paneldan qo'shing.</p>
+            </div>
+          )}
         </div>
       )}
 

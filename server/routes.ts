@@ -61,6 +61,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Online Classes routes
+  app.get('/api/classes', async (req, res) => {
+    try {
+      const classes = await storage.getClasses();
+      res.json({ classes });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch classes' });
+    }
+  });
+
+  app.post('/api/classes', async (req, res) => {
+    try {
+      const onlineClass = await storage.createClass(req.body);
+      res.json(onlineClass);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create class' });
+    }
+  });
+
+  app.delete('/api/classes/:id', async (req, res) => {
+    try {
+      await storage.deleteClass(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete class' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
