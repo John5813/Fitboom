@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -121,9 +123,16 @@ export default function HomePage() {
       {/* Home Tab */}
       {activeTab === 'home' && (
         <div className="p-4 space-y-6">
-          <div>
-            <h1 className="font-display font-bold text-3xl mb-2">FitBoom</h1>
-            <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display font-bold text-3xl mb-2">FitBoom</h1>
+              <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
+            </div>
+            <Link href="/admin">
+              <Button variant="outline" size="sm">
+                Admin Panel
+              </Button>
+            </Link>
           </div>
           
           <CreditBalance 
