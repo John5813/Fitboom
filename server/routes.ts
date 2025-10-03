@@ -10,14 +10,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/register", async (req, res, next) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Bu foydalanuvchi nomi allaqachon band" });
       }
 
       const user = await storage.createUser(userData);
-      
+
       req.login({ id: user.id, username: user.username, credits: user.credits }, (err) => {
         if (err) {
           return next(err);
@@ -125,6 +125,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Purchase credits
+  app.post('/api/purchase-credits', requireAuth, async (req, res) => {
+    try {
+      const { credits, price } = req.body;
+
+      if (!credits || !price) {
+        return res.status(400).json({ message: "Kredit va narx majburiy" });
+      }
+
+      const user = await storage.updateUserCredits(req.user!.id, credits);
+
+      res.json({ 
+        message: "Kreditlar muvaffaqiyatli sotib olindi",
+        credits,
+        totalCredits: user.credits 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Book a gym
+  app.post('/api/book-gym', requireAuth, async (req, res) => {
+    try {
+      const { gymId } = req.body;
+
+      if (!gymId) {
+        return res.status(400).json({ message: "Zal ID majburiy" });
+      }
+
+      const gym = await storage.getGym(gymId);
+      if (!gym) {
+        return res.status(404).json({ message: "Zal topilmadi" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      if (user.credits < gym.credits) {
+        return res.status(400).json({ message: "Kredit yetarli emas" });
+      }
+
+      await storage.updateUserCredits(user.id, -gym.credits);
+
+      res.json({ 
+        message: "Zal muvaffaqiyatli bron qilindi",
+        creditsUsed: gym.credits 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Online Classes routes
   app.get('/api/classes', async (req, res) => {
     try {
@@ -135,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/classes', async (req, res) => {
+  app.post('/api/classes', requireAuth, async (req, res) => {
     try {
       const onlineClass = await storage.createClass(req.body);
       res.json(onlineClass);

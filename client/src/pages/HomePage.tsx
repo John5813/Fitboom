@@ -10,7 +10,8 @@ import BottomNav from "@/components/BottomNav";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
 import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Gym } from "@shared/schema";
 
 import gymImage from "@assets/generated_images/Standard_gym_facility_interior_f255ae25.png";
@@ -20,12 +21,15 @@ import classImage from "@assets/generated_images/Online_fitness_class_instructor
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('home');
-  const [credits, setCredits] = useState(12);
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  const credits = user?.credits || 0;
 
   // Fetch gyms from API
   const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
@@ -62,16 +66,29 @@ export default function HomePage() {
     return matchesCategory && matchesSearch;
   });
 
-  const handleBookGym = (gymId: string) => {
-    const gym = gyms.find(g => g.id === gymId);
-    if (gym && credits >= gym.credits) {
-      setCredits(credits - gym.credits);
+  const bookGymMutation = useMutation({
+    mutationFn: async (gymId: string) => {
+      const response = await fetch('/api/book-gym', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ gymId }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+      return response.json();
+    },
+    onSuccess: (data, gymId) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      const gym = gyms.find(g => g.id === gymId);
       
       // Add new booking
       const newBooking = {
         id: `booking_${Date.now()}`,
-        gymName: gym.name,
-        gymImage: gym.imageUrl || getGymImage(gym.category),
+        gymName: gym?.name || '',
+        gymImage: gym?.imageUrl || getGymImage(gym?.category || ''),
         date: new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' }),
         time: '18:00',
         qrCode: `qr_${Date.now()}`
@@ -80,15 +97,20 @@ export default function HomePage() {
       
       toast({
         title: "Muvaffaqiyatli bron qilindi!",
-        description: `${gym.name} uchun ${gym.credits} kredit ishlatildi.`,
+        description: `${gym?.name} uchun ${gym?.credits} kredit ishlatildi.`,
       });
-    } else {
+    },
+    onError: (error: Error) => {
       toast({
-        title: "Kredit yetarli emas",
-        description: "Iltimos, kredit sotib oling.",
+        title: "Xatolik",
+        description: error.message,
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleBookGym = (gymId: string) => {
+    bookGymMutation.mutate(gymId);
   };
 
   const handleCancelBooking = (bookingId: string) => {
@@ -97,12 +119,6 @@ export default function HomePage() {
       // Remove booking from list
       setBookings(bookings.filter(b => b.id !== bookingId));
       
-      // Find the gym to refund credits
-      const gym = gyms.find(g => g.name === booking.gymName);
-      if (gym) {
-        setCredits(credits + gym.credits);
-      }
-      
       toast({
         title: "Bron bekor qilindi",
         description: "Kreditingiz qaytarildi.",
@@ -110,12 +126,38 @@ export default function HomePage() {
     }
   };
 
+  const purchaseMutation = useMutation({
+    mutationFn: async (data: { credits: number; price: number }) => {
+      const response = await fetch('/api/purchase-credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Xarid amalga oshmadi');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Muvaffaqiyatli!",
+        description: `${data.credits} kredit sotib olindi.`,
+      });
+      setIsPurchaseDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Kredit sotib olishda xatolik yuz berdi.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handlePurchase = (creditAmount: number, price: number) => {
-    setCredits(credits + creditAmount);
-    toast({
-      title: "Muvaffaqiyatli!",
-      description: `${creditAmount} kredit sotib olindi.`,
-    });
+    purchaseMutation.mutate({ credits: creditAmount, price });
   };
 
   const handleScanQR = (data: string) => {
