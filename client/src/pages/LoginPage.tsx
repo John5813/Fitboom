@@ -99,15 +99,14 @@ export default function LoginPage() {
               <span className="text-gray-600 dark:text-gray-400">
                 Hali ro'yxatdan o'tmaganmisiz?{" "}
               </span>
-              <Button
+              <button
                 type="button"
-                variant="link"
-                className="p-0 h-auto text-orange-500 hover:text-orange-600"
+                className="p-0 h-auto text-orange-500 hover:text-orange-600 underline bg-transparent border-none cursor-pointer"
                 onClick={() => setLocation("/register")}
                 data-testid="link-register"
               >
                 Ro'yxatdan o'tish
-              </Button>
+              </button>
             </div>
           </form>
         </CardContent>

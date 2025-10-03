@@ -131,15 +131,14 @@ export default function RegisterPage() {
               <span className="text-gray-600 dark:text-gray-400">
                 Allaqachon hisobingiz bormi?{" "}
               </span>
-              <Button
+              <button
                 type="button"
-                variant="link"
-                className="p-0 h-auto text-orange-500 hover:text-orange-600"
+                className="p-0 h-auto text-orange-500 hover:text-orange-600 underline bg-transparent border-none cursor-pointer"
                 onClick={() => setLocation("/login")}
                 data-testid="link-login"
               >
                 Kirish
-              </Button>
+              </button>
             </div>
           </form>
         </CardContent>
