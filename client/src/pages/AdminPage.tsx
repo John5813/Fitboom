@@ -27,7 +27,6 @@ export default function AdminPage() {
     imageUrl: '',
     facilities: '',
     rating: '5',
-    distance: '',
     hours: ''
   });
 
@@ -131,7 +130,6 @@ export default function AdminPage() {
       imageUrl: '',
       facilities: '',
       rating: '5',
-      distance: '',
       hours: ''
     });
   };
@@ -197,17 +195,7 @@ export default function AdminPage() {
       return;
     }
 
-    // Validate distance and hours - required fields
-    const trimmedDistance = gymForm.distance.trim();
-    if (!trimmedDistance || trimmedDistance.length === 0) {
-      toast({
-        title: "Xatolik",
-        description: "Masofani kiriting (masalan: 1.2 km).",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    // Validate hours - required field
     const trimmedHours = gymForm.hours.trim();
     if (!trimmedHours || trimmedHours.length === 0) {
       toast({
@@ -230,7 +218,6 @@ export default function AdminPage() {
       imageUrl: trimmedImageUrl,
       facilities: trimmedFacilities || null,
       rating: parseInt(gymForm.rating, 10),
-      distance: trimmedDistance,
       hours: trimmedHours
     };
 
@@ -252,7 +239,6 @@ export default function AdminPage() {
       imageUrl: gym.imageUrl,
       facilities: gym.facilities || '',
       rating: gym.rating.toString(),
-      distance: gym.distance,
       hours: gym.hours
     });
   };
@@ -410,16 +396,6 @@ export default function AdminPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="gym-distance">Masofa</Label>
-                    <Input
-                      id="gym-distance"
-                      value={gymForm.distance}
-                      onChange={(e) => setGymForm({...gymForm, distance: e.target.value})}
-                      placeholder="1.2 km"
-                      data-testid="input-gym-distance"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="gym-hours">Ish vaqti</Label>
                     <Input
                       id="gym-hours"
@@ -521,7 +497,7 @@ export default function AdminPage() {
                             {gym.category} • {gym.credits} kredit • {gym.address}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {gym.distance} • {gym.hours}
+                            {gym.hours}
                           </p>
                         </div>
                         <div className="flex gap-2">
