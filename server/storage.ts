@@ -1,14 +1,12 @@
-import { type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass } from "@shared/schema";
-import { randomUUID } from "crypto";
-import Database from "@replit/database";
-
-// modify the interface with any CRUD methods
-// you might need
+import { users, gyms, onlineClasses, bookings, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserCredits(id: string, credits: number): Promise<User | undefined>;
   getGyms(): Promise<Gym[]>;
   getGym(id: string): Promise<Gym | undefined>;
   createGym(gym: InsertGym): Promise<Gym>;
@@ -17,103 +15,121 @@ export interface IStorage {
   getClasses(): Promise<OnlineClass[]>;
   createClass(onlineClass: InsertOnlineClass): Promise<OnlineClass>;
   deleteClass(id: string): Promise<void>;
+  getBookings(userId?: string): Promise<Booking[]>;
+  getBooking(id: string): Promise<Booking | undefined>;
+  createBooking(booking: InsertBooking): Promise<Booking>;
+  updateBooking(id: string, updateData: Partial<InsertBooking>): Promise<Booking | undefined>;
+  deleteBooking(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private gyms: Map<string, Gym>;
-  private db: Database;
-
-  constructor() {
-    this.users = new Map();
-    this.gyms = new Map();
-    this.db = new Database();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id, credits: insertUser.credits ?? 0 };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
+  async updateUserCredits(id: string, credits: number): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ credits })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
   async getGyms(): Promise<Gym[]> {
-    return Array.from(this.gyms.values());
+    return await db.select().from(gyms);
   }
 
   async getGym(id: string): Promise<Gym | undefined> {
-    const gyms = await this.getGyms();
-    return gyms.find(gym => gym.id === id);
+    const [gym] = await db.select().from(gyms).where(eq(gyms.id, id));
+    return gym || undefined;
   }
 
   async createGym(insertGym: InsertGym): Promise<Gym> {
-    const id = randomUUID();
-    const gym: Gym = { 
-      id,
-      name: insertGym.name,
-      category: insertGym.category,
-      credits: insertGym.credits,
-      distance: insertGym.distance ?? "0 km",
-      hours: insertGym.hours ?? "00:00 - 24:00",
-      imageUrl: insertGym.imageUrl,
-      address: insertGym.address,
-      description: insertGym.description ?? null,
-      rating: insertGym.rating ?? 5,
-      facilities: insertGym.facilities ?? null,
-      createdAt: new Date(),
-    };
-    this.gyms.set(id, gym);
+    const [gym] = await db
+      .insert(gyms)
+      .values(insertGym)
+      .returning();
     return gym;
   }
 
   async updateGym(id: string, updateData: Partial<InsertGym>): Promise<Gym | undefined> {
-    const gym = this.gyms.get(id);
-    if (!gym) return undefined;
-
-    const updatedGym: Gym = { ...gym, ...updateData };
-    this.gyms.set(id, updatedGym);
-    return updatedGym;
+    const [gym] = await db
+      .update(gyms)
+      .set(updateData)
+      .where(eq(gyms.id, id))
+      .returning();
+    return gym || undefined;
   }
 
   async deleteGym(id: string): Promise<boolean> {
-    return this.gyms.delete(id);
+    const result = await db.delete(gyms).where(eq(gyms.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getClasses(): Promise<OnlineClass[]> {
-    try {
-      const classes = await this.db.get("classes");
-      return classes || [];
-    } catch (error) {
-      return [];
-    }
+    return await db.select().from(onlineClasses);
   }
 
   async createClass(insertClass: InsertOnlineClass): Promise<OnlineClass> {
-    const id = randomUUID();
-    const onlineClass: OnlineClass = { ...insertClass, id };
-
-    const classes = await this.getClasses();
-    classes.push(onlineClass);
-    await this.db.set("classes", classes);
-
+    const [onlineClass] = await db
+      .insert(onlineClasses)
+      .values(insertClass)
+      .returning();
     return onlineClass;
   }
 
   async deleteClass(id: string): Promise<void> {
-    const classes = await this.getClasses();
-    const filteredClasses = classes.filter(cls => cls.id !== id);
-    await this.db.set("classes", filteredClasses);
+    await db.delete(onlineClasses).where(eq(onlineClasses.id, id));
+  }
+
+  async getBookings(userId?: string): Promise<Booking[]> {
+    if (userId) {
+      return await db.select().from(bookings).where(eq(bookings.userId, userId));
+    }
+    return await db.select().from(bookings);
+  }
+
+  async getBooking(id: string): Promise<Booking | undefined> {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    return booking || undefined;
+  }
+
+  async createBooking(insertBooking: InsertBooking): Promise<Booking> {
+    const [booking] = await db
+      .insert(bookings)
+      .values(insertBooking)
+      .returning();
+    return booking;
+  }
+
+  async updateBooking(id: string, updateData: Partial<InsertBooking>): Promise<Booking | undefined> {
+    const [booking] = await db
+      .update(bookings)
+      .set(updateData)
+      .where(eq(bookings.id, id))
+      .returning();
+    return booking || undefined;
+  }
+
+  async deleteBooking(id: string): Promise<boolean> {
+    const result = await db.delete(bookings).where(eq(bookings.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
