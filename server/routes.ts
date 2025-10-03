@@ -134,7 +134,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Kredit va narx majburiy" });
       }
 
-      const user = await storage.updateUserCredits(req.user!.id, credits);
+      const currentUser = await storage.getUser(req.user!.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      const newCredits = currentUser.credits + credits;
+      const user = await storage.updateUserCredits(req.user!.id, newCredits);
 
       if (!user) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
@@ -150,10 +156,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get bookings
+  app.get('/api/bookings', requireAuth, async (req, res) => {
+    try {
+      const bookings = await storage.getBookings(req.user!.id);
+      res.json({ bookings });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Cancel booking
+  app.delete('/api/bookings/:id', requireAuth, async (req, res) => {
+    try {
+      const bookingId = req.params.id;
+      const booking = await storage.getBooking(bookingId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "Bron topilmadi" });
+      }
+
+      if (booking.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+
+      const gym = await storage.getGym(booking.gymId);
+      if (!gym) {
+        return res.status(404).json({ message: "Zal topilmadi" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      const newCredits = user.credits + gym.credits;
+      await storage.updateUserCredits(user.id, newCredits);
+
+      const success = await storage.deleteBooking(bookingId);
+      if (!success) {
+        return res.status(500).json({ message: "Bron o'chirilmadi" });
+      }
+
+      res.json({ 
+        message: "Bron bekor qilindi va kredit qaytarildi",
+        creditsRefunded: gym.credits
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Book a gym
   app.post('/api/book-gym', requireAuth, async (req, res) => {
     try {
-      const { gymId } = req.body;
+      const { gymId, date, time } = req.body;
 
       if (!gymId) {
         return res.status(400).json({ message: "Zal ID majburiy" });
@@ -173,10 +230,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Kredit yetarli emas" });
       }
 
-      await storage.updateUserCredits(user.id, -gym.credits);
+      const newCredits = user.credits - gym.credits;
+      await storage.updateUserCredits(user.id, newCredits);
+
+      const qrCode = `QR-${Date.now()}-${gymId}`;
+      const booking = await storage.createBooking({
+        userId: user.id,
+        gymId,
+        date: date || new Date().toISOString().split('T')[0],
+        time: time || '18:00',
+        qrCode,
+      });
 
       res.json({ 
         message: "Zal muvaffaqiyatli bron qilindi",
+        booking,
         creditsUsed: gym.credits 
       });
     } catch (error: any) {

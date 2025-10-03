@@ -12,7 +12,7 @@ import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Gym } from "@shared/schema";
+import type { Gym, Booking } from "@shared/schema";
 
 import gymImage from "@assets/generated_images/Standard_gym_facility_interior_f255ae25.png";
 import poolImage from "@assets/generated_images/Swimming_pool_facility_9aea752a.png";
@@ -57,8 +57,12 @@ export default function HomePage() {
 
   const onlineClasses = classesData?.classes || [];
 
-  // todo: remove mock functionality - Mock bookings
-  const [bookings, setBookings] = useState([]);
+  // Fetch bookings from API
+  const { data: bookingsData } = useQuery<{ bookings: Booking[] }>({
+    queryKey: ['/api/bookings'],
+  });
+
+  const bookings = bookingsData?.bookings || [];
 
   const filteredGyms = gyms.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.category === selectedCategory;
@@ -80,24 +84,13 @@ export default function HomePage() {
       }
       return response.json();
     },
-    onSuccess: (data, gymId) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      const gym = gyms.find(g => g.id === gymId);
-      
-      // Add new booking
-      const newBooking = {
-        id: `booking_${Date.now()}`,
-        gymName: gym?.name || '',
-        gymImage: gym?.imageUrl || getGymImage(gym?.category || ''),
-        date: new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' }),
-        time: '18:00',
-        qrCode: `qr_${Date.now()}`
-      };
-      setBookings([...bookings, newBooking]);
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       
       toast({
         title: "Muvaffaqiyatli bron qilindi!",
-        description: `${gym?.name} uchun ${gym?.credits} kredit ishlatildi.`,
+        description: `${data.creditsUsed} kredit ishlatildi.`,
       });
     },
     onError: (error: Error) => {
@@ -109,21 +102,41 @@ export default function HomePage() {
     },
   });
 
-  const handleBookGym = (gymId: string) => {
-    bookGymMutation.mutate(gymId);
-  };
-
-  const handleCancelBooking = (bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
-    if (booking) {
-      // Remove booking from list
-      setBookings(bookings.filter(b => b.id !== bookingId));
+  const cancelBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Bron bekor qilinmadi');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       
       toast({
         title: "Bron bekor qilindi",
         description: "Kreditingiz qaytarildi.",
       });
-    }
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Bron bekor qilishda xatolik yuz berdi.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBookGym = (gymId: string) => {
+    bookGymMutation.mutate(gymId);
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
+    cancelBookingMutation.mutate(bookingId);
   };
 
   const purchaseMutation = useMutation({
@@ -306,14 +319,21 @@ export default function HomePage() {
           <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
           
           <div className="space-y-3">
-            {bookings.map((booking) => (
-              <BookingCard 
-                key={booking.id}
-                {...booking}
-                onScanQR={() => setIsScannerOpen(true)}
-                onCancel={handleCancelBooking}
-              />
-            ))}
+            {bookings.map((booking) => {
+              const gym = gyms.find(g => g.id === booking.gymId);
+              return (
+                <BookingCard 
+                  key={booking.id}
+                  id={booking.id}
+                  gymName={gym?.name || 'Sport Zali'}
+                  gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
+                  date={booking.date}
+                  time={booking.time}
+                  onScanQR={() => setIsScannerOpen(true)}
+                  onCancel={handleCancelBooking}
+                />
+              );
+            })}
           </div>
 
           {bookings.length === 0 && (
@@ -324,10 +344,30 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Scanner Tab */}
+      {activeTab === 'scanner' && (
+        <div className="h-screen bg-background">
+          <div className="p-4 pb-24">
+            <h1 className="font-display font-bold text-2xl mb-4">QR Kod Skaner</h1>
+            <p className="text-muted-foreground mb-6">
+              Zalga kirish uchun QR kodni skanerlang
+            </p>
+            <div className="rounded-lg overflow-hidden">
+              <QRScanner 
+                isOpen={true}
+                onClose={() => setActiveTab('home')}
+                onScan={handleScanQR}
+                isDialog={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <BottomNav 
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onScanQR={() => setIsScannerOpen(true)}
+        onScanQR={() => setActiveTab('scanner')}
       />
 
       <PurchaseCreditsDialog 
