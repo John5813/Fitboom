@@ -1,9 +1,73 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema } from "@shared/schema";
+import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema } from "@shared/schema";
+import passport from "passport";
+import { requireAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Bu foydalanuvchi nomi allaqachon band" });
+      }
+
+      const user = await storage.createUser(userData);
+      
+      req.login({ id: user.id, username: user.username, credits: user.credits }, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({ 
+          user: { 
+            id: user.id, 
+            username: user.username, 
+            credits: user.credits 
+          } 
+        });
+      });
+    } catch (error) {
+      res.status(400).json({ message: "Noto'g'ri ma'lumotlar" });
+    }
+  });
+
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(400).json({ message: info?.message || "Login yoki parol noto'g'ri" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({ user });
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Chiqishda xatolik" });
+      }
+      res.json({ message: "Muvaffaqiyatli chiqildi" });
+    });
+  });
+
+  app.get("/api/user", (req, res) => {
+    if (req.isAuthenticated()) {
+      return res.json({ user: req.user });
+    }
+    res.status(401).json({ message: "Tizimga kirilmagan" });
+  });
+
   // Gym routes
   app.get("/api/gyms", async (req, res) => {
     try {
