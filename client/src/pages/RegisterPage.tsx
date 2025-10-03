@@ -20,13 +20,16 @@ export default function RegisterPage() {
     mutationFn: async (data: { username: string; password: string }) => {
       return apiRequest('/api/register', 'POST', data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Xush kelibsiz!",
         description: "Ro'yxatdan o'tish muvaffaqiyatli!",
       });
-      setLocation("/home");
+      setTimeout(() => {
+        setLocation("/home");
+      }, 100);
     },
     onError: (error: any) => {
       toast({
@@ -39,7 +42,7 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!username || !password || !confirmPassword) {
       toast({
         title: "Xatolik",

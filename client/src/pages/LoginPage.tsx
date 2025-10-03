@@ -19,13 +19,16 @@ export default function LoginPage() {
     mutationFn: async (data: { username: string; password: string }) => {
       return apiRequest('/api/login', 'POST', data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Xush kelibsiz!",
         description: "Tizimga muvaffaqiyatli kirdingiz.",
       });
-      setLocation("/home");
+      setTimeout(() => {
+        setLocation("/home");
+      }, 100);
     },
     onError: (error: any) => {
       toast({
