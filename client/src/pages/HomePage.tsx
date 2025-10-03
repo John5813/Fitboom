@@ -29,7 +29,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  const credits = user?.credits || 0;
+  const credits = user?.credits ?? 0;
 
   // Fetch gyms from API
   const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
@@ -84,9 +84,11 @@ export default function HomePage() {
       }
       return response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/bookings'] });
       
       toast({
         title: "Muvaffaqiyatli bron qilindi!",
@@ -148,22 +150,24 @@ export default function HomePage() {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error('Xarid amalga oshmadi');
+        const error = await response.json();
+        throw new Error(error.message || 'Xarid amalga oshmadi');
       }
       return response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Muvaffaqiyatli!",
-        description: `${data.credits} kredit sotib olindi.`,
+        description: `${data.credits} kredit sotib olindi. Jami: ${data.totalCredits} kredit`,
       });
       setIsPurchaseDialogOpen(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Xatolik",
-        description: "Kredit sotib olishda xatolik yuz berdi.",
+        description: error.message || "Kredit sotib olishda xatolik yuz berdi.",
         variant: "destructive",
       });
     },

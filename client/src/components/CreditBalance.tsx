@@ -1,6 +1,6 @@
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import { Zap, Plus } from "lucide-react";
 
 interface CreditBalanceProps {
   credits: number;
@@ -9,22 +9,24 @@ interface CreditBalanceProps {
 
 export default function CreditBalance({ credits, onPurchase }: CreditBalanceProps) {
   return (
-    <Card className="bg-gradient-to-br from-primary to-primary/80 border-primary-border p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-primary-foreground/80 text-sm mb-1">Sizning kreditingiz</p>
-          <p className="font-display font-bold text-5xl text-primary-foreground">{credits}</p>
+    <Card className="glass-card">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Kredit balansi</p>
+              <p className="font-display font-bold text-2xl" data-testid="credit-balance">{credits}</p>
+            </div>
+          </div>
+          <Button onClick={onPurchase} variant="outline" size="sm" className="hover-elevate active-elevate-2">
+            <Plus className="w-4 h-4 mr-2" />
+            To'ldirish
+          </Button>
         </div>
-        <Button 
-          onClick={onPurchase}
-          variant="outline"
-          className="bg-white/90 backdrop-blur-sm hover:bg-white border-white/40 text-primary hover-elevate active-elevate-2"
-          data-testid="button-purchase-credits"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Sotib olish
-        </Button>
-      </div>
+      </CardContent>
     </Card>
   );
 }
