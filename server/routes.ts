@@ -136,6 +136,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.updateUserCredits(req.user!.id, credits);
 
+      if (!user) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
       res.json({ 
         message: "Kreditlar muvaffaqiyatli sotib olindi",
         credits,
