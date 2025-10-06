@@ -46,7 +46,7 @@ export const bookings = pgTable("bookings", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true });
 export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
 export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ id: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
