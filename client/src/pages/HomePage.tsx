@@ -25,10 +25,11 @@ export default function HomePage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null); // Added state for selected booking
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   const credits = user?.credits ?? 0;
 
   // Fetch gyms from API
@@ -89,7 +90,7 @@ export default function HomePage() {
       await queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       await queryClient.refetchQueries({ queryKey: ['/api/bookings'] });
-      
+
       toast({
         title: "Muvaffaqiyatli bron qilindi!",
         description: `${data.creditsUsed} kredit ishlatildi.`,
@@ -118,7 +119,7 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
-      
+
       toast({
         title: "Bron bekor qilindi",
         description: "Kreditingiz qaytarildi.",
@@ -177,11 +178,62 @@ export default function HomePage() {
     purchaseMutation.mutate({ credits: creditAmount, price });
   };
 
-  const handleScanQR = (data: string) => {
-    toast({
-      title: "QR kod skaner qilindi",
-      description: "Zalga tashrif tasdiqlandi!",
-    });
+  // Updated QR scan handlers
+  const handleScanQR = (bookingId: string) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (booking) {
+      setSelectedBooking(booking);
+      setIsScannerOpen(true);
+    }
+  };
+
+  const handleQRScan = async (data: string) => {
+    if (!selectedBooking) {
+      toast({
+        title: "Xatolik",
+        description: "Bron topilmadi",
+        variant: "destructive",
+      });
+      setIsScannerOpen(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/verify-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          qrCode: data,
+          gymId: selectedBooking.gymId 
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({
+          title: "Muvaffaqiyatli!",
+          description: result.message,
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      } else {
+        toast({
+          title: "Xatolik",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "QR kod tekshirishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    }
+
+    setIsScannerOpen(false);
+    setSelectedBooking(null);
   };
 
   const categories = ['Gym', 'Suzish', 'Yoga', 'Boks'];
@@ -202,7 +254,7 @@ export default function HomePage() {
               </Button>
             </Link>
           </div>
-          
+
           <CreditBalance 
             credits={credits}
             onPurchase={() => setIsPurchaseDialogOpen(true)}
@@ -239,7 +291,7 @@ export default function HomePage() {
       {activeTab === 'gyms' && (
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Sport Zallari</h1>
-          
+
           <GymFilters 
             categories={categories}
             selectedCategory={selectedCategory}
@@ -282,7 +334,7 @@ export default function HomePage() {
       {activeTab === 'classes' && (
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Online Darslar</h1>
-          
+
           {classesLoading ? (
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           ) : onlineClasses.length > 0 ? (
@@ -321,7 +373,7 @@ export default function HomePage() {
       {activeTab === 'bookings' && (
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
-          
+
           <div className="space-y-3">
             {bookings.map((booking) => {
               const gym = gyms.find(g => g.id === booking.gymId);
@@ -333,7 +385,7 @@ export default function HomePage() {
                   gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
                   date={booking.date}
                   time={booking.time}
-                  onScanQR={() => setIsScannerOpen(true)}
+                  onScanQR={() => handleScanQR(booking.id)} // Pass booking ID to handleScanQR
                   onCancel={handleCancelBooking}
                 />
               );
@@ -360,7 +412,7 @@ export default function HomePage() {
               <QRScanner 
                 isOpen={true}
                 onClose={() => setActiveTab('home')}
-                onScan={handleScanQR}
+                onScan={handleQRScan}
                 isDialog={false}
               />
             </div>
@@ -371,7 +423,13 @@ export default function HomePage() {
       <BottomNav 
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onScanQR={() => setActiveTab('scanner')}
+        onScanQR={() => {
+          // When starting scan from BottomNav, we don't have a specific booking yet.
+          // The user will select a booking first from the 'bookings' tab.
+          // For now, just open the scanner, but it will prompt for booking selection.
+          // A better UX would be to navigate to 'bookings' tab first if no booking is selected.
+          setIsScannerOpen(true); 
+        }}
       />
 
       <PurchaseCreditsDialog 
@@ -382,8 +440,12 @@ export default function HomePage() {
 
       <QRScanner 
         isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onScan={handleScanQR}
+        onClose={() => {
+          setIsScannerOpen(false);
+          setSelectedBooking(null);
+        }}
+        onScan={handleQRScan}
+        gymId={selectedBooking?.gymId} // Pass gymId to QRScanner
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { QrCode, AlertCircle } from "lucide-react";
@@ -10,16 +9,35 @@ interface QRScannerProps {
   onClose: () => void;
   onScan: (data: string) => void;
   isDialog?: boolean;
+  gymId?: string; // Qaysi zal uchun skanerlayotganini bilish uchun
 }
 
-export default function QRScanner({ isOpen, onClose, onScan, isDialog = true }: QRScannerProps) {
+export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gymId }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleScan = (data: any) => {
     if (data) {
-      onScan(data.text || data);
-      if (isDialog) {
-        onClose();
+      // Agar gymId berilgan bo'lsa, QR koddan olingan ma'lumotda gymId borligini tekshiramiz
+      if (gymId) {
+        try {
+          const scannedData = JSON.parse(data.text || data);
+          if (scannedData.gymId === gymId) {
+            onScan(data.text || data);
+            if (isDialog) {
+              onClose();
+            }
+          } else {
+            setError("Bu QR kod ushbu zal uchun emas.");
+          }
+        } catch (e) {
+          setError("QR kod formati noto'g'ri.");
+        }
+      } else {
+        // Agar gymId berilmagan bo'lsa, oddiygina ma'lumotni o'tkazamiz
+        onScan(data.text || data);
+        if (isDialog) {
+          onClose();
+        }
       }
     }
   };
@@ -36,7 +54,7 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true }: 
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
             <AlertCircle className="w-16 h-16 text-destructive mb-4" />
             <p className="text-sm text-muted-foreground mb-4">{error}</p>
-            <Button 
+            <Button
               onClick={() => {
                 setError(null);
               }}

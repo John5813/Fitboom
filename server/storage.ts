@@ -128,7 +128,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBooking(id: string): Promise<boolean> {
     const result = await db.delete(bookings).where(eq(bookings.id, id));
-    return result.rowCount !== null && result.rowCount > 0;
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async completeBooking(id: string): Promise<void> {
+    await this.db
+      .update(bookings)
+      .set({ isCompleted: true })
+      .where(eq(bookings.id, id));
+  }
+
+  async getBooking(id: string) {
+    const result = await this.db.select().from(bookings).where(eq(bookings.id, id));
+    return result[0] || null;
   }
 }
 

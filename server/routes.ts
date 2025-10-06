@@ -236,7 +236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newCredits = user.credits - gym.credits;
       await storage.updateUserCredits(user.id, newCredits);
 
-      const qrCode = `QR-${Date.now()}-${gymId}`;
+      // QR kodda booking ID va gym ID bo'ladi
+      const bookingId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const qrCode = `BOOKING-${bookingId}-GYM-${gymId}`;
       const booking = await storage.createBooking({
         userId: user.id,
         gymId,
@@ -280,6 +282,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete class' });
+    }
+  });
+
+  // QR kod tekshirish va tasdiqlash
+  app.post('/api/verify-qr', requireAuth, async (req, res) => {
+    try {
+      const { qrCode, gymId } = req.body;
+
+      if (!qrCode || !gymId) {
+        return res.status(400).json({ message: "QR kod va gym ID majburiy" });
+      }
+
+      // QR kod formatini tekshirish
+      const qrMatch = qrCode.match(/BOOKING-(.+)-GYM-(.+)/);
+      if (!qrMatch) {
+        return res.status(400).json({ message: "Noto'g'ri QR kod formati" });
+      }
+
+      const qrGymId = qrMatch[2];
+      
+      // Gym ID mosligini tekshirish
+      if (qrGymId !== gymId) {
+        return res.status(400).json({ 
+          message: "Bu QR kod boshqa zal uchun!",
+          success: false 
+        });
+      }
+
+      // Bronni topish
+      const bookings = await storage.getBookings(req.user!.id);
+      const booking = bookings.find(b => b.qrCode === qrCode);
+
+      if (!booking) {
+        return res.status(404).json({ 
+          message: "Bron topilmadi yoki allaqachon ishlatilgan",
+          success: false 
+        });
+      }
+
+      if (booking.isCompleted) {
+        return res.status(400).json({ 
+          message: "Bu QR kod allaqachon ishlatilgan",
+          success: false 
+        });
+      }
+
+      // Bronni tasdiqlash
+      await storage.completeBooking(booking.id);
+
+      const gym = await storage.getGym(gymId);
+      
+      res.json({ 
+        success: true,
+        message: "QR kod tasdiqlandi! Xush kelibsiz!",
+        booking,
+        gym
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
