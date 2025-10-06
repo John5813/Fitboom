@@ -22,6 +22,7 @@ export const gyms = pgTable("gyms", {
   description: text("description"),
   rating: integer("rating").notNull().default(5),
   facilities: text("facilities"),
+  qrCode: text("qr_code"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

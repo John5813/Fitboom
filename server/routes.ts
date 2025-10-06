@@ -81,7 +81,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/gyms", async (req, res) => {
     try {
       const gymData = insertGymSchema.parse(req.body);
-      const gym = await storage.createGym(gymData);
+      // Generate unique QR code for the gym
+      const qrCode = `GYM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const gymWithQR = { ...gymData, qrCode };
+      const gym = await storage.createGym(gymWithQR);
       res.json({ gym });
     } catch (error) {
       res.status(400).json({ error: "Invalid gym data" });
