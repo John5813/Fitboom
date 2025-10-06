@@ -27,7 +27,8 @@ export default function AdminPage() {
     imageUrl: '',
     facilities: '',
     rating: '5',
-    hours: ''
+    hours: '',
+    qrCode: '' // Added qrCode to gymForm state
   });
 
   // Class form state
@@ -130,7 +131,8 @@ export default function AdminPage() {
       imageUrl: '',
       facilities: '',
       rating: '5',
-      hours: ''
+      hours: '',
+      qrCode: '' // Reset qrCode
     });
   };
 
@@ -239,7 +241,8 @@ export default function AdminPage() {
       imageUrl: gym.imageUrl,
       facilities: gym.facilities || '',
       rating: gym.rating.toString(),
-      hours: gym.hours
+      hours: gym.hours,
+      qrCode: gym.qrCode || '' // Set qrCode when editing
     });
   };
 
@@ -406,7 +409,7 @@ export default function AdminPage() {
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="gym-address">Manzil</Label>
                   <Input
@@ -417,7 +420,7 @@ export default function AdminPage() {
                     data-testid="input-gym-address"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="gym-description">Tavsif</Label>
                   <Textarea
@@ -428,7 +431,7 @@ export default function AdminPage() {
                     data-testid="input-gym-description"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="gym-image">Rasm URL</Label>
                   <Input
@@ -439,7 +442,7 @@ export default function AdminPage() {
                     data-testid="input-gym-image"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="gym-facilities">Imkoniyatlar (vergul bilan ajratib yozing)</Label>
                   <Input
@@ -450,7 +453,28 @@ export default function AdminPage() {
                     data-testid="input-gym-facilities"
                   />
                 </div>
-                
+
+                {/* QR Code input - only shown when editing a gym */}
+                {editingGym && (
+                  <div>
+                    <Label htmlFor="gym-qrcode">QR Kod</Label>
+                    <Input
+                      id="gym-qrcode"
+                      value={gymForm.qrCode}
+                      onChange={(e) => setGymForm({...gymForm, qrCode: e.target.value})}
+                      placeholder="QR kodni shu yerga kiriting yoki avtomatik yaratiladi"
+                      data-testid="input-gym-qrcode"
+                      readOnly // Make it read-only if it's auto-generated, or editable if user can input
+                    />
+                    {gymForm.qrCode && (
+                      <div className="mt-2">
+                        <p className="text-sm text-muted-foreground">QR Kodni ko'rish:</p>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(gymForm.qrCode)}`} alt="QR Code" className="w-24 h-24 mt-1"/>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button 
                     onClick={handleAddOrUpdateGym} 
@@ -482,44 +506,63 @@ export default function AdminPage() {
                 {gymsLoading ? (
                   <p className="text-muted-foreground">Yuklanmoqda...</p>
                 ) : gyms && gyms.length > 0 ? (
-                  <div className="space-y-3">
+                  // Updated section to include QR code display
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {gyms.map((gym) => (
-                      <div 
-                        key={gym.id} 
-                        className="flex items-center justify-between p-4 border rounded-md hover-elevate"
-                        data-testid={`card-gym-${gym.id}`}
-                      >
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg" data-testid={`text-gym-name-${gym.id}`}>
-                            {gym.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {gym.category} • {gym.credits} kredit • {gym.address}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {gym.hours}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleEditGym(gym)}
-                            data-testid={`button-edit-gym-${gym.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => handleDeleteGym(gym.id)}
-                            disabled={deleteGymMutation.isPending}
-                            data-testid={`button-delete-gym-${gym.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      <Card key={gym.id}>
+                        <CardContent className="p-4">
+                          <img 
+                            src={gym.imageUrl} 
+                            alt={gym.name}
+                            className="w-full h-32 object-cover rounded-md mb-3"
+                          />
+                          <h3 className="font-semibold mb-2">{gym.name}</h3>
+                          <div className="space-y-1 text-sm text-muted-foreground mb-3">
+                            <p>Kategoriya: {gym.category}</p>
+                            <p>Narx: {gym.credits} kredit</p>
+                            <p>Manzil: {gym.address}</p>
+                            {gym.qrCode && (
+                              <div className="bg-muted p-2 rounded mt-2">
+                                <p className="text-xs font-mono break-all">QR: {gym.qrCode}</p>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="mt-1 h-6 text-xs"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(gym.qrCode || '');
+                                    toast({
+                                      title: "Nusxa olindi",
+                                      description: "QR kod nusxa olindi",
+                                    });
+                                  }}
+                                >
+                                  Nusxa olish
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditGym(gym)}
+                              data-testid={`button-edit-gym-${gym.id}`}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" />
+                              Tahrirlash
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleDeleteGym(gym.id)}
+                              data-testid={`button-delete-gym-${gym.id}`}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              O'chirish
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 ) : (
@@ -586,7 +629,7 @@ export default function AdminPage() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="class-thumbnail">Rasm URL</Label>
                 <Input
@@ -597,7 +640,7 @@ export default function AdminPage() {
                   data-testid="input-class-thumbnail"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="class-video">Video URL</Label>
                 <Input
@@ -608,7 +651,7 @@ export default function AdminPage() {
                   data-testid="input-class-video"
                 />
               </div>
-              
+
               <Button 
                 onClick={handleAddClass} 
                 className="w-full"
