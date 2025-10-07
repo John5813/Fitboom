@@ -455,23 +455,56 @@ export default function AdminPage() {
                 </div>
 
                 {/* QR Code input - only shown when editing a gym */}
-                {editingGym && (
+                {editingGym && gymForm.qrCode && (
                   <div>
-                    <Label htmlFor="gym-qrcode">QR Kod</Label>
-                    <Input
-                      id="gym-qrcode"
-                      value={gymForm.qrCode}
-                      onChange={(e) => setGymForm({...gymForm, qrCode: e.target.value})}
-                      placeholder="QR kodni shu yerga kiriting yoki avtomatik yaratiladi"
-                      data-testid="input-gym-qrcode"
-                      readOnly // Make it read-only if it's auto-generated, or editable if user can input
-                    />
-                    {gymForm.qrCode && (
-                      <div className="mt-2">
-                        <p className="text-sm text-muted-foreground">QR Kodni ko'rish:</p>
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(gymForm.qrCode)}`} alt="QR Code" className="w-24 h-24 mt-1"/>
+                    <Label>QR Kod</Label>
+                    <div className="mt-2 p-4 bg-muted rounded-lg">
+                      <div className="flex flex-col items-center gap-4">
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gymForm.qrCode)}`} 
+                          alt="QR Code" 
+                          className="w-48 h-48 border-4 border-background rounded-lg shadow-lg"
+                        />
+                        <div className="flex gap-2 w-full">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => {
+                              navigator.clipboard.writeText(gymForm.qrCode || '');
+                              toast({
+                                title: "Nusxa olindi",
+                                description: "QR kod matni nusxa olindi",
+                              });
+                            }}
+                          >
+                            Matnni nusxalash
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="default"
+                            className="flex-1"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(gymForm.qrCode || '')}`;
+                              link.download = `qr-${gymForm.name.replace(/\s+/g, '-').toLowerCase()}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              toast({
+                                title: "Yuklab olindi",
+                                description: "QR kod rasmi yuklab olindi",
+                              });
+                            }}
+                          >
+                            Rasmni yuklab olish
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono break-all text-center">
+                          {gymForm.qrCode}
+                        </p>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
 
@@ -523,21 +556,47 @@ export default function AdminPage() {
                             <p>Manzil: {gym.address}</p>
                             {gym.qrCode && (
                               <div className="bg-muted p-2 rounded mt-2">
-                                <p className="text-xs font-mono break-all">QR: {gym.qrCode}</p>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="mt-1 h-6 text-xs"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(gym.qrCode || '');
-                                    toast({
-                                      title: "Nusxa olindi",
-                                      description: "QR kod nusxa olindi",
-                                    });
-                                  }}
-                                >
-                                  Nusxa olish
-                                </Button>
+                                <p className="text-xs mb-2">QR Kod:</p>
+                                <img 
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(gym.qrCode)}`} 
+                                  alt="QR Code" 
+                                  className="w-32 h-32 mx-auto border-2 border-background rounded"
+                                />
+                                <div className="flex gap-1 mt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs flex-1"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(gym.qrCode || '');
+                                      toast({
+                                        title: "Nusxa olindi",
+                                        description: "QR kod matni nusxa olindi",
+                                      });
+                                    }}
+                                  >
+                                    Matnni nusxalash
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs flex-1"
+                                    onClick={() => {
+                                      const link = document.createElement('a');
+                                      link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(gym.qrCode || '')}`;
+                                      link.download = `qr-${gym.name.replace(/\s+/g, '-').toLowerCase()}.png`;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      toast({
+                                        title: "Yuklab olindi",
+                                        description: "QR kod rasmi yuklab olindi",
+                                      });
+                                    }}
+                                  >
+                                    Rasmni yuklab olish
+                                  </Button>
+                                </div>
                               </div>
                             )}
                           </div>
