@@ -63,7 +63,7 @@ Preferred communication style: Simple, everyday language.
 - Migration files in `migrations/` directory
 
 **Database Schema**
-- `users`: User accounts with username, password (plain text - should be hashed in production), and credit balance
+- `users`: User accounts with username, bcrypt-hashed password, credit balance, and isAdmin role flag
 - `gyms`: Gym listings with location, pricing, facilities, and metadata
 - `onlineClasses`: Video fitness classes with instructor and duration info
 - `bookings`: User gym reservations with date, time, and QR code tracking
@@ -118,11 +118,12 @@ Preferred communication style: Simple, everyday language.
 - HTTP status codes for API responses
 
 **Security Considerations**
-- CSRF protection via session configuration
+- Bcrypt password hashing with salt rounds for secure authentication
+- Session secret required in production (SESSION_SECRET environment variable)
 - Secure cookies in production (HTTPS only)
-- Input validation using Zod schemas
-- Protected routes with authentication middleware
-- **Note**: Passwords are currently stored in plain text - should implement bcrypt hashing for production
+- Input validation using Zod schemas on critical endpoints
+- Role-based authorization with isAdmin middleware protecting admin routes
+- Stripe webhook signature verification (optional STRIPE_WEBHOOK_SECRET)
 
 ## External Dependencies
 
@@ -134,9 +135,11 @@ Preferred communication style: Simple, everyday language.
 - Environment variable: `DATABASE_URL`
 
 **Payment Processing**
-- Stripe integration for credit purchases
-- `@stripe/stripe-js` and `@stripe/react-stripe-js` libraries
-- Currently implemented in UI but backend integration may be incomplete
+- Stripe integration for credit purchases with Checkout Sessions
+- Server-side pricing validation to prevent client manipulation
+- Webhook handling for payment confirmation
+- Environment variables: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (optional)
+- Test mode supported for development
 
 ### UI Component Libraries
 
