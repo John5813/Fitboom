@@ -24,10 +24,10 @@ const packages: CreditPackage[] = [
   { credits: 24, price: 18 },
 ];
 
-export default function PurchaseCreditsDialog({ 
-  isOpen, 
-  onClose, 
-  onPurchase 
+export default function PurchaseCreditsDialog({
+  isOpen,
+  onClose,
+  onPurchase
 }: PurchaseCreditsDialogProps) {
   const { toast } = useToast();
 
@@ -50,11 +50,29 @@ export default function PurchaseCreditsDialog({
     },
   });
 
-  const handlePurchase = (credits: number, price: number) => {
-    if (onPurchase) {
-      onPurchase(credits, price);
-    } else {
-      createCheckoutMutation.mutate(credits);
+  const handlePurchase = async (credits: number, price: number) => {
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ credits }),
+      });
+
+      if (!response.ok) {
+        throw new Error('To\'lov sessiyasi yaratilmadi');
+      }
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('To\'lov URL topilmadi');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      // Show error to user via toast or other UI feedback
     }
   };
 
@@ -66,7 +84,7 @@ export default function PurchaseCreditsDialog({
         </DialogHeader>
         <div className="space-y-3 py-4">
           {packages.map((pkg) => (
-            <Card 
+            <Card
               key={pkg.credits}
               className={`p-4 relative hover-elevate cursor-pointer ${
                 pkg.isPopular ? 'border-primary' : ''
