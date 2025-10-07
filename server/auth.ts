@@ -12,6 +12,7 @@ declare global {
       id: string;
       username: string;
       credits: number;
+      isAdmin: boolean;
     }
   }
 }
@@ -53,6 +54,7 @@ export function setupAuth(app: Express) {
           id: user.id,
           username: user.username,
           credits: user.credits,
+          isAdmin: user.isAdmin,
         });
       } catch (err) {
         return done(err);
@@ -74,6 +76,7 @@ export function setupAuth(app: Express) {
         id: user.id,
         username: user.username,
         credits: user.credits,
+        isAdmin: user.isAdmin,
       });
     } catch (err) {
       done(err);
@@ -86,4 +89,11 @@ export function requireAuth(req: any, res: any, next: any) {
     return next();
   }
   res.status(401).json({ message: "Tizimga kirish talab qilinadi" });
+}
+
+export function requireAdmin(req: any, res: any, next: any) {
+  if (req.isAuthenticated() && req.user?.isAdmin) {
+    return next();
+  }
+  res.status(403).json({ message: "Admin huquqi talab qilinadi" });
 }

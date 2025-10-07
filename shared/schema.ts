@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   credits: integer("credits").notNull().default(0),
+  isAdmin: boolean("is_admin").notNull().default(false),
 });
 
 export const gyms = pgTable("gyms", {
@@ -47,7 +48,7 @@ export const bookings = pgTable("bookings", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true, isAdmin: true });
 export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
 export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ id: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
