@@ -12,6 +12,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     apiVersion: "2025-08-27.basil",
   });
 
+  // Stripe webhook needs raw body, so we handle it before other routes
+  app.post('/api/stripe-webhook', 
+    express.raw({ type: 'application/json' }),
+    async (req, res) => {
+      const sig = req.headers['stripe-signature'] as string;
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+      let event: Stripe.Event;
+
+      try {
+        if (webhookSecret && sig) {
+          event = stripe.webhooks.constructEvent(
+            req.body,
+            sig,
+            webhookSecret
+          );
+        } else {
+          // Development fallback - parse the body as JSON
+          const bodyString = req.body.toString('utf8');
+          event = JSON.parse(bodyString);
+        }
+        
+        if (event.type === 'checkout.session.completed') {
+          const session = event.data.object as Stripe.Checkout.Session;
+          
+          const userId = session.metadata?.userId || session.client_reference_id;
+          const credits = parseInt(session.metadata?.credits || '0');
+
+          if (userId && credits) {
+            const currentUser = await storage.getUser(userId);
+            if (currentUser) {
+              const newCredits = currentUser.credits + credits;
+              await storage.updateUserCredits(userId, newCredits);
+              console.log(`Added ${credits} credits to user ${userId}. New balance: ${newCredits}`);
+            }
+          }
+        }
+
+        res.json({ received: true });
+      } catch (error: any) {
+        console.error('Webhook error:', error);
+        res.status(400).send(`Webhook Error: ${error.message}`);
+      }
+    }
+  );
+
   // Authentication routes
   app.post("/api/register", async (req, res, next) => {
     try {
@@ -172,6 +218,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const price = creditPackages[credits];
+      
+      // Build the base URL properly
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'http://localhost:5000';
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -189,8 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         ],
         mode: 'payment',
-        success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/?payment=success`,
-        cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/?payment=cancelled`,
+        success_url: `${baseUrl}/?payment=success&credits=${credits}`,
+        cancel_url: `${baseUrl}/?payment=cancelled`,
         client_reference_id: req.user!.id,
         metadata: {
           userId: req.user!.id,
@@ -198,57 +249,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
+      console.log('Checkout session created:', session.id);
       res.json({ sessionId: session.id, url: session.url });
     } catch (error: any) {
       console.error('Stripe checkout error:', error);
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Stripe webhook to handle successful payments
-  app.post('/api/stripe-webhook', async (req, res) => {
-    const sig = req.headers['stripe-signature'] as string;
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    let event: Stripe.Event;
-
-    try {
-      if (webhookSecret && sig) {
-        // Verify webhook signature if secret is configured
-        try {
-          event = stripe.webhooks.constructEvent(
-            JSON.stringify(req.body),
-            sig,
-            webhookSecret
-          );
-        } catch (err: any) {
-          console.error('Webhook signature verification failed:', err.message);
-          return res.status(400).send(`Webhook Error: ${err.message}`);
-        }
-      } else {
-        // Fallback for development without webhook secret
-        event = req.body;
-      }
-      
-      if (event.type === 'checkout.session.completed') {
-        const session = event.data.object as Stripe.Checkout.Session;
-        
-        const userId = session.metadata?.userId;
-        const credits = parseInt(session.metadata?.credits || '0');
-
-        if (userId && credits) {
-          const currentUser = await storage.getUser(userId);
-          if (currentUser) {
-            const newCredits = currentUser.credits + credits;
-            await storage.updateUserCredits(userId, newCredits);
-          }
-        }
-      }
-
-      res.json({ received: true });
-    } catch (error: any) {
-      console.error('Webhook error:', error);
-      res.status(400).send(`Webhook Error: ${error.message}`);
     }
   });
 

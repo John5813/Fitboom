@@ -30,6 +30,31 @@ export default function HomePage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  // Check for payment success/cancel in URL
+  useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const credits = urlParams.get('credits');
+    
+    if (paymentStatus === 'success') {
+      toast({
+        title: "To'lov muvaffaqiyatli!",
+        description: credits ? `${credits} kredit hisobingizga qo'shildi` : "Kredit hisobingizga qo'shildi",
+      });
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/');
+      // Refresh user data
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    } else if (paymentStatus === 'cancelled') {
+      toast({
+        title: "To'lov bekor qilindi",
+        description: "Qaytadan urinib ko'ring",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/');
+    }
+  });
+
   const credits = user?.credits ?? 0;
 
   // Fetch gyms from API

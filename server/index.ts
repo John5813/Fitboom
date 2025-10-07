@@ -8,7 +8,16 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 
 const app = express();
-app.use(express.json());
+
+// Webhook route needs raw body, so we skip JSON parsing for it
+app.use((req, res, next) => {
+  if (req.path === '/api/stripe-webhook') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: false }));
 setupAuth(app);
 
