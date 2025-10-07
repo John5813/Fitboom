@@ -96,30 +96,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gyms", requireAdmin, async (req, res) => {
     try {
-      const { name, description, credits, category, imageUrl, address } = req.body;
+      const gymData = insertGymSchema.parse(req.body);
 
       // QR kod uchun JSON ma'lumot yaratish
       const gymId = `gym-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const qrCodeData = JSON.stringify({
         gymId: gymId,
         type: 'gym',
-        name: name,
+        name: gymData.name,
         timestamp: new Date().toISOString()
       });
 
       const gym = await storage.createGym({
-        name,
-        description,
-        credits,
-        category,
-        imageUrl,
-        address,
+        ...gymData,
         qrCode: qrCodeData
       });
       res.json({ gym });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating gym:", error);
-      res.status(400).json({ error: "Invalid gym data" });
+      res.status(400).json({ error: error.message || "Invalid gym data" });
     }
   });
 
@@ -350,10 +345,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/classes', requireAdmin, async (req, res) => {
     try {
-      const onlineClass = await storage.createClass(req.body);
+      const classData = insertOnlineClassSchema.parse(req.body);
+      const onlineClass = await storage.createClass(classData);
       res.json(onlineClass);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create class' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to create class' });
     }
   });
 
