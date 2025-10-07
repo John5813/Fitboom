@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import type { Express } from "express";
 import session from "express-session";
 import type { User } from "@shared/schema";
+import bcrypt from "bcrypt";
 
 declare global {
   namespace Express {
@@ -44,7 +45,8 @@ export function setupAuth(app: Express) {
         if (!user) {
           return done(null, false, { message: "Foydalanuvchi topilmadi" });
         }
-        if (user.password !== password) {
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
           return done(null, false, { message: "Parol noto'g'ri" });
         }
         return done(null, {
