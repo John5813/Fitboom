@@ -17,9 +17,10 @@ export default function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
-      return apiRequest('/api/login', 'POST', data);
+      const response = await apiRequest('/api/login', 'POST', data);
+      return response;
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       toast({
@@ -31,6 +32,7 @@ export default function LoginPage() {
       }, 100);
     },
     onError: (error: any) => {
+      console.error('Login error:', error);
       toast({
         title: "Xatolik",
         description: error.message || "Login yoki parol noto'g'ri",

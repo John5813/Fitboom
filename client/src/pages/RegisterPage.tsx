@@ -18,9 +18,10 @@ export default function RegisterPage() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
-      return apiRequest('/api/register', 'POST', data);
+      const response = await apiRequest('/api/register', 'POST', data);
+      return response;
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       toast({
@@ -32,9 +33,10 @@ export default function RegisterPage() {
       }, 100);
     },
     onError: (error: any) => {
+      console.error('Register error:', error);
       toast({
         title: "Xatolik",
-        description: error.message || "Ro'yxatdan o'tishda xatolik",
+        description: error.message || "Ro'yxatdan o'tishda xatolik yuz berdi",
         variant: "destructive",
       });
     },

@@ -9,6 +9,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log('Register request body:', req.body);
       const userData = insertUserSchema.parse(req.body);
 
       const existingUser = await storage.getUserByUsername(userData.username);
@@ -20,6 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       req.login({ id: user.id, username: user.username, credits: user.credits }, (err) => {
         if (err) {
+          console.error('Login after register error:', err);
           return next(err);
         }
         return res.json({ 
@@ -30,8 +32,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } 
         });
       });
-    } catch (error) {
-      res.status(400).json({ message: "Noto'g'ri ma'lumotlar" });
+    } catch (error: any) {
+      console.error('Register error:', error);
+      res.status(400).json({ 
+        message: error.message || "Noto'g'ri ma'lumotlar",
+        errors: error.errors || undefined
+      });
     }
   });
 
