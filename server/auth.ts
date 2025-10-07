@@ -18,8 +18,13 @@ declare global {
 }
 
 export function setupAuth(app: Express) {
+  // Require SESSION_SECRET in production
+  if (app.get("env") === "production" && !process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable is required in production");
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "fitboom-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET || "fitboom-dev-secret-change-in-production",
     resave: false,
     saveUninitialized: false,
     cookie: {

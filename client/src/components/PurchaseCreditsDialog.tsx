@@ -32,8 +32,8 @@ export default function PurchaseCreditsDialog({
   const { toast } = useToast();
 
   const createCheckoutMutation = useMutation({
-    mutationFn: async (data: { credits: number; price: number }) => {
-      const response = await apiRequest('/api/create-checkout-session', 'POST', data);
+    mutationFn: async (credits: number) => {
+      const response = await apiRequest('/api/create-checkout-session', 'POST', { credits });
       return response.json();
     },
     onSuccess: (data) => {
@@ -54,7 +54,7 @@ export default function PurchaseCreditsDialog({
     if (onPurchase) {
       onPurchase(credits, price);
     } else {
-      createCheckoutMutation.mutate({ credits, price });
+      createCheckoutMutation.mutate(credits);
     }
   };
 

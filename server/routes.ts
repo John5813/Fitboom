@@ -155,14 +155,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Server-side pricing for credit packages
+  const creditPackages: Record<number, number> = {
+    6: 5,
+    13: 10,
+    24: 18,
+  };
+
   // Create Stripe checkout session for purchasing credits
   app.post('/api/create-checkout-session', requireAuth, async (req, res) => {
     try {
-      const { credits, price } = req.body;
+      const { credits } = req.body;
 
-      if (!credits || !price) {
-        return res.status(400).json({ message: "Kredit va narx majburiy" });
+      if (!credits || !creditPackages[credits]) {
+        return res.status(400).json({ message: "Noto'g'ri kredit paketi" });
       }
+
+      const price = creditPackages[credits];
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -199,11 +208,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook to handle successful payments
   app.post('/api/stripe-webhook', async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     let event: Stripe.Event;
 
     try {
-      event = req.body;
+      if (webhookSecret && sig) {
+        // Verify webhook signature if secret is configured
+        try {
+          event = stripe.webhooks.constructEvent(
+            JSON.stringify(req.body),
+            sig,
+            webhookSecret
+          );
+        } catch (err: any) {
+          console.error('Webhook signature verification failed:', err.message);
+          return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+      } else {
+        // Fallback for development without webhook secret
+        event = req.body;
+      }
       
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -281,11 +306,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Book a gym
   app.post('/api/book-gym', requireAuth, async (req, res) => {
     try {
-      const { gymId, date, time } = req.body;
+      const bookingData = insertBookingSchema.partial({ qrCode: true, isCompleted: true }).parse(req.body);
 
-      if (!gymId) {
+      if (!bookingData.gymId) {
         return res.status(400).json({ message: "Zal ID majburiy" });
       }
+
+      const { gymId, date, time } = bookingData;
 
       const gym = await storage.getGym(gymId);
       if (!gym) {
