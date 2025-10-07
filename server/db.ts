@@ -11,11 +11,7 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Use pooling URL to avoid SSL issues
-const connectionString = process.env.DATABASE_URL.replace('.us-east-2', '-pooler.us-east-2');
-
 export const pool = new Pool({ 
-  connectionString,
-  ssl: false
+  connectionString: process.env.DATABASE_URL
 });
 export const db = drizzle({ client: pool, schema });
