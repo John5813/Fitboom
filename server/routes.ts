@@ -5,8 +5,13 @@ import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBooki
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
+import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2024-12-18.acacia",
+  });
+
   // Authentication routes
   app.post("/api/register", async (req, res, next) => {
     try {
@@ -154,8 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase credits
-  app.post('/api/purchase-credits', requireAuth, async (req, res) => {
+  // Create Stripe checkout session for purchasing credits
+  app.post('/api/create-checkout-session', requireAuth, async (req, res) => {
     try {
       const { credits, price } = req.body;
 
@@ -163,25 +168,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Kredit va narx majburiy" });
       }
 
-      const currentUser = await storage.getUser(req.user!.id);
-      if (!currentUser) {
-        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-      }
-
-      const newCredits = currentUser.credits + credits;
-      const user = await storage.updateUserCredits(req.user!.id, newCredits);
-
-      if (!user) {
-        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-      }
-
-      res.json({
-        message: "Kreditlar muvaffaqiyatli sotib olindi",
-        credits,
-        totalCredits: user.credits
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `${credits} FitBoom Krediti`,
+                description: `${credits} kredit sotib olish`,
+              },
+              unit_amount: Math.round(price * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/?payment=success`,
+        cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/?payment=cancelled`,
+        client_reference_id: req.user!.id,
+        metadata: {
+          userId: req.user!.id,
+          credits: credits.toString(),
+        },
       });
+
+      res.json({ sessionId: session.id, url: session.url });
     } catch (error: any) {
+      console.error('Stripe checkout error:', error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Stripe webhook to handle successful payments
+  app.post('/api/stripe-webhook', async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+
+    let event: Stripe.Event;
+
+    try {
+      event = req.body;
+      
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        const userId = session.metadata?.userId;
+        const credits = parseInt(session.metadata?.credits || '0');
+
+        if (userId && credits) {
+          const currentUser = await storage.getUser(userId);
+          if (currentUser) {
+            const newCredits = currentUser.credits + credits;
+            await storage.updateUserCredits(userId, newCredits);
+          }
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error);
+      res.status(400).send(`Webhook Error: ${error.message}`);
     }
   });
 
