@@ -17,12 +17,14 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
 
   const handleScan = (data: any) => {
     if (data) {
+      const qrText = data.text || data;
+      
       // Agar gymId berilgan bo'lsa, QR koddan olingan ma'lumotda gymId borligini tekshiramiz
       if (gymId) {
         try {
-          const scannedData = JSON.parse(data.text || data);
+          const scannedData = JSON.parse(qrText);
           if (scannedData.gymId === gymId) {
-            onScan(data.text || data);
+            onScan(qrText);
             if (isDialog) {
               onClose();
             }
@@ -30,13 +32,19 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
             setError("Bu QR kod ushbu zal uchun emas.");
           }
         } catch (e) {
-          setError("QR kod formati noto'g'ri.");
+          console.error('QR parse error:', e);
+          setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
         }
       } else {
-        // Agar gymId berilmagan bo'lsa, oddiygina ma'lumotni o'tkazamiz
-        onScan(data.text || data);
-        if (isDialog) {
-          onClose();
+        // Agar gymId berilmagan bo'lsa, JSON formatni tekshiramiz
+        try {
+          JSON.parse(qrText);
+          onScan(qrText);
+          if (isDialog) {
+            onClose();
+          }
+        } catch (e) {
+          setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
         }
       }
     }

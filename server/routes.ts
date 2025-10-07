@@ -24,17 +24,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Login after register error:', err);
           return next(err);
         }
-        return res.json({ 
-          user: { 
-            id: user.id, 
-            username: user.username, 
-            credits: user.credits 
-          } 
+        return res.json({
+          user: {
+            id: user.id,
+            username: user.username,
+            credits: user.credits
+          }
         });
       });
     } catch (error: any) {
       console.error('Register error:', error);
-      res.status(400).json({ 
+      res.status(400).json({
         message: error.message || "Noto'g'ri ma'lumotlar",
         errors: error.errors || undefined
       });
@@ -86,13 +86,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gyms", async (req, res) => {
     try {
-      const gymData = insertGymSchema.parse(req.body);
-      // Generate unique QR code for the gym
-      const qrCode = `GYM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const gymWithQR = { ...gymData, qrCode };
-      const gym = await storage.createGym(gymWithQR);
+      const { name, description, price, category, imageUrl } = req.body;
+
+      // QR kod uchun JSON ma'lumot yaratish
+      const gymId = `gym-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const qrCodeData = JSON.stringify({
+        gymId: gymId,
+        type: 'gym',
+        name: name,
+        timestamp: new Date().toISOString()
+      });
+
+      const gym = await storage.createGym({
+        name,
+        description,
+        price,
+        category,
+        imageUrl,
+        qrCode: qrCodeData
+      });
       res.json({ gym });
     } catch (error) {
+      console.error("Error creating gym:", error);
       res.status(400).json({ error: "Invalid gym data" });
     }
   });
@@ -155,10 +170,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
       }
 
-      res.json({ 
+      res.json({
         message: "Kreditlar muvaffaqiyatli sotib olindi",
         credits,
-        totalCredits: user.credits 
+        totalCredits: user.credits
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -180,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bookingId = req.params.id;
       const booking = await storage.getBooking(bookingId);
-      
+
       if (!booking) {
         return res.status(404).json({ message: "Bron topilmadi" });
       }
@@ -207,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Bron o'chirilmadi" });
       }
 
-      res.json({ 
+      res.json({
         message: "Bron bekor qilindi va kredit qaytarildi",
         creditsRefunded: gym.credits
       });
@@ -242,21 +257,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newCredits = user.credits - gym.credits;
       await storage.updateUserCredits(user.id, newCredits);
 
-      // QR kodda booking ID va gym ID bo'ladi
-      const bookingId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const qrCode = `BOOKING-${bookingId}-GYM-${gymId}`;
-      const booking = await storage.createBooking({
-        userId: user.id,
+      const bookingDate = date || new Date().toISOString().split('T')[0];
+      const bookingTime = time || '18:00';
+
+      // Yangi bron yaratish
+      const qrCodeData = JSON.stringify({
         gymId,
-        date: date || new Date().toISOString().split('T')[0],
-        time: time || '18:00',
-        qrCode,
+        userId: req.user!.id,
+        bookingId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString()
       });
 
-      res.json({ 
+      const booking = await storage.createBooking({
+        userId: req.user!.id,
+        gymId,
+        date: bookingDate,
+        time: bookingTime,
+        qrCode: qrCodeData,
+      });
+
+      res.json({
         message: "Zal muvaffaqiyatli bron qilindi",
         booking,
-        creditsUsed: gym.credits 
+        creditsUsed: gym.credits
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -301,18 +324,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // QR kod formatini tekshirish
-      const qrMatch = qrCode.match(/BOOKING-(.+)-GYM-(.+)/);
-      if (!qrMatch) {
-        return res.status(400).json({ message: "Noto'g'ri QR kod formati" });
+      let qrData;
+      try {
+        qrData = JSON.parse(qrCode);
+      } catch (e) {
+        return res.status(400).json({
+          message: "QR kod formati noto'g'ri",
+          success: false
+        });
       }
 
-      const qrGymId = qrMatch[2];
-      
-      // Gym ID mosligini tekshirish
-      if (qrGymId !== gymId) {
-        return res.status(400).json({ 
-          message: "Bu QR kod boshqa zal uchun!",
-          success: false 
+      // GymId mos kelishini tekshirish
+      if (qrData.gymId !== gymId) {
+        return res.status(400).json({
+          message: "Bu QR kod ushbu zal uchun emas",
+          success: false
         });
       }
 
@@ -320,17 +346,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookings = await storage.getBookings(req.user!.id);
       const booking = bookings.find(b => b.qrCode === qrCode);
 
+
       if (!booking) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           message: "Bron topilmadi yoki allaqachon ishlatilgan",
-          success: false 
+          success: false
         });
       }
 
       if (booking.isCompleted) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Bu QR kod allaqachon ishlatilgan",
-          success: false 
+          success: false
         });
       }
 
@@ -338,8 +365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.completeBooking(booking.id);
 
       const gym = await storage.getGym(gymId);
-      
-      res.json({ 
+
+      res.json({
         success: true,
         message: "QR kod tasdiqlandi! Xush kelibsiz!",
         booking,
