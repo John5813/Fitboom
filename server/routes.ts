@@ -9,7 +9,7 @@ import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2024-12-18.acacia",
+    apiVersion: "2025-08-27.basil",
   });
 
   // Authentication routes
@@ -96,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gyms", requireAdmin, async (req, res) => {
     try {
-      const { name, description, price, category, imageUrl } = req.body;
+      const { name, description, credits, category, imageUrl, address } = req.body;
 
       // QR kod uchun JSON ma'lumot yaratish
       const gymId = `gym-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -110,9 +110,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gym = await storage.createGym({
         name,
         description,
-        price,
+        credits,
         category,
         imageUrl,
+        address,
         qrCode: qrCodeData
       });
       res.json({ gym });
