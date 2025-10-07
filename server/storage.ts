@@ -132,15 +132,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeBooking(id: string): Promise<void> {
-    await this.db
+    await db
       .update(bookings)
       .set({ isCompleted: true })
       .where(eq(bookings.id, id));
-  }
-
-  async getBooking(id: string) {
-    const result = await this.db.select().from(bookings).where(eq(bookings.id, id));
-    return result[0] || null;
   }
 }
 
