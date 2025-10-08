@@ -9,55 +9,62 @@ import bcrypt from "bcrypt";
 import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  const stripeEnabled = !!process.env.STRIPE_SECRET_KEY;
+  const stripe = stripeEnabled ? new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2025-08-27.basil",
-  });
+  }) : null;
+
+  if (!stripeEnabled) {
+    console.log('⚠️  Stripe is disabled - payment features will use test mode');
+  }
 
   // Stripe webhook needs raw body, so we handle it before other routes
-  app.post('/api/stripe-webhook', 
-    express.raw({ type: 'application/json' }),
-    async (req, res) => {
-      const sig = req.headers['stripe-signature'] as string;
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (stripeEnabled && stripe) {
+    app.post('/api/stripe-webhook', 
+      express.raw({ type: 'application/json' }),
+      async (req, res) => {
+        const sig = req.headers['stripe-signature'] as string;
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-      let event: Stripe.Event;
+        let event: Stripe.Event;
 
-      try {
-        if (webhookSecret && sig) {
-          event = stripe.webhooks.constructEvent(
-            req.body,
-            sig,
-            webhookSecret
-          );
-        } else {
-          // Development fallback - parse the body as JSON
-          const bodyString = req.body.toString('utf8');
-          event = JSON.parse(bodyString);
-        }
-        
-        if (event.type === 'checkout.session.completed') {
-          const session = event.data.object as Stripe.Checkout.Session;
+        try {
+          if (webhookSecret && sig) {
+            event = stripe.webhooks.constructEvent(
+              req.body,
+              sig,
+              webhookSecret
+            );
+          } else {
+            // Development fallback - parse the body as JSON
+            const bodyString = req.body.toString('utf8');
+            event = JSON.parse(bodyString);
+          }
           
-          const userId = session.metadata?.userId || session.client_reference_id;
-          const credits = parseInt(session.metadata?.credits || '0');
+          if (event.type === 'checkout.session.completed') {
+            const session = event.data.object as Stripe.Checkout.Session;
+            
+            const userId = session.metadata?.userId || session.client_reference_id;
+            const credits = parseInt(session.metadata?.credits || '0');
 
-          if (userId && credits) {
-            const currentUser = await storage.getUser(userId);
-            if (currentUser) {
-              const newCredits = currentUser.credits + credits;
-              await storage.updateUserCredits(userId, newCredits);
-              console.log(`Added ${credits} credits to user ${userId}. New balance: ${newCredits}`);
+            if (userId && credits) {
+              const currentUser = await storage.getUser(userId);
+              if (currentUser) {
+                const newCredits = currentUser.credits + credits;
+                await storage.updateUserCredits(userId, newCredits);
+                console.log(`Added ${credits} credits to user ${userId}. New balance: ${newCredits}`);
+              }
             }
           }
-        }
 
-        res.json({ received: true });
-      } catch (error: any) {
-        console.error('Webhook error:', error);
-        res.status(400).send(`Webhook Error: ${error.message}`);
+          res.json({ received: true });
+        } catch (error: any) {
+          console.error('Webhook error:', error);
+          res.status(400).send(`Webhook Error: ${error.message}`);
+        }
       }
-    }
-  );
+    );
+  }
 
   // Authentication routes
   app.post("/api/register", async (req, res, next) => {
@@ -219,6 +226,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const price = creditPackages[credits];
+
+      // TEST MODE: If Stripe is not enabled, simulate purchase
+      if (!stripeEnabled || !stripe) {
+        console.log(`⚠️  TEST MODE: Simulating credit purchase for user ${req.user!.id}`);
+        
+        // Directly add credits to user in test mode
+        const user = await storage.getUser(req.user!.id);
+        if (user) {
+          const newCredits = user.credits + credits;
+          await storage.updateUserCredits(req.user!.id, newCredits);
+          console.log(`✅ TEST MODE: Added ${credits} credits to user ${req.user!.id}. New balance: ${newCredits}`);
+        }
+
+        // Return success response
+        return res.json({ 
+          testMode: true,
+          message: "Test rejimida kredit qo'shildi",
+          credits: credits 
+        });
+      }
       
       // Build the base URL properly
       const baseUrl = process.env.REPLIT_DEV_DOMAIN 
