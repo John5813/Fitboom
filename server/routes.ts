@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema } from "@shared/schema";
+import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
@@ -393,17 +393,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Video Collections routes
+  app.get('/api/collections', async (req, res) => {
+    try {
+      const collections = await storage.getVideoCollections();
+      res.json({ collections });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch collections' });
+    }
+  });
+
+  app.get('/api/collections/:id', async (req, res) => {
+    try {
+      const collection = await storage.getVideoCollection(req.params.id);
+      if (!collection) {
+        return res.status(404).json({ error: 'Collection not found' });
+      }
+      res.json({ collection });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch collection' });
+    }
+  });
+
+  app.post('/api/collections', requireAdmin, async (req, res) => {
+    try {
+      const collectionData = insertVideoCollectionSchema.parse(req.body);
+      const collection = await storage.createVideoCollection(collectionData);
+      res.json({ collection });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to create collection' });
+    }
+  });
+
+  app.put('/api/collections/:id', requireAdmin, async (req, res) => {
+    try {
+      const updateData = insertVideoCollectionSchema.partial().parse(req.body);
+      const collection = await storage.updateVideoCollection(req.params.id, updateData);
+      if (!collection) {
+        return res.status(404).json({ error: 'Collection not found' });
+      }
+      res.json({ collection });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to update collection' });
+    }
+  });
+
+  app.delete('/api/collections/:id', requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteVideoCollection(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Collection not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete collection' });
+    }
+  });
+
   // Online Classes routes
   app.get('/api/classes', async (req, res) => {
     try {
-      const classes = await storage.getClasses();
+      const collectionId = req.query.collectionId as string | undefined;
+      const classes = await storage.getClasses(collectionId);
       res.json({ classes });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch classes' });
     }
   });
 
-  app.post('/api/classes', requireAuth, async (req, res) => {
+  app.post('/api/classes', requireAdmin, async (req, res) => {
     try {
       const classData = insertOnlineClassSchema.parse(req.body);
       const onlineClass = await storage.createClass(classData);
@@ -413,12 +471,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/classes/:id', requireAuth, async (req, res) => {
+  app.delete('/api/classes/:id', requireAdmin, async (req, res) => {
     try {
       await storage.deleteClass(req.params.id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete class' });
+    }
+  });
+
+  // User Purchases routes  
+  app.get('/api/my-purchases', requireAuth, async (req, res) => {
+    try {
+      const purchases = await storage.getUserPurchases(req.user!.id);
+      res.json({ purchases });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/purchase-collection', requireAuth, async (req, res) => {
+    try {
+      const { collectionId } = req.body;
+
+      if (!collectionId) {
+        return res.status(400).json({ message: "To'plam ID majburiy" });
+      }
+
+      const collection = await storage.getVideoCollection(collectionId);
+      if (!collection) {
+        return res.status(404).json({ message: "To'plam topilmadi" });
+      }
+
+      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      if (alreadyPurchased) {
+        return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
+      }
+
+      // TEST MODE: Auto purchase without payment
+      if (!stripeEnabled || !stripe) {
+        const purchase = await storage.createUserPurchase({
+          userId: req.user!.id,
+          collectionId: collectionId,
+        });
+
+        return res.json({
+          message: "To'plam muvaffaqiyatli sotib olindi (test rejim)",
+          purchase,
+          testMode: true
+        });
+      }
+
+      // TODO: Implement Stripe payment for collections
+      res.status(501).json({ message: "To'lov tizimi hali ishlanmoqda" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
