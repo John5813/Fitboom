@@ -9,21 +9,14 @@ import bcrypt from "bcrypt";
 import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Stripe'ni ixtiyoriy qilish - agar kalit bo'lmasa, test rejimida ishlaymiz
-  const stripe = process.env.STRIPE_SECRET_KEY 
-    ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: "2025-08-27.basil",
-      })
-    : null;
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-08-27.basil",
+  });
 
   // Stripe webhook needs raw body, so we handle it before other routes
   app.post('/api/stripe-webhook', 
     express.raw({ type: 'application/json' }),
     async (req, res) => {
-      if (!stripe) {
-        return res.status(503).json({ message: "To'lov tizimi test rejimida" });
-      }
-
       const sig = req.headers['stripe-signature'] as string;
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -223,26 +216,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!credits || !creditPackages[credits]) {
         return res.status(400).json({ message: "Noto'g'ri kredit paketi" });
-      }
-
-      // TEST REJIMI: Agar Stripe yo'q bo'lsa, to'g'ridan-to'g'ri kredit qo'shamiz
-      if (!stripe) {
-        const user = await storage.getUser(req.user!.id);
-        if (!user) {
-          return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-        }
-
-        const newCredits = user.credits + credits;
-        await storage.updateUserCredits(user.id, newCredits);
-
-        console.log(`[TEST MODE] Added ${credits} credits to user ${user.id}. New balance: ${newCredits}`);
-        
-        return res.json({ 
-          testMode: true,
-          message: "Test rejimida kredit qo'shildi",
-          creditsAdded: credits,
-          newBalance: newCredits
-        });
       }
 
       const price = creditPackages[credits];
