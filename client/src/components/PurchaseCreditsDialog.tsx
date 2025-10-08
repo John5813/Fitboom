@@ -50,30 +50,8 @@ export default function PurchaseCreditsDialog({
     },
   });
 
-  const handlePurchase = async (credits: number, price: number) => {
-    try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ credits }),
-      });
-
-      if (!response.ok) {
-        throw new Error('To\'lov sessiyasi yaratilmadi');
-      }
-
-      const data = await response.json();
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('To\'lov URL topilmadi');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      // Show error to user via toast or other UI feedback
-    }
+  const handlePurchase = (credits: number) => {
+    createCheckoutMutation.mutate(credits);
   };
 
   return (
@@ -89,7 +67,7 @@ export default function PurchaseCreditsDialog({
               className={`p-4 relative hover-elevate cursor-pointer ${
                 pkg.isPopular ? 'border-primary' : ''
               }`}
-              onClick={() => handlePurchase(pkg.credits, pkg.price)}
+              onClick={() => handlePurchase(pkg.credits)}
               data-testid={`card-package-${pkg.credits}`}
             >
               {pkg.isPopular && (
@@ -106,8 +84,9 @@ export default function PurchaseCreditsDialog({
                     ${pkg.price}
                   </p>
                 </div>
-                <Button
+                <Button 
                   size="sm"
+                  onClick={() => handlePurchase(pkg.credits)}
                   disabled={createCheckoutMutation.isPending}
                   data-testid={`button-buy-${pkg.credits}`}
                 >
