@@ -9,6 +9,8 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import HomePage from "@/pages/HomePage";
 import AdminPage from "@/pages/AdminPage";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminGymsPage from "@/pages/AdminGymsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,7 +26,12 @@ function Router() {
       </Route>
       <Route path="/admin">
         <ProtectedRoute>
-          <AdminPage />
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/gyms">
+        <ProtectedRoute>
+          <AdminGymsPage />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />
