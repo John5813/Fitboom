@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/gyms", requireAdmin, async (req, res) => {
+  app.post("/api/gyms", requireAuth, async (req, res) => {
     try {
       const gymData = insertGymSchema.parse(req.body);
 
@@ -184,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/gyms/:id", requireAdmin, async (req, res) => {
+  app.put("/api/gyms/:id", requireAuth, async (req, res) => {
     try {
       const updateData = insertGymSchema.partial().parse(req.body);
       const gym = await storage.updateGym(req.params.id, updateData);
@@ -197,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/gyms/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/gyms/:id", requireAuth, async (req, res) => {
     try {
       const success = await storage.deleteGym(req.params.id);
       if (!success) {
@@ -403,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/classes', requireAdmin, async (req, res) => {
+  app.post('/api/classes', requireAuth, async (req, res) => {
     try {
       const classData = insertOnlineClassSchema.parse(req.body);
       const onlineClass = await storage.createClass(classData);
@@ -413,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/classes/:id', requireAdmin, async (req, res) => {
+  app.delete('/api/classes/:id', requireAuth, async (req, res) => {
     try {
       await storage.deleteClass(req.params.id);
       res.json({ success: true });
