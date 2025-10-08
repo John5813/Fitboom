@@ -307,7 +307,7 @@ export default function HomePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">Hali sport zallar qo'shilmagan. Admin paneldan qo'shing.</p>
+              <p className="text-muted-foreground">Hozircha yaqin atrofda sport zallar mavjud emas.</p>
             )}
           </div>
 
@@ -368,7 +368,7 @@ export default function HomePage() {
 
               {filteredGyms.length === 0 && (
                 <div className="text-center py-12">
-                  <p className="text-muted-foreground">Hech qanday zal topilmadi</p>
+                  <p className="text-muted-foreground">Sizning qidiruv shartingizga mos sport zal topilmadi</p>
                 </div>
               )}
             </>
@@ -409,7 +409,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Hali online darslar qo'shilmagan. Admin paneldan qo'shing.</p>
+              <p className="text-muted-foreground">Hozircha online darslar mavjud emas. Tez orada yangi darslar qo'shiladi!</p>
             </div>
           )}
         </div>
