@@ -1,9 +1,9 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { VideoCollection, UserPurchase } from "@shared/schema";
+import type { VideoCollection, UserPurchase, OnlineClass } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Video, Check, ShoppingCart } from "lucide-react";
+import { Video, Check, ShoppingCart, PlayCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -123,6 +123,12 @@ export default function CoursesPage() {
 
                   <CardContent>
                     <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <PlayCircle className="h-3 w-3" />
+                          {(collection as any).videoCount || 0} ta video
+                        </Badge>
+                      </div>
                       <div>
                         <p className="text-2xl font-bold">
                           {collection.price.toLocaleString()} so'm

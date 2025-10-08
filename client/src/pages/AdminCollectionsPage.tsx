@@ -182,6 +182,7 @@ export default function AdminCollectionsPage() {
               <TableRow>
                 <TableHead className="w-16">№</TableHead>
                 <TableHead>To'plam Nomi</TableHead>
+                <TableHead>Videolar</TableHead>
                 <TableHead>Narx</TableHead>
                 <TableHead className="w-32">Harakatlar</TableHead>
               </TableRow>
@@ -192,6 +193,9 @@ export default function AdminCollectionsPage() {
                   <TableCell className="font-medium">{index + 1}</TableCell>
                   <TableCell className="font-semibold" data-testid={`text-collection-name-${collection.id}`}>
                     {collection.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{(collection as any).videoCount || 0} ta</Badge>
                   </TableCell>
                   <TableCell>{collection.price.toLocaleString()} so'm</TableCell>
                   <TableCell>
@@ -363,14 +367,17 @@ export default function AdminCollectionsPage() {
             </div>
 
             <div>
-              <Label htmlFor="videoUrl">Video URL (YouTube/Vimeo) *</Label>
+              <Label htmlFor="videoUrl">Video URL *</Label>
               <Input
                 id="videoUrl"
                 value={videoForm.videoUrl}
                 onChange={(e) => setVideoForm({ ...videoForm, videoUrl: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..."
+                placeholder="https://... (YouTube, Vimeo, yoki boshqa video URL)"
                 data-testid="input-video-url"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Har qanday video platformasidan URL kiriting
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

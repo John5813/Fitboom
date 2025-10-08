@@ -13,6 +13,8 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminGymsPage from "@/pages/AdminGymsPage";
 import AdminCollectionsPage from "@/pages/AdminCollectionsPage";
 import CoursesPage from "@/pages/CoursesPage";
+import MyCourseDetailPage from "@/pages/MyCourseDetailPage";
+import VideoPlayerPage from "@/pages/VideoPlayerPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -44,6 +46,16 @@ function Router() {
       <Route path="/courses">
         <ProtectedRoute>
           <CoursesPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/my-courses/:id">
+        <ProtectedRoute>
+          <MyCourseDetailPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/watch/:id">
+        <ProtectedRoute>
+          <VideoPlayerPage />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

@@ -397,7 +397,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/collections', async (req, res) => {
     try {
       const collections = await storage.getVideoCollections();
-      res.json({ collections });
+      const allClasses = await storage.getClasses();
+      
+      // Har bir collection uchun video sonini hisoblash
+      const collectionsWithCount = collections.map(collection => ({
+        ...collection,
+        videoCount: allClasses.filter(c => c.collectionId === collection.id).length
+      }));
+      
+      res.json({ collections: collectionsWithCount });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch collections' });
     }
@@ -451,11 +459,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Online Classes routes
-  app.get('/api/classes', async (req, res) => {
+  app.get('/api/classes', requireAuth, async (req, res) => {
     try {
       const collectionId = req.query.collectionId as string | undefined;
-      const classes = await storage.getClasses(collectionId);
-      res.json({ classes });
+      
+      // Admin uchun barcha classlarni qaytarish
+      if (req.user!.isAdmin) {
+        const classes = await storage.getClasses(collectionId);
+        return res.json({ classes });
+      }
+      
+      // Oddiy foydalanuvchilar uchun
+      if (collectionId) {
+        // Bitta collection uchun sotib olganligini tekshirish
+        const hasPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+        if (!hasPurchased) {
+          return res.status(403).json({ error: 'Bu to\'plamga ruxsat yo\'q' });
+        }
+        const classes = await storage.getClasses(collectionId);
+        return res.json({ classes });
+      } else {
+        // CollectionId bo'lmasa, faqat sotib olingan to'plamlardagi classlarni qaytarish
+        const purchases = await storage.getUserPurchases(req.user!.id);
+        const purchasedCollectionIds = purchases.map(p => p.collectionId);
+        const allClasses = await storage.getClasses();
+        const purchasedClasses = allClasses.filter(c => purchasedCollectionIds.includes(c.collectionId));
+        return res.json({ classes: purchasedClasses });
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch classes' });
     }

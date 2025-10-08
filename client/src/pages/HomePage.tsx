@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Video } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";

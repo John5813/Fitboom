@@ -118,8 +118,6 @@ export default function AdminGymsPage() {
               <TableRow>
                 <TableHead className="w-16">№</TableHead>
                 <TableHead>Zal Nomi</TableHead>
-                <TableHead>Kategoriya</TableHead>
-                <TableHead>Kredit</TableHead>
                 <TableHead className="w-24">Harakatlar</TableHead>
               </TableRow>
             </TableHeader>
@@ -130,10 +128,6 @@ export default function AdminGymsPage() {
                   <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
                     {gym.name}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{gym.category}</Badge>
-                  </TableCell>
-                  <TableCell>{gym.credits} kredit</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
