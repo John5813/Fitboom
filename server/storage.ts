@@ -1,6 +1,6 @@
-import { users, gyms, onlineClasses, bookings, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -12,14 +12,24 @@ export interface IStorage {
   createGym(gym: InsertGym): Promise<Gym>;
   updateGym(id: string, updateData: Partial<InsertGym>): Promise<Gym | undefined>;
   deleteGym(id: string): Promise<boolean>;
-  getClasses(): Promise<OnlineClass[]>;
+  getVideoCollections(): Promise<VideoCollection[]>;
+  getVideoCollection(id: string): Promise<VideoCollection | undefined>;
+  createVideoCollection(collection: InsertVideoCollection): Promise<VideoCollection>;
+  updateVideoCollection(id: string, updateData: Partial<InsertVideoCollection>): Promise<VideoCollection | undefined>;
+  deleteVideoCollection(id: string): Promise<boolean>;
+  getClasses(collectionId?: string): Promise<OnlineClass[]>;
+  getClass(id: string): Promise<OnlineClass | undefined>;
   createClass(onlineClass: InsertOnlineClass): Promise<OnlineClass>;
   deleteClass(id: string): Promise<void>;
+  getUserPurchases(userId: string): Promise<UserPurchase[]>;
+  createUserPurchase(purchase: InsertUserPurchase): Promise<UserPurchase>;
+  hasPurchased(userId: string, collectionId: string): Promise<boolean>;
   getBookings(userId?: string): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, updateData: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<boolean>;
+  completeBooking(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,8 +91,47 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async getClasses(): Promise<OnlineClass[]> {
+  async getVideoCollections(): Promise<VideoCollection[]> {
+    return await db.select().from(videoCollections);
+  }
+
+  async getVideoCollection(id: string): Promise<VideoCollection | undefined> {
+    const [collection] = await db.select().from(videoCollections).where(eq(videoCollections.id, id));
+    return collection || undefined;
+  }
+
+  async createVideoCollection(insertCollection: InsertVideoCollection): Promise<VideoCollection> {
+    const [collection] = await db
+      .insert(videoCollections)
+      .values(insertCollection)
+      .returning();
+    return collection;
+  }
+
+  async updateVideoCollection(id: string, updateData: Partial<InsertVideoCollection>): Promise<VideoCollection | undefined> {
+    const [collection] = await db
+      .update(videoCollections)
+      .set(updateData)
+      .where(eq(videoCollections.id, id))
+      .returning();
+    return collection || undefined;
+  }
+
+  async deleteVideoCollection(id: string): Promise<boolean> {
+    const result = await db.delete(videoCollections).where(eq(videoCollections.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getClasses(collectionId?: string): Promise<OnlineClass[]> {
+    if (collectionId) {
+      return await db.select().from(onlineClasses).where(eq(onlineClasses.collectionId, collectionId));
+    }
     return await db.select().from(onlineClasses);
+  }
+
+  async getClass(id: string): Promise<OnlineClass | undefined> {
+    const [onlineClass] = await db.select().from(onlineClasses).where(eq(onlineClasses.id, id));
+    return onlineClass || undefined;
   }
 
   async createClass(insertClass: InsertOnlineClass): Promise<OnlineClass> {
@@ -95,6 +144,29 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClass(id: string): Promise<void> {
     await db.delete(onlineClasses).where(eq(onlineClasses.id, id));
+  }
+
+  async getUserPurchases(userId: string): Promise<UserPurchase[]> {
+    return await db.select().from(userPurchases).where(eq(userPurchases.userId, userId));
+  }
+
+  async createUserPurchase(insertPurchase: InsertUserPurchase): Promise<UserPurchase> {
+    const [purchase] = await db
+      .insert(userPurchases)
+      .values(insertPurchase)
+      .returning();
+    return purchase;
+  }
+
+  async hasPurchased(userId: string, collectionId: string): Promise<boolean> {
+    const [purchase] = await db
+      .select()
+      .from(userPurchases)
+      .where(and(
+        eq(userPurchases.userId, userId),
+        eq(userPurchases.collectionId, collectionId)
+      ));
+    return !!purchase;
   }
 
   async getBookings(userId?: string): Promise<Booking[]> {
