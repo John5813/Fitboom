@@ -63,9 +63,9 @@ export default function AdminDashboard() {
               <p className="text-sm text-muted-foreground mb-4">
                 Video darslik to'plamlarini yaratish va boshqarish
               </p>
-              <Link href="/admin">
-                <Button className="w-full" variant="outline" data-testid="button-manage-collections">
-                  To'plamlar (Tez kunda)
+              <Link href="/admin/collections">
+                <Button className="w-full" data-testid="button-manage-collections">
+                  To'plamlar Ro'yxati
                 </Button>
               </Link>
             </CardContent>

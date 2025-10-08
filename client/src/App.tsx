@@ -11,6 +11,8 @@ import HomePage from "@/pages/HomePage";
 import AdminPage from "@/pages/AdminPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminGymsPage from "@/pages/AdminGymsPage";
+import AdminCollectionsPage from "@/pages/AdminCollectionsPage";
+import CoursesPage from "@/pages/CoursesPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -32,6 +34,16 @@ function Router() {
       <Route path="/admin/gyms">
         <ProtectedRoute>
           <AdminGymsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/collections">
+        <ProtectedRoute>
+          <AdminCollectionsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/courses">
+        <ProtectedRoute>
+          <CoursesPage />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

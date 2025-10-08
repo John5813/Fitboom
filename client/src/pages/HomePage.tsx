@@ -309,6 +309,26 @@ export default function HomePage() {
               <p className="text-muted-foreground">Hali sport zallar qo'shilmagan. Admin paneldan qo'shing.</p>
             )}
           </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-semibold text-xl">Video Kurslar</h2>
+              <Link href="/courses">
+                <Button variant="ghost" size="sm" data-testid="button-all-courses">
+                  Barchasini ko'rish →
+                </Button>
+              </Link>
+            </div>
+            <p className="text-muted-foreground text-sm mb-4">
+              Professional trenerjlardan video darsliklar to'plami
+            </p>
+            <Link href="/courses">
+              <Button className="w-full" data-testid="button-explore-courses">
+                <Video className="h-4 w-4 mr-2" />
+                Kurslarni Ko'rish
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 
