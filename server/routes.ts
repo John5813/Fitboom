@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema } from "@shared/schema";
+import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
@@ -206,6 +206,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete gym" });
+    }
+  });
+
+  // Time Slots routes
+  app.get("/api/time-slots", async (req, res) => {
+    try {
+      const gymId = req.query.gymId as string | undefined;
+      const timeSlots = await storage.getTimeSlots(gymId);
+      res.json({ timeSlots });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch time slots" });
+    }
+  });
+
+  app.get("/api/time-slots/:id", async (req, res) => {
+    try {
+      const timeSlot = await storage.getTimeSlot(req.params.id);
+      if (!timeSlot) {
+        return res.status(404).json({ error: "Time slot not found" });
+      }
+      res.json({ timeSlot });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch time slot" });
+    }
+  });
+
+  app.post("/api/time-slots", requireAuth, async (req, res) => {
+    try {
+      const timeSlotData = insertTimeSlotSchema.parse(req.body);
+      const timeSlot = await storage.createTimeSlot(timeSlotData);
+      res.json({ timeSlot });
+    } catch (error: any) {
+      console.error("Error creating time slot:", error);
+      res.status(400).json({ error: error.message || "Invalid time slot data" });
+    }
+  });
+
+  app.put("/api/time-slots/:id", requireAuth, async (req, res) => {
+    try {
+      const updateData = insertTimeSlotSchema.partial().parse(req.body);
+      const timeSlot = await storage.updateTimeSlot(req.params.id, updateData);
+      if (!timeSlot) {
+        return res.status(404).json({ error: "Time slot not found" });
+      }
+      res.json({ timeSlot });
+    } catch (error) {
+      res.status(400).json({ error: "Invalid time slot data" });
+    }
+  });
+
+  app.delete("/api/time-slots/:id", requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteTimeSlot(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Time slot not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete time slot" });
     }
   });
 
