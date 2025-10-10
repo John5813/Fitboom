@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video } from "lucide-react";
+import { Video, MapPin } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -336,7 +336,15 @@ export default function HomePage() {
       {/* Gyms Tab */}
       {activeTab === 'gyms' && (
         <div className="p-4 space-y-6">
-          <h1 className="font-display font-bold text-2xl">Sport Zallari</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-display font-bold text-2xl">Sport Zallari</h1>
+            <Link href="/map">
+              <Button variant="outline" size="sm" data-testid="button-view-map">
+                <MapPin className="h-4 w-4 mr-2" />
+                Haritada Ko'rish
+              </Button>
+            </Link>
+          </div>
 
           <GymFilters 
             categories={categories}

@@ -1,5 +1,6 @@
-import { Home, Dumbbell, Video, Calendar, QrCode } from "lucide-react";
+import { Home, Dumbbell, Video, Calendar, QrCode, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 interface BottomNavProps {
   activeTab: string;
