@@ -631,27 +631,33 @@ export default function AdminGymsPage() {
       <Dialog open={isQRDialogOpen} onOpenChange={setIsQRDialogOpen}>
         <DialogContent className="max-w-md" data-testid="dialog-qr-code">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl">QR Kod</DialogTitle>
+            <DialogTitle className="font-display text-2xl">QR Kod Yaratildi</DialogTitle>
             <DialogDescription>
-              {createdGym?.name} uchun QR kod yaratildi
+              {createdGym?.name} uchun QR kod muvaffaqiyatli yaratildi
             </DialogDescription>
           </DialogHeader>
           
           {createdGym && createdGym.qrCode && (
             <div className="space-y-4">
-              <div className="flex justify-center">
+              <div className="flex justify-center bg-white p-6 rounded-lg">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(createdGym.qrCode)}`}
                   alt="QR Code"
-                  className="rounded-lg border"
+                  className="rounded-lg border-4 border-primary/20"
                   data-testid="img-qr-code"
                 />
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-sm text-muted-foreground text-center">
                   Bu QR kodni sport zalda joylashtiring. Foydalanuvchilar uni skanerlash orqali kirishi mumkin.
                 </p>
+                
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs font-mono text-center break-all">
+                    {createdGym.qrCode}
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-3">

@@ -556,12 +556,12 @@ export default function AdminPage() {
                           </div>
                           
                           {/* QR Code - Always visible */}
-                          <div className="bg-muted p-3 rounded-lg mb-3">
-                            <p className="text-xs font-medium mb-2 text-center">QR Kod:</p>
+                          <div className="bg-white p-3 rounded-lg mb-3 border-2 border-primary/10">
+                            <p className="text-xs font-semibold mb-2 text-center text-primary">QR Kod:</p>
                             <img 
                               src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(gym.qrCode || '')}`} 
                               alt="QR Code" 
-                              className="w-32 h-32 mx-auto border-2 border-background rounded"
+                              className="w-32 h-32 mx-auto border-2 border-primary/20 rounded"
                             />
                             <div className="flex flex-col sm:flex-row gap-1 mt-2">
                               <Button
