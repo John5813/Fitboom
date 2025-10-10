@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Gym } from "@shared/schema";
+import type { Gym, TimeSlot } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Eye, Plus, ArrowLeft } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, Plus, ArrowLeft, Clock, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -17,6 +18,7 @@ import { Link } from "wouter";
 export default function AdminGymsPage() {
   const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [gymForm, setGymForm] = useState({
@@ -32,11 +34,25 @@ export default function AdminGymsPage() {
     longitude: '',
   });
 
+  const [timeSlotForm, setTimeSlotForm] = useState({
+    dayOfWeek: '',
+    startTime: '',
+    endTime: '',
+    capacity: '',
+  });
+
   const { data: gymsData, isLoading } = useQuery<{ gyms: Gym[] }>({
     queryKey: ['/api/gyms'],
   });
 
+  const { data: timeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
+    queryKey: ['/api/time-slots', selectedGym?.id],
+    enabled: !!selectedGym?.id,
+    queryFn: () => fetch(`/api/time-slots?gymId=${selectedGym?.id}`, { credentials: 'include' }).then(res => res.json()),
+  });
+
   const gyms = gymsData?.gyms || [];
+  const timeSlots = timeSlotsData?.timeSlots || [];
 
   const createGymMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -72,6 +88,55 @@ export default function AdminGymsPage() {
     }
   });
 
+  const createTimeSlotMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('/api/time-slots', 'POST', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/time-slots', selectedGym?.id] });
+      toast({
+        title: "Vaqt sloti qo'shildi",
+        description: "Yangi vaqt sloti muvaffaqiyatli qo'shildi.",
+      });
+      setIsTimeSlotDialogOpen(false);
+      setTimeSlotForm({
+        dayOfWeek: '',
+        startTime: '',
+        endTime: '',
+        capacity: '',
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Vaqt sloti qo'shishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteTimeSlotMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/time-slots/${id}`, 'DELETE');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/time-slots', selectedGym?.id] });
+      toast({
+        title: "Vaqt sloti o'chirildi",
+        description: "Vaqt sloti muvaffaqiyatli o'chirildi.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Vaqt sloti o'chirishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCreateGym = () => {
     if (!gymForm.name || !gymForm.address || !gymForm.credits || !gymForm.category) {
       toast({
@@ -86,6 +151,40 @@ export default function AdminGymsPage() {
       ...gymForm,
       credits: parseInt(gymForm.credits)
     });
+  };
+
+  const handleCreateTimeSlot = () => {
+    if (!timeSlotForm.dayOfWeek || !timeSlotForm.startTime || !timeSlotForm.endTime || !timeSlotForm.capacity) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "Iltimos, barcha maydonlarni to'ldiring.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedGym) {
+      toast({
+        title: "Xatolik",
+        description: "Zal tanlanmagan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const capacity = parseInt(timeSlotForm.capacity);
+    createTimeSlotMutation.mutate({
+      gymId: selectedGym.id,
+      dayOfWeek: timeSlotForm.dayOfWeek,
+      startTime: timeSlotForm.startTime,
+      endTime: timeSlotForm.endTime,
+      capacity: capacity,
+      availableSpots: capacity,
+    });
+  };
+
+  const handleDeleteTimeSlot = (id: string) => {
+    deleteTimeSlotMutation.mutate(id);
   };
 
   return (
@@ -208,8 +307,148 @@ export default function AdminGymsPage() {
                   />
                 </div>
               )}
+
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Vaqt slotlari</h3>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsTimeSlotDialogOpen(true)}
+                    data-testid="button-add-time-slot"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Qo'shish
+                  </Button>
+                </div>
+                
+                {timeSlots.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Vaqt slotlari yo'q
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {timeSlots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                        data-testid={`time-slot-${slot.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium text-sm">
+                              {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {slot.availableSpots}/{slot.capacity} joy mavjud
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteTimeSlot(slot.id)}
+                          data-testid={`button-delete-slot-${slot.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Time Slot Dialog */}
+      <Dialog open={isTimeSlotDialogOpen} onOpenChange={setIsTimeSlotDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-create-time-slot">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Vaqt Sloti Qo'shish</DialogTitle>
+            <DialogDescription>
+              {selectedGym?.name} uchun yangi vaqt sloti yarating
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="dayOfWeek">Kun *</Label>
+              <Select
+                value={timeSlotForm.dayOfWeek}
+                onValueChange={(value) => setTimeSlotForm({ ...timeSlotForm, dayOfWeek: value })}
+              >
+                <SelectTrigger id="dayOfWeek" data-testid="select-day-of-week">
+                  <SelectValue placeholder="Kunni tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dushanba">Dushanba</SelectItem>
+                  <SelectItem value="Seshanba">Seshanba</SelectItem>
+                  <SelectItem value="Chorshanba">Chorshanba</SelectItem>
+                  <SelectItem value="Payshanba">Payshanba</SelectItem>
+                  <SelectItem value="Juma">Juma</SelectItem>
+                  <SelectItem value="Shanba">Shanba</SelectItem>
+                  <SelectItem value="Yakshanba">Yakshanba</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startTime">Boshlanish vaqti *</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={timeSlotForm.startTime}
+                  onChange={(e) => setTimeSlotForm({ ...timeSlotForm, startTime: e.target.value })}
+                  data-testid="input-start-time"
+                />
+              </div>
+              <div>
+                <Label htmlFor="endTime">Tugash vaqti *</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={timeSlotForm.endTime}
+                  onChange={(e) => setTimeSlotForm({ ...timeSlotForm, endTime: e.target.value })}
+                  data-testid="input-end-time"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="capacity">Sig'im (kishi) *</Label>
+              <Input
+                id="capacity"
+                type="number"
+                min="1"
+                value={timeSlotForm.capacity}
+                onChange={(e) => setTimeSlotForm({ ...timeSlotForm, capacity: e.target.value })}
+                placeholder="Misol: 20"
+                data-testid="input-capacity"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleCreateTimeSlot}
+                disabled={createTimeSlotMutation.isPending}
+                className="flex-1"
+                data-testid="button-submit-time-slot"
+              >
+                {createTimeSlotMutation.isPending ? 'Yuklanmoqda...' : "Qo'shish"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsTimeSlotDialogOpen(false)}
+                className="flex-1"
+                data-testid="button-cancel-time-slot"
+              >
+                Bekor qilish
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

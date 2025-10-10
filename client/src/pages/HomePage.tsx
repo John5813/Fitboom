@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin } from "lucide-react";
+import { Video, MapPin, Clock } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -14,11 +14,24 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Gym, Booking } from "@shared/schema";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 import gymImage from "@assets/generated_images/Standard_gym_facility_interior_f255ae25.png";
 import poolImage from "@assets/generated_images/Swimming_pool_facility_9aea752a.png";
 import yogaImage from "@assets/generated_images/Yoga_studio_space_83aaaeab.png";
 import classImage from "@assets/generated_images/Online_fitness_class_instructor_ef28ee4a.png";
+
+// Define TimeSlot type if not already defined in schema
+interface TimeSlot {
+  id: string;
+  gymId: string;
+  startTime: string;
+  endTime: string;
+  dayOfWeek: string;
+  availableSpots: number;
+}
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('home');
@@ -30,13 +43,15 @@ export default function HomePage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
 
   // Check for payment success/cancel in URL
   useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
     const credits = urlParams.get('credits');
-    
+
     if (paymentStatus === 'success') {
       toast({
         title: "To'lov muvaffaqiyatli!",
@@ -65,6 +80,13 @@ export default function HomePage() {
 
   const gyms = gymsData?.gyms || [];
 
+  // Fetch time slots from API
+  const { data: timeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
+    queryKey: ['/api/time-slots', selectedGymForBooking?.id],
+    enabled: !!selectedGymForBooking?.id,
+    queryFn: () => fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}`, { credentials: 'include' }).then(res => res.json()),
+  });
+
   // Fallback images for gyms based on category
   const getGymImage = (category: string) => {
     switch (category.toLowerCase()) {
@@ -87,6 +109,7 @@ export default function HomePage() {
   // Fetch bookings from API
   const { data: bookingsData } = useQuery<{ bookings: Booking[] }>({
     queryKey: ['/api/bookings'],
+    enabled: !!user,
   });
 
   const bookings = bookingsData?.bookings || [];
@@ -98,12 +121,12 @@ export default function HomePage() {
   });
 
   const bookGymMutation = useMutation({
-    mutationFn: async (gymId: string) => {
+    mutationFn: async (variables: { gymId: string; timeSlotId?: string }) => {
       const response = await fetch('/api/book-gym', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ gymId }),
+        body: JSON.stringify(variables),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -121,6 +144,8 @@ export default function HomePage() {
         title: "Muvaffaqiyatli bron qilindi!",
         description: `${data.creditsUsed} kredit ishlatildi.`,
       });
+      setSelectedGymForBooking(null);
+      setSelectedTimeSlot(null);
     },
     onError: (error: Error) => {
       toast({
@@ -160,12 +185,24 @@ export default function HomePage() {
     },
   });
 
-  const handleBookGym = (gymId: string) => {
-    bookGymMutation.mutate(gymId);
-  };
-
   const handleCancelBooking = (bookingId: string) => {
     cancelBookingMutation.mutate(bookingId);
+  };
+
+  const handleBookGym = (gymId: string) => {
+    const gym = gyms?.find(g => g.id === gymId);
+    if (gym) {
+      setSelectedGymForBooking(gym);
+    }
+  };
+
+  const handleConfirmBooking = () => {
+    if (!selectedGymForBooking) return;
+
+    bookGymMutation.mutate({
+      gymId: selectedGymForBooking.id,
+      timeSlotId: selectedTimeSlot?.id,
+    });
   };
 
   const purchaseMutation = useMutation({
@@ -501,6 +538,87 @@ export default function HomePage() {
         onScan={handleQRScan}
         gymId={selectedBooking?.gymId} // Pass gymId to QRScanner
       />
+
+      {/* Time Slot Selection Dialog */}
+      <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
+        <DialogContent className="max-w-md" data-testid="dialog-select-time-slot">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Vaqtni tanlang</DialogTitle>
+            <DialogDescription>
+              {selectedGymForBooking?.name} uchun vaqt slotini tanlang
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {timeSlotsData?.timeSlots && timeSlotsData.timeSlots.length > 0 ? (
+              <div className="space-y-2">
+                {timeSlotsData.timeSlots
+                  .filter(slot => slot.availableSpots > 0)
+                  .map((slot) => (
+                    <Card
+                      key={slot.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedTimeSlot?.id === slot.id
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:border-primary/50'
+                      }`}
+                      onClick={() => setSelectedTimeSlot(slot)}
+                      data-testid={`card-time-slot-${slot.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Clock className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">
+                                {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {slot.availableSpots} joy mavjud
+                              </p>
+                            </div>
+                          </div>
+                          {selectedTimeSlot?.id === slot.id && (
+                            <Badge>Tanlandi</Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">
+                  Bu zal uchun vaqt slotlari yo'q. Vaqtsiz bron qilishingiz mumkin.
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleConfirmBooking}
+                disabled={bookGymMutation.isPending}
+                className="flex-1"
+                data-testid="button-confirm-booking"
+              >
+                {bookGymMutation.isPending ? 'Yuklanmoqda...' : 'Tasdiqlash'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedGymForBooking(null);
+                  setSelectedTimeSlot(null);
+                }}
+                className="flex-1"
+                data-testid="button-cancel-booking"
+              >
+                Bekor qilish
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
