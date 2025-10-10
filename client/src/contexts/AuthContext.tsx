@@ -15,6 +15,7 @@ interface AuthContextType {
   register: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
+  isAuthenticated: boolean;
   setUserAsAdmin: () => void;
 }
 
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => {},
   logout: async () => {},
   isLoading: true,
+  isAuthenticated: false,
   setUserAsAdmin: () => {},
 });
 
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     register,
     logout,
     isLoading,
+    isAuthenticated,
     setUserAsAdmin,
   };
 
