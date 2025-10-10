@@ -11,22 +11,26 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   isLoading: boolean;
-  isAuthenticated: boolean;
   setUserAsAdmin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
   isLoading: true,
-  isAuthenticated: false,
   setUserAsAdmin: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
   const [localUser, setLocalUser] = useState<User | null>(null);
-  
+
   const { data, isLoading } = useQuery<{ user: User }>({
     queryKey: ['/api/user'],
     retry: false,
@@ -36,11 +40,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const user = localUser || serverUser;
   const isAuthenticated = !!user;
 
+  const login = async (username: string, password: string) => {
+    // Implement login logic here
+  };
+
+  const register = async (username: string, password: string) => {
+    // Implement register logic here
+  };
+
+  const logout = async () => {
+    // Implement logout logic here
+    setLocalUser(null);
+    setLocation("/login");
+  };
+
   const setUserAsAdmin = () => {
-    if (serverUser) {
+    if (user) {
       setLocalUser({
-        ...serverUser,
-        isAdmin: true,
+        ...user,
+        isAdmin: true
       });
     }
   };
@@ -51,8 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [serverUser]);
 
+  const value = {
+    user,
+    login,
+    register,
+    logout,
+    isLoading,
+    setUserAsAdmin,
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated, setUserAsAdmin }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
