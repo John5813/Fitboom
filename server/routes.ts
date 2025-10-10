@@ -510,7 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/collections', requireAdmin, async (req, res) => {
+  app.post('/api/collections', requireAuth, async (req, res) => {
     try {
       const collectionData = insertVideoCollectionSchema.parse(req.body);
       const collection = await storage.createVideoCollection(collectionData);
@@ -520,7 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/collections/:id', requireAdmin, async (req, res) => {
+  app.put('/api/collections/:id', requireAuth, async (req, res) => {
     try {
       const updateData = insertVideoCollectionSchema.partial().parse(req.body);
       const collection = await storage.updateVideoCollection(req.params.id, updateData);
@@ -533,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/collections/:id', requireAdmin, async (req, res) => {
+  app.delete('/api/collections/:id', requireAuth, async (req, res) => {
     try {
       const success = await storage.deleteVideoCollection(req.params.id);
       if (!success) {
@@ -578,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/classes', requireAdmin, async (req, res) => {
+  app.post('/api/classes', requireAuth, async (req, res) => {
     try {
       const classData = insertOnlineClassSchema.parse(req.body);
       const onlineClass = await storage.createClass(classData);
@@ -588,7 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/classes/:id', requireAdmin, async (req, res) => {
+  app.delete('/api/classes/:id', requireAuth, async (req, res) => {
     try {
       await storage.deleteClass(req.params.id);
       res.json({ success: true });

@@ -6,6 +6,7 @@ interface User {
   id: string;
   username: string;
   credits: number;
+  isAdmin: boolean;
 }
 
 interface AuthContextType {
