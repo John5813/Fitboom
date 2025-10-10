@@ -12,27 +12,46 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  setUserAsAdmin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  setUserAsAdmin: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
+  const [localUser, setLocalUser] = useState<User | null>(null);
   
   const { data, isLoading } = useQuery<{ user: User }>({
     queryKey: ['/api/user'],
     retry: false,
   });
 
-  const user = data?.user || null;
+  const serverUser = data?.user || null;
+  const user = localUser || serverUser;
   const isAuthenticated = !!user;
 
+  const setUserAsAdmin = () => {
+    if (serverUser) {
+      setLocalUser({
+        ...serverUser,
+        isAdmin: true,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (serverUser) {
+      setLocalUser(serverUser);
+    }
+  }, [serverUser]);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated, setUserAsAdmin }}>
       {children}
     </AuthContext.Provider>
   );

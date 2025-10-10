@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Video, MapPin, Clock } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
@@ -41,10 +41,11 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null); // Added state for selected booking
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, setUserAsAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+  const [, setLocation] = useLocation();
 
   // Check for payment success/cancel in URL
   useState(() => {
@@ -311,11 +312,17 @@ export default function HomePage() {
               <h1 className="font-display font-bold text-3xl mb-2">FitBoom</h1>
               <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
             </div>
-            <Link href="/admin">
-              <Button variant="outline" size="sm" data-testid="button-admin-panel">
-                Admin Panel
-              </Button>
-            </Link>
+            {/* Test Admin tugmasi */}
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setUserAsAdmin();
+                setLocation('/admin-dashboard');
+              }}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Admin Panel (Test)
+            </Button>
           </div>
 
           <CreditBalance 
