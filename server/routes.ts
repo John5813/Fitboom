@@ -6,65 +6,8 @@ import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBooki
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
-import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  const stripeEnabled = !!process.env.STRIPE_SECRET_KEY;
-  const stripe = stripeEnabled ? new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-08-27.basil",
-  }) : null;
-
-  if (!stripeEnabled) {
-    console.log('⚠️  Stripe is disabled - payment features will use test mode');
-  }
-
-  // Stripe webhook needs raw body, so we handle it before other routes
-  if (stripeEnabled && stripe) {
-    app.post('/api/stripe-webhook', 
-      express.raw({ type: 'application/json' }),
-      async (req, res) => {
-        const sig = req.headers['stripe-signature'] as string;
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-        let event: Stripe.Event;
-
-        try {
-          if (webhookSecret && sig) {
-            event = stripe.webhooks.constructEvent(
-              req.body,
-              sig,
-              webhookSecret
-            );
-          } else {
-            // Development fallback - parse the body as JSON
-            const bodyString = req.body.toString('utf8');
-            event = JSON.parse(bodyString);
-          }
-          
-          if (event.type === 'checkout.session.completed') {
-            const session = event.data.object as Stripe.Checkout.Session;
-            
-            const userId = session.metadata?.userId || session.client_reference_id;
-            const credits = parseInt(session.metadata?.credits || '0');
-
-            if (userId && credits) {
-              const currentUser = await storage.getUser(userId);
-              if (currentUser) {
-                const newCredits = currentUser.credits + credits;
-                await storage.updateUserCredits(userId, newCredits);
-                console.log(`Added ${credits} credits to user ${userId}. New balance: ${newCredits}`);
-              }
-            }
-          }
-
-          res.json({ received: true });
-        } catch (error: any) {
-          console.error('Webhook error:', error);
-          res.status(400).send(`Webhook Error: ${error.message}`);
-        }
-      }
-    );
-  }
 
   // Authentication routes
   app.post("/api/register", async (req, res, next) => {
@@ -296,78 +239,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Server-side pricing for credit packages
-  const creditPackages: Record<number, number> = {
-    6: 5,
-    13: 10,
-    24: 18,
-  };
+  // Ruxsat etilgan kredit paketlari
+  const allowedCreditPackages = [6, 13, 24];
 
-  // Create Stripe checkout session for purchasing credits
-  app.post('/api/create-checkout-session', requireAuth, async (req, res) => {
+  // Purchase credits (simplified - with validation)
+  app.post('/api/purchase-credits', requireAuth, async (req, res) => {
     try {
       const { credits } = req.body;
 
-      if (!credits || !creditPackages[credits]) {
-        return res.status(400).json({ message: "Noto'g'ri kredit paketi" });
+      // Faqat ruxsat etilgan paketlarni qabul qilish
+      if (!credits || !allowedCreditPackages.includes(credits)) {
+        return res.status(400).json({ message: "Noto'g'ri kredit paketi. Faqat 6, 13 yoki 24 kredit sotib olish mumkin" });
       }
 
-      const price = creditPackages[credits];
-
-      // TEST MODE: If Stripe is not enabled, simulate purchase
-      if (!stripeEnabled || !stripe) {
-        console.log(`⚠️  TEST MODE: Simulating credit purchase for user ${req.user!.id}`);
-        
-        // Directly add credits to user in test mode
-        const user = await storage.getUser(req.user!.id);
-        if (user) {
-          const newCredits = user.credits + credits;
-          await storage.updateUserCredits(req.user!.id, newCredits);
-          console.log(`✅ TEST MODE: Added ${credits} credits to user ${req.user!.id}. New balance: ${newCredits}`);
-        }
-
-        // Return success response
-        return res.json({ 
-          testMode: true,
-          message: "Test rejimida kredit qo'shildi",
-          credits: credits 
-        });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
       }
+
+      const newCredits = user.credits + credits;
+      await storage.updateUserCredits(req.user!.id, newCredits);
       
-      // Build the base URL properly
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'http://localhost:5000';
+      console.log(`✅ Kredit qo'shildi: ${credits} kredit foydalanuvchi ${req.user!.id} ga. Yangi balans: ${newCredits}`);
 
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `${credits} FitBoom Krediti`,
-                description: `${credits} kredit sotib olish`,
-              },
-              unit_amount: Math.round(price * 100),
-            },
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${baseUrl}/?payment=success&credits=${credits}`,
-        cancel_url: `${baseUrl}/?payment=cancelled`,
-        client_reference_id: req.user!.id,
-        metadata: {
-          userId: req.user!.id,
-          credits: credits.toString(),
-        },
+      res.json({ 
+        success: true,
+        message: "Kredit muvaffaqiyatli qo'shildi",
+        credits: newCredits
       });
-
-      console.log('Checkout session created:', session.id);
-      res.json({ sessionId: session.id, url: session.url });
     } catch (error: any) {
-      console.error('Stripe checkout error:', error);
+      console.error('Kredit qo\'shish xatosi:', error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -625,22 +526,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
       }
 
-      // TEST MODE: Auto purchase without payment
-      if (!stripeEnabled || !stripe) {
-        const purchase = await storage.createUserPurchase({
-          userId: req.user!.id,
-          collectionId: collectionId,
-        });
+      const purchase = await storage.createUserPurchase({
+        userId: req.user!.id,
+        collectionId: collectionId,
+      });
 
-        return res.json({
-          message: "To'plam muvaffaqiyatli sotib olindi (test rejim)",
-          purchase,
-          testMode: true
-        });
-      }
-
-      // TODO: Implement Stripe payment for collections
-      res.status(501).json({ message: "To'lov tizimi hali ishlanmoqda" });
+      res.json({
+        success: true,
+        message: "To'plam muvaffaqiyatli sotib olindi",
+        purchase
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

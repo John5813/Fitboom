@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface CreditPackage {
@@ -31,27 +31,30 @@ export default function PurchaseCreditsDialog({
 }: PurchaseCreditsDialogProps) {
   const { toast } = useToast();
 
-  const createCheckoutMutation = useMutation({
+  const purchaseCreditsMutation = useMutation({
     mutationFn: async (credits: number) => {
-      const response = await apiRequest('/api/create-checkout-session', 'POST', { credits });
+      const response = await apiRequest('/api/purchase-credits', 'POST', { credits });
       return response.json();
     },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
+    onSuccess: (data, credits) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Muvaffaqiyatli!",
+        description: `${credits} kredit hisobingizga qo'shildi`,
+      });
+      onClose();
     },
     onError: (error: any) => {
       toast({
         title: "Xatolik",
-        description: error.message || "To'lovni boshlashda xatolik yuz berdi",
+        description: error.message || "Kredit qo'shishda xatolik yuz berdi",
         variant: "destructive",
       });
     },
   });
 
   const handlePurchase = (credits: number) => {
-    createCheckoutMutation.mutate(credits);
+    purchaseCreditsMutation.mutate(credits);
   };
 
   return (
@@ -87,10 +90,10 @@ export default function PurchaseCreditsDialog({
                 <Button 
                   size="sm"
                   onClick={() => handlePurchase(pkg.credits)}
-                  disabled={createCheckoutMutation.isPending}
+                  disabled={purchaseCreditsMutation.isPending}
                   data-testid={`button-buy-${pkg.credits}`}
                 >
-                  {createCheckoutMutation.isPending ? 'Yuklanmoqda...' : 'Sotib olish'}
+                  {purchaseCreditsMutation.isPending ? 'Yuklanmoqda...' : 'Sotib olish'}
                 </Button>
               </div>
             </Card>

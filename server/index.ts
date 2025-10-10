@@ -1,7 +1,3 @@
-if (process.env.NODE_ENV === "development") {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-}
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -9,15 +5,7 @@ import { setupAuth } from "./auth";
 
 const app = express();
 
-// Webhook route needs raw body, so we skip JSON parsing for it
-app.use((req, res, next) => {
-  if (req.path === '/api/stripe-webhook') {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-});
-
+app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 setupAuth(app);
 

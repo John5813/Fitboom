@@ -41,7 +41,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null); // Added state for selected booking
   const { toast } = useToast();
-  const { user, setUserAsAdmin } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -316,12 +316,12 @@ export default function HomePage() {
             <Button 
               className="w-full" 
               onClick={() => {
-                setUserAsAdmin();
-                setLocation('/admin-dashboard');
+                setLocation('/admin');
               }}
+              data-testid="button-admin"
             >
               <Shield className="w-4 h-4 mr-2" />
-              Admin Panel (Test)
+              Admin Panel
             </Button>
           </div>
 
