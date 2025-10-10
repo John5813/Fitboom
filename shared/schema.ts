@@ -24,6 +24,8 @@ export const gyms = pgTable("gyms", {
   rating: integer("rating").notNull().default(5),
   facilities: text("facilities"),
   qrCode: text("qr_code"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -67,12 +69,23 @@ export const bookings = pgTable("bookings", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const timeSlots = pgTable("time_slots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gymId: varchar("gym_id").notNull(),
+  dayOfWeek: text("day_of_week").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  capacity: integer("capacity").notNull(),
+  availableSpots: integer("available_spots").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true, isAdmin: true });
 export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
 export const insertVideoCollectionSchema = createInsertSchema(videoCollections).omit({ id: true, createdAt: true });
 export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ id: true });
 export const insertUserPurchaseSchema = createInsertSchema(userPurchases).omit({ id: true, purchaseDate: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
+export const insertTimeSlotSchema = createInsertSchema(timeSlots).omit({ id: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -86,3 +99,5 @@ export type InsertUserPurchase = z.infer<typeof insertUserPurchaseSchema>;
 export type UserPurchase = typeof userPurchases.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
+export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
+export type TimeSlot = typeof timeSlots.$inferSelect;

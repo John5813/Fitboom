@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -30,6 +30,12 @@ export interface IStorage {
   updateBooking(id: string, updateData: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<boolean>;
   completeBooking(id: string): Promise<void>;
+  getTimeSlots(gymId?: string): Promise<TimeSlot[]>;
+  getTimeSlot(id: string): Promise<TimeSlot | undefined>;
+  createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
+  updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined>;
+  deleteTimeSlot(id: string): Promise<boolean>;
+  deleteTimeSlotsForGym(gymId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -208,6 +214,44 @@ export class DatabaseStorage implements IStorage {
       .update(bookings)
       .set({ isCompleted: true })
       .where(eq(bookings.id, id));
+  }
+
+  async getTimeSlots(gymId?: string): Promise<TimeSlot[]> {
+    if (gymId) {
+      return await db.select().from(timeSlots).where(eq(timeSlots.gymId, gymId));
+    }
+    return await db.select().from(timeSlots);
+  }
+
+  async getTimeSlot(id: string): Promise<TimeSlot | undefined> {
+    const [timeSlot] = await db.select().from(timeSlots).where(eq(timeSlots.id, id));
+    return timeSlot || undefined;
+  }
+
+  async createTimeSlot(insertTimeSlot: InsertTimeSlot): Promise<TimeSlot> {
+    const [timeSlot] = await db
+      .insert(timeSlots)
+      .values(insertTimeSlot)
+      .returning();
+    return timeSlot;
+  }
+
+  async updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined> {
+    const [timeSlot] = await db
+      .update(timeSlots)
+      .set(updateData)
+      .where(eq(timeSlots.id, id))
+      .returning();
+    return timeSlot || undefined;
+  }
+
+  async deleteTimeSlot(id: string): Promise<boolean> {
+    const result = await db.delete(timeSlots).where(eq(timeSlots.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async deleteTimeSlotsForGym(gymId: string): Promise<void> {
+    await db.delete(timeSlots).where(eq(timeSlots.gymId, gymId));
   }
 }
 
