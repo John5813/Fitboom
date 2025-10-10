@@ -298,8 +298,8 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-background p-4 overflow-y-auto">
+      <div className="max-w-6xl mx-auto pb-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Link href="/home">
@@ -541,18 +541,18 @@ export default function AdminPage() {
                 ) : gyms && gyms.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {gyms.map((gym) => (
-                      <Card key={gym.id}>
-                        <CardContent className="p-4">
+                      <Card key={gym.id} className="flex flex-col h-full">
+                        <CardContent className="p-4 flex flex-col flex-1 overflow-hidden">
                           <img 
                             src={gym.imageUrl} 
                             alt={gym.name}
                             className="w-full h-32 object-cover rounded-md mb-3"
                           />
-                          <h3 className="font-semibold mb-2">{gym.name}</h3>
+                          <h3 className="font-semibold mb-2 truncate">{gym.name}</h3>
                           <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                            <p>Kategoriya: {gym.category}</p>
+                            <p className="truncate">Kategoriya: {gym.category}</p>
                             <p>Narx: {gym.credits} kredit</p>
-                            <p>Manzil: {gym.address}</p>
+                            <p className="truncate">Manzil: {gym.address}</p>
                           </div>
                           
                           {/* QR Code - Always visible */}
@@ -563,11 +563,11 @@ export default function AdminPage() {
                               alt="QR Code" 
                               className="w-32 h-32 mx-auto border-2 border-background rounded"
                             />
-                            <div className="flex gap-1 mt-2">
+                            <div className="flex flex-col sm:flex-row gap-1 mt-2">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 text-xs flex-1"
+                                className="h-7 text-xs flex-1 whitespace-nowrap"
                                 onClick={() => {
                                   navigator.clipboard.writeText(gym.qrCode || '');
                                   toast({
@@ -581,7 +581,7 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 text-xs flex-1"
+                                className="h-7 text-xs flex-1 whitespace-nowrap"
                                 onClick={() => {
                                   const link = document.createElement('a');
                                   link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(gym.qrCode || '')}`;
@@ -600,10 +600,11 @@ export default function AdminPage() {
                             </div>
                           </div>
                           
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2 mt-auto">
                             <Button 
                               size="sm" 
                               variant="outline"
+                              className="flex-1"
                               onClick={() => handleEditGym(gym)}
                               data-testid={`button-edit-gym-${gym.id}`}
                             >
@@ -613,6 +614,7 @@ export default function AdminPage() {
                             <Button 
                               size="sm" 
                               variant="destructive"
+                              className="flex-1"
                               onClick={() => handleDeleteGym(gym.id)}
                               data-testid={`button-delete-gym-${gym.id}`}
                             >
