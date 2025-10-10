@@ -199,6 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/gyms/:id", requireAuth, async (req, res) => {
     try {
+      await storage.deleteTimeSlotsForGym(req.params.id);
       const success = await storage.deleteGym(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "Gym not found" });
@@ -235,6 +236,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/time-slots", requireAuth, async (req, res) => {
     try {
       const timeSlotData = insertTimeSlotSchema.parse(req.body);
+      
+      const gym = await storage.getGym(timeSlotData.gymId);
+      if (!gym) {
+        return res.status(404).json({ error: "Gym not found" });
+      }
+      
+      if (timeSlotData.availableSpots > timeSlotData.capacity) {
+        return res.status(400).json({ error: "Available spots cannot exceed capacity" });
+      }
+      
       const timeSlot = await storage.createTimeSlot(timeSlotData);
       res.json({ timeSlot });
     } catch (error: any) {
@@ -246,10 +257,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/time-slots/:id", requireAuth, async (req, res) => {
     try {
       const updateData = insertTimeSlotSchema.partial().parse(req.body);
-      const timeSlot = await storage.updateTimeSlot(req.params.id, updateData);
-      if (!timeSlot) {
+      
+      if (updateData.gymId) {
+        const gym = await storage.getGym(updateData.gymId);
+        if (!gym) {
+          return res.status(404).json({ error: "Gym not found" });
+        }
+      }
+      
+      const existingSlot = await storage.getTimeSlot(req.params.id);
+      if (!existingSlot) {
         return res.status(404).json({ error: "Time slot not found" });
       }
+      
+      const capacity = updateData.capacity ?? existingSlot.capacity;
+      const availableSpots = updateData.availableSpots ?? existingSlot.availableSpots;
+      
+      if (availableSpots > capacity) {
+        return res.status(400).json({ error: "Available spots cannot exceed capacity" });
+      }
+      
+      const timeSlot = await storage.updateTimeSlot(req.params.id, updateData);
       res.json({ timeSlot });
     } catch (error) {
       res.status(400).json({ error: "Invalid time slot data" });
