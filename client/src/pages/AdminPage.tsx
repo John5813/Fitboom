@@ -539,7 +539,6 @@ export default function AdminPage() {
                 {gymsLoading ? (
                   <p className="text-muted-foreground">Yuklanmoqda...</p>
                 ) : gyms && gyms.length > 0 ? (
-                  // Updated section to include QR code display
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {gyms.map((gym) => (
                       <Card key={gym.id}>
@@ -554,52 +553,53 @@ export default function AdminPage() {
                             <p>Kategoriya: {gym.category}</p>
                             <p>Narx: {gym.credits} kredit</p>
                             <p>Manzil: {gym.address}</p>
-                            {gym.qrCode && (
-                              <div className="bg-muted p-2 rounded mt-2">
-                                <p className="text-xs mb-2">QR Kod:</p>
-                                <img 
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(gym.qrCode)}`} 
-                                  alt="QR Code" 
-                                  className="w-32 h-32 mx-auto border-2 border-background rounded"
-                                />
-                                <div className="flex gap-1 mt-2">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 text-xs flex-1"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(gym.qrCode || '');
-                                      toast({
-                                        title: "Nusxa olindi",
-                                        description: "QR kod matni nusxa olindi",
-                                      });
-                                    }}
-                                  >
-                                    Matnni nusxalash
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 text-xs flex-1"
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(gym.qrCode || '')}`;
-                                      link.download = `qr-${gym.name.replace(/\s+/g, '-').toLowerCase()}.png`;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                      toast({
-                                        title: "Yuklab olindi",
-                                        description: "QR kod rasmi yuklab olindi",
-                                      });
-                                    }}
-                                  >
-                                    Rasmni yuklab olish
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
                           </div>
+                          
+                          {/* QR Code - Always visible */}
+                          <div className="bg-muted p-3 rounded-lg mb-3">
+                            <p className="text-xs font-medium mb-2 text-center">QR Kod:</p>
+                            <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(gym.qrCode || '')}`} 
+                              alt="QR Code" 
+                              className="w-32 h-32 mx-auto border-2 border-background rounded"
+                            />
+                            <div className="flex gap-1 mt-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs flex-1"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(gym.qrCode || '');
+                                  toast({
+                                    title: "Nusxa olindi",
+                                    description: "QR kod matni nusxa olindi",
+                                  });
+                                }}
+                              >
+                                Matnni nusxalash
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs flex-1"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(gym.qrCode || '')}`;
+                                  link.download = `qr-${gym.name.replace(/\s+/g, '-').toLowerCase()}.png`;
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                  toast({
+                                    title: "Yuklab olindi",
+                                    description: "QR kod rasmi yuklab olindi",
+                                  });
+                                }}
+                              >
+                                Rasmni yuklab olish
+                              </Button>
+                            </div>
+                          </div>
+                          
                           <div className="flex gap-2">
                             <Button 
                               size="sm" 
