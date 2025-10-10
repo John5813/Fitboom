@@ -17,7 +17,6 @@ import type { Gym, Booking } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield } from "lucide-react";
 
 import gymImage from "@assets/generated_images/Standard_gym_facility_interior_f255ae25.png";
 import poolImage from "@assets/generated_images/Swimming_pool_facility_9aea752a.png";
