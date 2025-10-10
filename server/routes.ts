@@ -41,7 +41,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
     } catch (error: any) {
-      console.error('Registration error details:', error);
       res.status(400).json({
         message: error.message || "Noto'g'ri ma'lumotlar",
         errors: error.errors || undefined
