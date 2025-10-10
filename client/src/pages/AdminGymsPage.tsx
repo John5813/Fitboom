@@ -28,6 +28,8 @@ export default function AdminGymsPage() {
     imageUrl: '',
     facilities: '',
     hours: '09:00 - 22:00',
+    latitude: '',
+    longitude: '',
   });
 
   const { data: gymsData, isLoading } = useQuery<{ gyms: Gym[] }>({
@@ -57,6 +59,8 @@ export default function AdminGymsPage() {
         imageUrl: '',
         facilities: '',
         hours: '09:00 - 22:00',
+        latitude: '',
+        longitude: '',
       });
     },
     onError: () => {
@@ -276,6 +280,29 @@ export default function AdminGymsPage() {
                 placeholder="Toshkent, Yunusobod tumani"
                 data-testid="input-gym-address"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="latitude">Kenglik (Latitude)</Label>
+                <Input
+                  id="latitude"
+                  value={gymForm.latitude}
+                  onChange={(e) => setGymForm({ ...gymForm, latitude: e.target.value })}
+                  placeholder="41.311151"
+                  data-testid="input-gym-latitude"
+                />
+              </div>
+              <div>
+                <Label htmlFor="longitude">Uzunlik (Longitude)</Label>
+                <Input
+                  id="longitude"
+                  value={gymForm.longitude}
+                  onChange={(e) => setGymForm({ ...gymForm, longitude: e.target.value })}
+                  placeholder="69.279737"
+                  data-testid="input-gym-longitude"
+                />
+              </div>
             </div>
 
             <div>
