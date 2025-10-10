@@ -26,6 +26,7 @@ export default function AdminCollectionsPage() {
     description: '',
     price: '',
     thumbnailUrl: '',
+    category: '',
   });
 
   const [videoForm, setVideoForm] = useState({
@@ -69,6 +70,7 @@ export default function AdminCollectionsPage() {
         description: '',
         price: '',
         thumbnailUrl: '',
+        category: '',
       });
     },
     onError: () => {
@@ -111,10 +113,10 @@ export default function AdminCollectionsPage() {
   });
 
   const handleCreateCollection = () => {
-    if (!collectionForm.name || !collectionForm.price) {
+    if (!collectionForm.name || !collectionForm.price || !collectionForm.category) {
       toast({
         title: "Ma'lumot to'liq emas",
-        description: "Iltimos, nomi va narxni kiriting.",
+        description: "Iltimos, nomi, kategoriya va narxni kiriting.",
         variant: "destructive"
       });
       return;
@@ -296,6 +298,17 @@ export default function AdminCollectionsPage() {
                 onChange={(e) => setCollectionForm({ ...collectionForm, price: e.target.value })}
                 placeholder="150000"
                 data-testid="input-collection-price"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="category">Kategoriya *</Label>
+              <Input
+                id="category"
+                value={collectionForm.category}
+                onChange={(e) => setCollectionForm({ ...collectionForm, category: e.target.value })}
+                placeholder="Misol: Yoga, Fitnes, Pilates"
+                data-testid="input-collection-category"
               />
             </div>
 

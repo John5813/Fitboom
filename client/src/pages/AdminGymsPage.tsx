@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, ArrowLeft, Clock, Trash2 } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -19,6 +19,8 @@ export default function AdminGymsPage() {
   const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
+  const [createdGym, setCreatedGym] = useState<Gym | null>(null);
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [gymForm, setGymForm] = useState({
@@ -59,13 +61,15 @@ export default function AdminGymsPage() {
       const response = await apiRequest('/api/gyms', 'POST', data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
       toast({
         title: "Zal qo'shildi",
         description: `${gymForm.name} muvaffaqiyatli qo'shildi.`,
       });
       setIsCreateDialogOpen(false);
+      setCreatedGym(data.gym);
+      setIsQRDialogOpen(true);
       setGymForm({
         name: '',
         address: '',
@@ -185,6 +189,28 @@ export default function AdminGymsPage() {
 
   const handleDeleteTimeSlot = (id: string) => {
     deleteTimeSlotMutation.mutate(id);
+  };
+
+  const handleCopyQRCode = (qrCode: string) => {
+    navigator.clipboard.writeText(qrCode);
+    toast({
+      title: "Nusxalandi",
+      description: "QR kod ma'lumoti clipboardga nusxalandi.",
+    });
+  };
+
+  const handleDownloadQRCode = (qrCode: string, gymName: string) => {
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrCode)}`;
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    link.download = `${gymName}-qrcode.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Yuklab olinmoqda",
+      description: "QR kod rasm sifatida yuklab olinmoqda.",
+    });
   };
 
   return (
@@ -598,6 +624,58 @@ export default function AdminGymsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={isQRDialogOpen} onOpenChange={setIsQRDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-qr-code">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">QR Kod</DialogTitle>
+            <DialogDescription>
+              {createdGym?.name} uchun QR kod yaratildi
+            </DialogDescription>
+          </DialogHeader>
+          
+          {createdGym && createdGym.qrCode && (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(createdGym.qrCode)}`}
+                  alt="QR Code"
+                  className="rounded-lg border"
+                  data-testid="img-qr-code"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground text-center">
+                  Bu QR kodni sport zalda joylashtiring. Foydalanuvchilar uni skanerlash orqali kirishi mumkin.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => handleCopyQRCode(createdGym.qrCode!)}
+                  variant="outline"
+                  className="flex-1"
+                  data-testid="button-copy-qr"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Nusxalash
+                </Button>
+                <Button
+                  onClick={() => handleDownloadQRCode(createdGym.qrCode!, createdGym.name)}
+                  variant="outline"
+                  className="flex-1"
+                  data-testid="button-download-qr"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Yuklab olish
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
