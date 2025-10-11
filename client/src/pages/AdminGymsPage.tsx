@@ -279,7 +279,7 @@ export default function AdminGymsPage() {
 
       {/* Gym Detail Dialog */}
       <Dialog open={!!selectedGym} onOpenChange={(open) => !open && setSelectedGym(null)}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-gym-detail">
+        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-gym-detail">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">
               {selectedGym?.name}
@@ -287,7 +287,8 @@ export default function AdminGymsPage() {
           </DialogHeader>
           
           {selectedGym && (
-            <div className="space-y-4">
+            <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+              <div className="space-y-4"></div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Kategoriya</p>
@@ -388,7 +389,7 @@ export default function AdminGymsPage() {
                   </ScrollArea>
                 )}
               </div>
-            </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
