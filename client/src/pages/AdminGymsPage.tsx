@@ -200,18 +200,39 @@ export default function AdminGymsPage() {
     });
   };
 
-  const handleDownloadQRCode = (qrCode: string, gymName: string) => {
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrCode)}`;
-    const link = document.createElement('a');
-    link.href = qrCodeUrl;
-    link.download = `${gymName}-qrcode.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast({
-      title: "Yuklab olinmoqda",
-      description: "QR kod rasm sifatida yuklab olinmoqda.",
-    });
+  const handleDownloadQRCode = async (qrCode: string, gymName: string) => {
+    try {
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrCode)}`;
+      
+      // Fetch the image as a blob
+      const response = await fetch(qrCodeUrl);
+      const blob = await response.blob();
+      
+      // Create blob URL
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Create and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${gymName.replace(/\s+/g, '-')}-qrcode.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up blob URL
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      
+      toast({
+        title: "Yuklab olindi",
+        description: "QR kod muvaffaqiyatli yuklab olindi.",
+      });
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "QR kodni yuklab olishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
