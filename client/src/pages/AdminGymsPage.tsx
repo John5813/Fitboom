@@ -338,6 +338,44 @@ export default function AdminGymsPage() {
                 </div>
               )}
 
+              {selectedGym.qrCode && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">QR Kod</p>
+                  <div className="bg-white p-4 rounded-lg border-2 border-primary/10">
+                    <div className="flex justify-center mb-3">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selectedGym.qrCode)}`}
+                        alt="QR Code"
+                        className="rounded-lg border-4 border-primary/20"
+                      />
+                    </div>
+                    <p className="text-xs font-mono break-all text-center mb-3 text-muted-foreground">
+                      {selectedGym.qrCode}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleCopyQRCode(selectedGym.qrCode!)}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Nusxalash
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleDownloadQRCode(selectedGym.qrCode!, selectedGym.name)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Yuklab olish
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Vaqt slotlari</h3>
