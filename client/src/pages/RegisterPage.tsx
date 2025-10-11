@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const registerMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
       const response = await apiRequest('/api/register', 'POST', data);
-      return response;
+      return response.json();
     },
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
