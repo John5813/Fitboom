@@ -1,12 +1,6 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from "@shared/schema";
-
-neonConfig.webSocketConstructor = ws;
-neonConfig.wsProxy = (host) => `${host}?sslmode=require`;
-neonConfig.useSecureWebSocket = false;
-neonConfig.pipelineConnect = false;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -14,8 +8,5 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-export const db = drizzle({ client: pool, schema });
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle({ client: sql, schema });
