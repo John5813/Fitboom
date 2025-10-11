@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Gym, TimeSlot } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -242,35 +243,37 @@ export default function AdminGymsPage() {
             Hozircha zallar yo'q
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">№</TableHead>
-                <TableHead>Zal Nomi</TableHead>
-                <TableHead className="w-24">Harakatlar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {gyms.map((gym, index) => (
-                <TableRow key={gym.id} data-testid={`row-gym-${gym.id}`}>
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
-                    {gym.name}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedGym(gym)}
-                      data-testid={`button-view-${gym.id}`}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <ScrollArea className="h-[60vh] lg:h-[65vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16 sticky top-0 bg-card z-10">№</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Zal Nomi</TableHead>
+                  <TableHead className="w-24 sticky top-0 bg-card z-10">Harakatlar</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {gyms.map((gym, index) => (
+                  <TableRow key={gym.id} data-testid={`row-gym-${gym.id}`}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
+                      {gym.name}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedGym(gym)}
+                        data-testid={`button-view-${gym.id}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         )}
       </Card>
 
@@ -352,35 +355,37 @@ export default function AdminGymsPage() {
                     Vaqt slotlari yo'q
                   </p>
                 ) : (
-                  <div className="space-y-2">
-                    {timeSlots.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                        data-testid={`time-slot-${slot.id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium text-sm">
-                              {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {slot.availableSpots}/{slot.capacity} joy mavjud
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteTimeSlot(slot.id)}
-                          data-testid={`button-delete-slot-${slot.id}`}
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2 pr-4">
+                      {timeSlots.map((slot) => (
+                        <div
+                          key={slot.id}
+                          className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                          data-testid={`time-slot-${slot.id}`}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                          <div className="flex items-center gap-3">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium text-sm">
+                                {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {slot.availableSpots}/{slot.capacity} joy mavjud
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteTimeSlot(slot.id)}
+                            data-testid={`button-delete-slot-${slot.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 )}
               </div>
             </div>

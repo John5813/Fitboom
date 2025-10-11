@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { VideoCollection, OnlineClass } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -179,51 +180,53 @@ export default function AdminCollectionsPage() {
             To'plamlar topilmadi
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">№</TableHead>
-                <TableHead>To'plam Nomi</TableHead>
-                <TableHead>Videolar</TableHead>
-                <TableHead>Narx</TableHead>
-                <TableHead className="w-32">Harakatlar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {collections.map((collection, index) => (
-                <TableRow key={collection.id} data-testid={`row-collection-${collection.id}`}>
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell className="font-semibold" data-testid={`text-collection-name-${collection.id}`}>
-                    {collection.name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{(collection as any).videoCount || 0} ta</Badge>
-                  </TableCell>
-                  <TableCell>{collection.price.toLocaleString()} so'm</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedCollection(collection)}
-                        data-testid={`button-view-${collection.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openAddVideoDialog(collection.id)}
-                        data-testid={`button-add-video-${collection.id}`}
-                      >
-                        <Video className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <ScrollArea className="h-[60vh] lg:h-[65vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16 sticky top-0 bg-card z-10">№</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">To'plam Nomi</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Videolar</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Narx</TableHead>
+                  <TableHead className="w-32 sticky top-0 bg-card z-10">Harakatlar</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {collections.map((collection, index) => (
+                  <TableRow key={collection.id} data-testid={`row-collection-${collection.id}`}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell className="font-semibold" data-testid={`text-collection-name-${collection.id}`}>
+                      {collection.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{(collection as any).videoCount || 0} ta</Badge>
+                    </TableCell>
+                    <TableCell>{collection.price.toLocaleString()} so'm</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedCollection(collection)}
+                          data-testid={`button-view-${collection.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openAddVideoDialog(collection.id)}
+                          data-testid={`button-add-video-${collection.id}`}
+                        >
+                          <Video className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         )}
       </Card>
 
