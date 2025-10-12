@@ -42,27 +42,15 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone) {
+    if (!phone || phone.length < 9) {
       toast({
         title: "Xatolik",
-        description: "Telefon raqamini kiriting",
+        description: "Telefon raqamini to'liq kiriting",
         variant: "destructive",
       });
       return;
     }
-
-    // Validate phone format
-    const phoneRegex = /^\+998\d{9}$/;
-    if (!phoneRegex.test(phone)) {
-      toast({
-        title: "Xatolik",
-        description: "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    loginMutation.mutate({ phone });
+    loginMutation.mutate({ phone: phone.trim() });
   };
 
   return (
