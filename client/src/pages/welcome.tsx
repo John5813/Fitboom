@@ -5,6 +5,6 @@ export default function Welcome() {
   const [, setLocation] = useLocation();
 
   return (
-    <WelcomeScreen onStart={() => setLocation('/home')} />
+    <WelcomeScreen onStart={() => setLocation('/register')} />
   );
 }
