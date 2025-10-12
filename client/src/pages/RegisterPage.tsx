@@ -32,10 +32,19 @@ export default function RegisterPage() {
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      toast({
-        title: "Xush kelibsiz!",
-        description: "Ro'yxatdan o'tish muvaffaqiyatli!",
-      });
+      
+      if (data.existingUser) {
+        toast({
+          title: "Xush kelibsiz!",
+          description: "Sizning hisobingiz topildi",
+        });
+      } else {
+        toast({
+          title: "Xush kelibsiz!",
+          description: "Ro'yxatdan o'tish muvaffaqiyatli!",
+        });
+      }
+      
       setTimeout(() => {
         setLocation("/home");
       }, 100);

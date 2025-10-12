@@ -16,7 +16,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingUser = await storage.getUserByPhone(userData.phone);
       if (existingUser) {
-        return res.status(400).json({ message: "Bu telefon raqami allaqachon ro'yxatdan o'tgan" });
+        // Agar foydalanuvchi mavjud bo'lsa, avtomatik tizimga kiritish
+        req.login({ 
+          id: existingUser.id, 
+          phone: existingUser.phone, 
+          name: existingUser.name, 
+          credits: existingUser.credits, 
+          isAdmin: existingUser.isAdmin 
+        }, (err) => {
+          if (err) {
+            return next(err);
+          }
+          return res.json({
+            user: {
+              id: existingUser.id,
+              phone: existingUser.phone,
+              name: existingUser.name,
+              credits: existingUser.credits,
+              isAdmin: existingUser.isAdmin
+            },
+            existingUser: true
+          });
+        });
+        return;
       }
 
       const user = await storage.createUser(userData);
