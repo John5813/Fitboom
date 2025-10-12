@@ -11,12 +11,11 @@ import { Dumbbell } from "lucide-react";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const { toast } = useToast();
 
   const loginMutation = useMutation({
-    mutationFn: async (data: { username: string; password: string }) => {
+    mutationFn: async (data: { phone: string }) => {
       const response = await apiRequest('/api/login', 'POST', data);
       return response.json();
     },
@@ -35,7 +34,7 @@ export default function LoginPage() {
       console.error('Login error:', error);
       toast({
         title: "Xatolik",
-        description: error.message || "Login yoki parol noto'g'ri",
+        description: error.message || "Telefon raqami topilmadi",
         variant: "destructive",
       });
     },
@@ -43,15 +42,27 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!phone) {
       toast({
         title: "Xatolik",
-        description: "Barcha maydonlarni to'ldiring",
+        description: "Telefon raqamini kiriting",
         variant: "destructive",
       });
       return;
     }
-    loginMutation.mutate({ username, password });
+
+    // Validate phone format
+    const phoneRegex = /^\+998\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      toast({
+        title: "Xatolik",
+        description: "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    loginMutation.mutate({ phone });
   };
 
   return (
@@ -71,26 +82,17 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Foydalanuvchi nomi</Label>
+              <Label htmlFor="phone">Telefon raqami</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                data-testid="input-username"
+                id="phone"
+                type="tel"
+                placeholder="+998XXXXXXXXX"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                data-testid="input-phone"
+                autoComplete="tel"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Parol</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                data-testid="input-password"
-              />
+              <p className="text-sm text-gray-500">Format: +998XXXXXXXXX</p>
             </div>
             <Button
               type="submit"
