@@ -14,27 +14,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
 
-      const existingUser = await storage.getUserByUsername(userData.username);
+      const existingUser = await storage.getUserByPhone(userData.phone);
       if (existingUser) {
-        return res.status(400).json({ message: "Bu foydalanuvchi nomi allaqachon band" });
+        return res.status(400).json({ message: "Bu telefon raqami allaqachon ro'yxatdan o'tgan" });
       }
 
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
-      const userWithHashedPassword = {
-        ...userData,
-        password: hashedPassword
-      };
+      const user = await storage.createUser(userData);
 
-      const user = await storage.createUser(userWithHashedPassword);
-
-      req.login({ id: user.id, username: user.username, credits: user.credits, isAdmin: user.isAdmin }, (err) => {
+      req.login({ id: user.id, phone: user.phone, name: user.name, credits: user.credits, isAdmin: user.isAdmin }, (err) => {
         if (err) {
           return next(err);
         }
         return res.json({
           user: {
             id: user.id,
-            username: user.username,
+            phone: user.phone,
+            name: user.name,
             credits: user.credits,
             isAdmin: user.isAdmin
           }
@@ -54,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return next(err);
       }
       if (!user) {
-        return res.status(400).json({ message: info?.message || "Login yoki parol noto'g'ri" });
+        return res.status(400).json({ message: info?.message || "Telefon raqami noto'g'ri" });
       }
       req.login(user, (err) => {
         if (err) {

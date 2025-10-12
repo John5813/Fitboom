@@ -10,7 +10,8 @@ declare global {
   namespace Express {
     interface User {
       id: string;
-      username: string;
+      phone: string;
+      name: string;
       credits: number;
       isAdmin: boolean;
     }
@@ -45,19 +46,16 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy({ usernameField: 'phone', passwordField: 'phone' }, async (phone, _, done) => {
       try {
-        const user = await storage.getUserByUsername(username);
+        const user = await storage.getUserByPhone(phone);
         if (!user) {
           return done(null, false, { message: "Foydalanuvchi topilmadi" });
         }
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
-          return done(null, false, { message: "Parol noto'g'ri" });
-        }
         return done(null, {
           id: user.id,
-          username: user.username,
+          phone: user.phone,
+          name: user.name,
           credits: user.credits,
           isAdmin: user.isAdmin,
         });
@@ -79,7 +77,8 @@ export function setupAuth(app: Express) {
       }
       done(null, {
         id: user.id,
-        username: user.username,
+        phone: user.phone,
+        name: user.name,
         credits: user.credits,
         isAdmin: user.isAdmin,
       });

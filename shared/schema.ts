@@ -5,8 +5,10 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  phone: text("phone").notNull().unique(),
+  name: text("name").notNull(),
+  age: integer("age").notNull(),
+  gender: text("gender").notNull(),
   credits: integer("credits").notNull().default(0),
   isAdmin: boolean("is_admin").notNull().default(false),
 });
@@ -79,7 +81,12 @@ export const timeSlots = pgTable("time_slots", {
   availableSpots: integer("available_spots").notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true, isAdmin: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true, isAdmin: true }).extend({
+  phone: z.string().regex(/^\+998\d{9}$/, "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak"),
+  name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
+  age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
+  gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
+});
 export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
 export const insertVideoCollectionSchema = createInsertSchema(videoCollections).omit({ id: true, createdAt: true });
 export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ id: true });
