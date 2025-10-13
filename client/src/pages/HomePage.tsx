@@ -200,10 +200,19 @@ export default function HomePage() {
   const handleConfirmBooking = () => {
     if (!selectedGymForBooking) return;
 
-    bookGymMutation.mutate({
+    const bookingData: any = {
       gymId: selectedGymForBooking.id,
-      timeSlotId: selectedTimeSlot?.id,
-    });
+    };
+
+    // Agar vaqt sloti tanlangan bo'lsa, uning ma'lumotlarini qo'shamiz
+    if (selectedTimeSlot) {
+      // Bugungi sanani YYYY-MM-DD formatida olamiz
+      const today = new Date().toISOString().split('T')[0];
+      bookingData.date = today;
+      bookingData.time = selectedTimeSlot.startTime;
+    }
+
+    bookGymMutation.mutate(bookingData);
   };
 
   const purchaseMutation = useMutation({
