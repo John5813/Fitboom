@@ -159,6 +159,7 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-size: 0.875rem; /* 14px instead of 16px - 2 shifts smaller */
   }
 }
 
@@ -262,6 +263,22 @@
   .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
   .active-elevate-2:active:not(.no-default-active-elevate)::after {
     background-color: var(--elevate-2);
+  }
+
+  /* Active scale animation for all buttons */
+  button:active,
+  a[role="button"]:active,
+  [data-slot="sidebar-menu-button"]:active,
+  [data-slot="sidebar-menu-sub-button"]:active {
+    transform: scale(0.96);
+    transition: transform 0.1s ease-in-out;
+  }
+
+  button,
+  a[role="button"],
+  [data-slot="sidebar-menu-button"],
+  [data-slot="sidebar-menu-sub-button"] {
+    transition: transform 0.1s ease-in-out;
   }
 
   /* If there's a 1px border, adjust the inset so that it covers that parent's border */
