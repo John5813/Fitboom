@@ -425,13 +425,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Book a gym
   app.post('/api/book-gym', requireAuth, async (req, res) => {
     try {
-      const bookingData = insertBookingSchema.partial({ qrCode: true, isCompleted: true }).parse(req.body);
+      const { gymId, date, time } = req.body;
 
-      if (!bookingData.gymId) {
+      if (!gymId) {
         return res.status(400).json({ message: "Zal ID majburiy" });
       }
-
-      const { gymId, date, time } = bookingData;
 
       const gym = await storage.getGym(gymId);
       if (!gym) {
@@ -451,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserCredits(user.id, newCredits);
 
       const bookingDate = date || new Date().toISOString().split('T')[0];
-      const bookingTime = time || '18:00';
+      const bookingTime = time || '09:00';
 
       // Yangi bron yaratish
       const qrCodeData = JSON.stringify({
@@ -461,13 +459,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
 
-      const booking = await storage.createBooking({
+      const bookingToCreate = {
         userId: req.user!.id,
-        gymId,
+        gymId: gymId,
         date: bookingDate,
         time: bookingTime,
         qrCode: qrCodeData,
-      });
+        isCompleted: false
+      };
+
+      const booking = await storage.createBooking(bookingToCreate);
 
       res.json({
         message: "Zal muvaffaqiyatli bron qilindi",
