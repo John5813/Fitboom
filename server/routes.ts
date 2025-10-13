@@ -7,12 +7,31 @@ import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
 import multer from "multer";
-import { Client } from "@replit/object-storage";
+import path from "path";
+import fs from "fs/promises";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Multer sozlamalari - xotira orqali yuklash
+  // Rasmlar uchun papka yaratish
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  try {
+    await fs.mkdir(uploadsDir, { recursive: true });
+  } catch (error) {
+    console.error("Uploads papkasini yaratishda xatolik:", error);
+  }
+
+  // Multer sozlamalari - disk saqlash
+  const storage = multer.diskStorage({
+    destination: async (req, file, cb) => {
+      cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+      cb(null, uniqueName);
+    }
+  });
+
   const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: storage,
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB
     },
@@ -25,9 +44,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Object Storage client
-  const objectStorageClient = new Client();
-
   // Rasm yuklash endpoint
   app.post("/api/upload-image", requireAuth, upload.single('image'), async (req, res) => {
     try {
@@ -35,13 +51,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Fayl topilmadi" });
       }
 
-      const fileName = `gyms/${Date.now()}-${req.file.originalname}`;
-      
-      // Object Storage ga yuklash
-      await objectStorageClient.uploadFromBytes(fileName, req.file.buffer);
-      
       // URL yaratish
-      const imageUrl = `/api/images/${fileName}`;
+      const imageUrl = `/api/images/${req.file.filename}`;
       
       res.json({ imageUrl });
     } catch (error: any) {
@@ -51,20 +62,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rasmni olish endpoint
-  app.get("/api/images/*", async (req, res) => {
+  app.get("/api/images/:filename", async (req, res) => {
     try {
-      const fileName = req.params[0];
-      const imageData = await objectStorageClient.downloadAsBytes(fileName);
+      const filename = req.params.filename;
+      const filePath = path.join(uploadsDir, filename);
+      
+      // Faylni tekshirish
+      try {
+        await fs.access(filePath);
+      } catch {
+        return res.status(404).json({ error: "Rasm topilmadi" });
+      }
       
       // Content-Type ni aniqlash
       let contentType = 'image/jpeg';
-      if (fileName.endsWith('.png')) contentType = 'image/png';
-      else if (fileName.endsWith('.gif')) contentType = 'image/gif';
-      else if (fileName.endsWith('.webp')) contentType = 'image/webp';
+      if (filename.endsWith('.png')) contentType = 'image/png';
+      else if (filename.endsWith('.gif')) contentType = 'image/gif';
+      else if (filename.endsWith('.webp')) contentType = 'image/webp';
       
       res.setHeader('Content-Type', contentType);
       res.setHeader('Cache-Control', 'public, max-age=31536000');
-      res.send(Buffer.from(imageData));
+      res.sendFile(filePath);
     } catch (error: any) {
       console.error("Rasm yuklab olish xatosi:", error);
       res.status(404).json({ error: "Rasm topilmadi" });
