@@ -37,6 +37,9 @@ export default function AdminGymsPage() {
     longitude: '',
   });
 
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+
   const [timeSlotForm, setTimeSlotForm] = useState({
     dayOfWeek: '',
     startTime: '',
@@ -83,6 +86,7 @@ export default function AdminGymsPage() {
         latitude: '',
         longitude: '',
       });
+      setSelectedImage(null);
     },
     onError: () => {
       toast({
@@ -190,6 +194,41 @@ export default function AdminGymsPage() {
 
   const handleDeleteTimeSlot = (id: string) => {
     deleteTimeSlotMutation.mutate(id);
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Rasm yuklashda xatolik');
+      }
+
+      const data = await response.json();
+      setGymForm({ ...gymForm, imageUrl: data.imageUrl });
+      setSelectedImage(file);
+      
+      toast({
+        title: "Rasm yuklandi",
+        description: "Rasm muvaffaqiyatli yuklandi",
+      });
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "Rasm yuklashda xatolik yuz berdi",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleCopyQRCode = (qrCode: string) => {
@@ -636,14 +675,34 @@ export default function AdminGymsPage() {
             </div>
 
             <div>
-              <Label htmlFor="imageUrl">Rasm URL</Label>
-              <Input
-                id="imageUrl"
-                value={gymForm.imageUrl}
-                onChange={(e) => setGymForm({ ...gymForm, imageUrl: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                data-testid="input-gym-image"
-              />
+              <Label htmlFor="imageFile">Rasm Yuklash</Label>
+              <div className="space-y-2">
+                <Input
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleImageUpload(file);
+                    }
+                  }}
+                  disabled={uploadingImage}
+                  data-testid="input-gym-image"
+                />
+                {uploadingImage && (
+                  <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
+                )}
+                {gymForm.imageUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={gymForm.imageUrl} 
+                      alt="Preview" 
+                      className="rounded-lg w-full h-32 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

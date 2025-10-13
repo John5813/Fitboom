@@ -6,8 +6,70 @@ import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBooki
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
+import multer from "multer";
+import { Client } from "@replit/object-storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Multer sozlamalari - xotira orqali yuklash
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Faqat rasm fayllarini yuklash mumkin'));
+      }
+    }
+  });
+
+  // Object Storage client
+  const objectStorageClient = new Client();
+
+  // Rasm yuklash endpoint
+  app.post("/api/upload-image", requireAuth, upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Fayl topilmadi" });
+      }
+
+      const fileName = `gyms/${Date.now()}-${req.file.originalname}`;
+      
+      // Object Storage ga yuklash
+      await objectStorageClient.uploadFromBytes(fileName, req.file.buffer);
+      
+      // URL yaratish
+      const imageUrl = `/api/images/${fileName}`;
+      
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error("Rasm yuklash xatosi:", error);
+      res.status(500).json({ error: "Rasm yuklashda xatolik yuz berdi" });
+    }
+  });
+
+  // Rasmni olish endpoint
+  app.get("/api/images/*", async (req, res) => {
+    try {
+      const fileName = req.params[0];
+      const imageData = await objectStorageClient.downloadAsBytes(fileName);
+      
+      // Content-Type ni aniqlash
+      let contentType = 'image/jpeg';
+      if (fileName.endsWith('.png')) contentType = 'image/png';
+      else if (fileName.endsWith('.gif')) contentType = 'image/gif';
+      else if (fileName.endsWith('.webp')) contentType = 'image/webp';
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.send(Buffer.from(imageData));
+    } catch (error: any) {
+      console.error("Rasm yuklab olish xatosi:", error);
+      res.status(404).json({ error: "Rasm topilmadi" });
+    }
+  });
 
   // Authentication routes
   app.post("/api/register", async (req, res, next) => {
