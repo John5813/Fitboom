@@ -20,7 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Multer sozlamalari - disk saqlash
-  const storage = multer.diskStorage({
+  const multerStorage = multer.diskStorage({
     destination: async (req, file, cb) => {
       cb(null, uploadsDir);
     },
@@ -31,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const upload = multer({
-    storage: storage,
+    storage: multerStorage,
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB
     },
