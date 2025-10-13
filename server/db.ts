@@ -12,6 +12,7 @@ const sql = neon(process.env.DATABASE_URL, {
   fetchOptions: {
     cache: 'no-store',
   },
+  fetchConnectionCache: true,
 });
 
 export const db = drizzle({ client: sql, schema });
