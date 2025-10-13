@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Video, MapPin, Clock, Shield } from "lucide-react";
@@ -39,7 +39,7 @@ export default function HomePage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null); // Added state for selected booking
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -48,7 +48,7 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
 
   // Check for payment success/cancel in URL
-  useState(() => {
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
     const credits = urlParams.get('credits');
@@ -70,7 +70,7 @@ export default function HomePage() {
       });
       window.history.replaceState({}, '', '/');
     }
-  });
+  }, [toast, queryClient]);
 
   const credits = user?.credits ?? 0;
 
