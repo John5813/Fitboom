@@ -13,7 +13,7 @@ import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Gym, Booking } from "@shared/schema";
+import type { Gym, Booking, Category } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -309,7 +309,12 @@ export default function HomePage() {
     setSelectedBooking(null);
   };
 
-  const categories = ['Gym', 'Suzish', 'Yoga', 'Boks'];
+  // Fetch categories from API
+  const { data: categoriesData } = useQuery<{ categories: Category[] }>({
+    queryKey: ['/api/categories'],
+  });
+
+  const categories = categoriesData?.categories.map(c => c.name) || [];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -478,30 +483,26 @@ export default function HomePage() {
 
           {gymsLoading ? (
             <p className="text-muted-foreground">Yuklanmoqda...</p>
+          ) : filteredGyms.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Sizning qidiruv shartingizga mos sport zal topilmadi</p>
+            </div>
           ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredGyms.map((gym) => (
-                  <GymCard 
-                    key={gym.id}
-                    id={gym.id}
-                    name={gym.name}
-                    category={gym.category}
-                    credits={gym.credits}
-                    distance={gym.distance}
-                    hours={gym.hours}
-                    imageUrl={gym.imageUrl || getGymImage(gym.category)}
-                    onBook={handleBookGym}
-                  />
-                ))}
-              </div>
-
-              {filteredGyms.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Sizning qidiruv shartingizga mos sport zal topilmadi</p>
-                </div>
-              )}
-            </>
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
+              {filteredGyms.map((gym) => (
+                <GymCard 
+                  key={gym.id}
+                  id={gym.id}
+                  name={gym.name}
+                  category={gym.category}
+                  credits={gym.credits}
+                  distance={gym.distance}
+                  hours={gym.hours}
+                  imageUrl={gym.imageUrl || getGymImage(gym.category)}
+                  onBook={handleBookGym}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema } from "@shared/schema";
+import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, insertCategorySchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
@@ -248,6 +248,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete gym" });
+    }
+  });
+
+  // Category routes
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      res.json({ categories });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/categories", requireAdmin, async (req, res) => {
+    try {
+      const categoryData = insertCategorySchema.parse(req.body);
+      const category = await storage.createCategory(categoryData);
+      res.json({ category });
+    } catch (error: any) {
+      console.error("Error creating category:", error);
+      res.status(400).json({ error: error.message || "Invalid category data" });
+    }
+  });
+
+  app.delete("/api/categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteCategory(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete category" });
     }
   });
 

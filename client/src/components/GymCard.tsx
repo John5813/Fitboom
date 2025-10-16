@@ -25,47 +25,42 @@ export default function GymCard({
   onBook 
 }: GymCardProps) {
   return (
-    <Card className="overflow-hidden hover-elevate" data-testid={`card-gym-${id}`}>
+    <Card 
+      className="overflow-hidden hover-elevate flex-shrink-0 w-52 cursor-pointer transition-transform hover:scale-105" 
+      data-testid={`card-gym-${id}`}
+      onClick={() => onBook(id)}
+    >
       <div className="relative">
         <img 
           src={imageUrl} 
           alt={name}
-          className="w-full h-48 object-cover"
+          className="w-full h-32 object-cover"
         />
         <Badge 
-          className="absolute top-3 right-3 bg-primary text-primary-foreground border-primary-border font-display font-bold text-base"
+          className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5"
           data-testid={`badge-credits-${id}`}
         >
-          {credits} kredit
+          {credits} ⭐
         </Badge>
       </div>
-      <CardContent className="p-4">
-        <h3 className="font-display font-semibold text-lg mb-1" data-testid={`text-gym-name-${id}`}>
+      <CardContent className="p-3">
+        <h3 className="font-display font-semibold text-sm mb-1 truncate" data-testid={`text-gym-name-${id}`}>
           {name}
         </h3>
-        <Badge variant="secondary" className="mb-3 text-xs">
+        <Badge variant="secondary" className="mb-2 text-xs">
           {category}
         </Badge>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            <span>{distance}</span>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{distance}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            <span>{hours}</span>
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{hours}</span>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button 
-          onClick={() => onBook(id)}
-          className="w-full hover-elevate active-elevate-2"
-          data-testid={`button-book-${id}`}
-        >
-          Bron qilish
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

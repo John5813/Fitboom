@@ -10,7 +10,7 @@ import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Gym } from "@shared/schema";
+import type { Gym, Category } from "@shared/schema";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('gyms');
@@ -41,6 +41,12 @@ export default function AdminPage() {
     videoUrl: ''
   });
 
+  // Category form state
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    icon: ''
+  });
+
   // Fetch all gyms
   const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
     queryKey: ['/api/gyms'],
@@ -54,6 +60,13 @@ export default function AdminPage() {
   });
 
   const classes = classesData?.classes || [];
+
+  // Fetch all categories
+  const { data: categoriesData } = useQuery<{ categories: Category[] }>({
+    queryKey: ['/api/categories'],
+  });
+
+  const categories = categoriesData?.categories || [];
 
   // Create gym mutation
   const createGymMutation = useMutation({
@@ -297,6 +310,61 @@ export default function AdminPage() {
     createClassMutation.mutate(classForm);
   };
 
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('/api/categories', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({
+        title: "Kategoriya qo'shildi",
+        description: `${categoryForm.name} muvaffaqiyatli qo'shildi.`,
+      });
+      setCategoryForm({ name: '', icon: '' });
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Kategoriya qo'shishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/categories/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({
+        title: "Kategoriya o'chirildi",
+        description: "Kategoriya muvaffaqiyatli o'chirildi.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Kategoriya o'chirishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleAddCategory = () => {
+    if (!categoryForm.name.trim()) {
+      toast({
+        title: "Xatolik",
+        description: "Kategoriya nomini kiriting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    createCategoryMutation.mutate(categoryForm);
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 overflow-y-auto">
       <div className="max-w-6xl mx-auto pb-8">
@@ -312,7 +380,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <Button
             variant={activeTab === 'gyms' ? 'default' : 'outline'}
             onClick={() => setActiveTab('gyms')}
@@ -326,6 +394,13 @@ export default function AdminPage() {
             data-testid="button-tab-classes"
           >
             Online Darslar
+          </Button>
+          <Button
+            variant={activeTab === 'categories' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('categories')}
+            data-testid="button-tab-categories"
+          >
+            Kategoriyalar
           </Button>
         </div>
 
@@ -362,16 +437,11 @@ export default function AdminPage() {
                       <SelectValue placeholder="Kategoriya tanlang" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Boks">Boks</SelectItem>
-                      <SelectItem value="Suzish">Suzish</SelectItem>
-                      <SelectItem value="Ot sporti">Ot sporti</SelectItem>
-                      <SelectItem value="Yoga">Yoga</SelectItem>
-                      <SelectItem value="Velosport">Velosport</SelectItem>
-                      <SelectItem value="Karate">Karate</SelectItem>
-                      <SelectItem value="Fitnes">Fitnes</SelectItem>
-                      <SelectItem value="Gym">Gym</SelectItem>
-                      <SelectItem value="Pilates">Pilates</SelectItem>
-                      <SelectItem value="Crossfit">Crossfit</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.icon} {category.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -777,6 +847,93 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Categories Management */}
+        {activeTab === 'categories' && (
+          <div className="space-y-6">
+            {/* Add Category Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Yangi Kategoriya Qo'shish
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="category-name">Kategoriya nomi</Label>
+                  <Input
+                    id="category-name"
+                    value={categoryForm.name}
+                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                    placeholder="Yoga"
+                    data-testid="input-category-name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="category-icon">Icon (emoji)</Label>
+                  <Input
+                    id="category-icon"
+                    value={categoryForm.icon}
+                    onChange={(e) => setCategoryForm({...categoryForm, icon: e.target.value})}
+                    placeholder="🧘"
+                    data-testid="input-category-icon"
+                  />
+                </div>
+
+                <Button 
+                  onClick={handleAddCategory}
+                  disabled={createCategoryMutation.isPending}
+                  className="w-full"
+                  data-testid="button-add-category"
+                >
+                  {createCategoryMutation.isPending ? "Qo'shilmoqda..." : "Kategoriya Qo'shish"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Categories List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Mavjud Kategoriyalar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {categories.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {categories.map((category) => (
+                      <div 
+                        key={category.id} 
+                        className="border rounded-lg p-4 flex items-center justify-between"
+                        data-testid={`card-category-${category.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{category.icon}</span>
+                          <span className="font-semibold">{category.name}</span>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`${category.name} kategoriyasini o'chirmoqchimisiz?`)) {
+                              deleteCategoryMutation.mutate(category.id);
+                            }
+                          }}
+                          disabled={deleteCategoryMutation.isPending}
+                          data-testid={`button-delete-category-${category.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Hali kategoriyalar qo'shilmagan.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
