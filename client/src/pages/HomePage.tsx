@@ -381,16 +381,7 @@ export default function HomePage() {
                   </Card>
                 ))}
               </div>
-            ) : (
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div 
-                    key={i}
-                    className="aspect-square min-w-[160px] flex-shrink-0 rounded-lg bg-muted/20 border-2 border-dashed border-muted-foreground/20"
-                  />
-                ))}
-              </div>
-            )}
+            ) : null}
           </div>
 
           <div>
