@@ -340,48 +340,126 @@ export default function HomePage() {
           />
 
           <div>
-            <h2 className="font-display font-semibold text-xl mb-4">Yaqin atrofdagi zallar</h2>
-            {gymsLoading ? (
-              <p className="text-muted-foreground">Yuklanmoqda...</p>
-            ) : gyms.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {gyms.slice(0, 3).map((gym) => (
-                  <GymCard 
-                    key={gym.id}
-                    id={gym.id}
-                    name={gym.name}
-                    category={gym.category}
-                    credits={gym.credits}
-                    distance={gym.distance}
-                    hours={gym.hours}
-                    imageUrl={gym.imageUrl || getGymImage(gym.category)}
-                    onBook={handleBookGym}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">Hozircha yaqin atrofda sport zallar mavjud emas.</p>
-            )}
-          </div>
-
-          <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">Video Kurslar</h2>
-              <Link href="/courses">
-                <Button variant="ghost" size="sm" data-testid="button-all-courses">
-                  Barchasini ko'rish →
+              <h2 className="font-display font-semibold text-xl">Yaqinigizdadi Yuyori Baholangen Zallar</h2>
+              <Link href="/gyms">
+                <Button variant="ghost" size="sm" className="text-primary">
+                  Barchasini ko'rish
                 </Button>
               </Link>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              Professional trenerjlardan video darsliklar to'plami
+              Hozircha yayin atrofda sport zall mayud emas.
             </p>
-            <Link href="/courses">
-              <Button className="w-full" data-testid="button-explore-courses">
-                <Video className="h-4 w-4 mr-2" />
-                Kurslarni Ko'rish
-              </Button>
-            </Link>
+            {gymsLoading ? (
+              <p className="text-muted-foreground">Yuklanmoqda...</p>
+            ) : gyms.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {gyms.slice(0, 4).map((gym) => (
+                  <Card 
+                    key={gym.id}
+                    className="overflow-hidden cursor-pointer hover-elevate aspect-square"
+                    onClick={() => handleBookGym(gym.id)}
+                    data-testid={`card-gym-square-${gym.id}`}
+                  >
+                    <div className="relative h-full">
+                      <img 
+                        src={gym.imageUrl || getGymImage(gym.category)} 
+                        alt={gym.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="text-white font-semibold text-sm truncate">
+                          {gym.name}
+                        </h3>
+                        <p className="text-white/80 text-xs">
+                          {gym.category}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div 
+                    key={i}
+                    className="aspect-square rounded-lg bg-muted/20 border-2 border-dashed border-muted-foreground/20"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h2 className="font-display font-semibold text-xl mb-4">Professional Murabyillardan Eksklyuziv Kurslar</h2>
+            {classesLoading ? (
+              <p className="text-muted-foreground">Yuklanmoqda...</p>
+            ) : onlineClasses.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {onlineClasses.slice(0, 3).map((classItem) => (
+                  <Card 
+                    key={classItem.id}
+                    className="overflow-hidden cursor-pointer hover-elevate aspect-[3/4]"
+                    onClick={() => {
+                      if (credits > 0) {
+                        toast({
+                          title: "Dars boshlanmoqda",
+                          description: classItem.title,
+                        });
+                      } else {
+                        toast({
+                          title: "Kredit kerak",
+                          description: "Online darslarni ko'rish uchun kredit sotib oling.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    data-testid={`card-class-square-${classItem.id}`}
+                  >
+                    <div className="relative h-full flex flex-col">
+                      <div className="relative flex-1">
+                        <img 
+                          src={classItem.thumbnailUrl || classImage} 
+                          alt={classItem.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <Badge className="bg-primary/90 text-white">
+                            {classItem.duration}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-card">
+                        <h3 className="font-semibold text-sm mb-1 truncate">
+                          {classItem.title}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                            <span className="text-xs">👤</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Murabbiy: {classItem.instructor}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground text-sm">Hozircha online darslar mavjud emas</p>
+                <Link href="/courses">
+                  <Button className="mt-4" data-testid="button-explore-courses">
+                    <Video className="h-4 w-4 mr-2" />
+                    Kurslarni Ko'rish
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
