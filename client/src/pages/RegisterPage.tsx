@@ -24,6 +24,30 @@ export default function RegisterPage() {
   
   const { toast } = useToast();
 
+  // Telefon raqamini tekshirish uchun mutation
+  const checkPhoneMutation = useMutation({
+    mutationFn: async (phone: string) => {
+      const response = await apiRequest('/api/login', 'POST', { phone });
+      return response.json();
+    },
+    onSuccess: async (data) => {
+      // Agar foydalanuvchi topilsa, to'g'ridan-to'g'ri tizimga kiritish
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Xush kelibsiz!",
+        description: "Tizimga muvaffaqiyatli kirdingiz",
+      });
+      setTimeout(() => {
+        setLocation("/home");
+      }, 100);
+    },
+    onError: () => {
+      // Agar foydalanuvchi topilmasa, 2-qadamga o'tish
+      setStep(2);
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: async (data: { phone: string; name: string; age: number; gender: "Erkak" | "Ayol" }) => {
       const response = await apiRequest('/api/register', 'POST', data);
@@ -32,19 +56,10 @@ export default function RegisterPage() {
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      
-      if (data.existingUser) {
-        toast({
-          title: "Xush kelibsiz!",
-          description: "Sizning hisobingiz topildi",
-        });
-      } else {
-        toast({
-          title: "Xush kelibsiz!",
-          description: "Ro'yxatdan o'tish muvaffaqiyatli!",
-        });
-      }
-      
+      toast({
+        title: "Xush kelibsiz!",
+        description: "Ro'yxatdan o'tish muvaffaqiyatli!",
+      });
       setTimeout(() => {
         setLocation("/home");
       }, 100);
@@ -82,7 +97,8 @@ export default function RegisterPage() {
       return;
     }
 
-    setStep(2);
+    // Avval foydalanuvchi mavjudligini tekshirish
+    checkPhoneMutation.mutate(phone.trim());
   };
 
   const handleStep2Submit = (e: React.FormEvent) => {
@@ -145,9 +161,10 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={checkPhoneMutation.isPending}
                 data-testid="button-next"
               >
-                Keyingi
+                {checkPhoneMutation.isPending ? "Tekshirilmoqda..." : "Keyingi"}
               </Button>
               <div className="text-center text-sm">
                 <span className="text-gray-600 dark:text-gray-400">
