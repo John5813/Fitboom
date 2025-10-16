@@ -415,11 +415,11 @@ export default function HomePage() {
             {gymsLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : gymsWithDistance.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
-                {gymsWithDistance.slice(0, 6).map((gym) => (
+              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+                {gymsWithDistance.slice(0, 8).map((gym) => (
                   <Card 
                     key={gym.id}
-                    className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[160px] flex-shrink-0 snap-start"
+                    className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
                     onClick={() => handleBookGym(gym.id)}
                     data-testid={`card-gym-square-${gym.id}`}
                   >
@@ -429,17 +429,17 @@ export default function HomePage() {
                         alt={gym.name}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className="text-white font-semibold text-sm truncate">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <h3 className="text-white font-semibold text-xs truncate leading-tight">
                           {gym.name}
                         </h3>
-                        <p className="text-white/80 text-xs">
+                        <p className="text-white/70 text-[10px] truncate">
                           {gym.category}
                         </p>
                         {gym.distance !== undefined && (
-                          <p className="text-white/80 text-xs">
-                            {gym.distance.toFixed(2)} km
+                          <p className="text-white/70 text-[10px]">
+                            {gym.distance.toFixed(1)} km
                           </p>
                         )}
                       </div>
