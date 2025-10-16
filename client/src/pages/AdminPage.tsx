@@ -358,7 +358,7 @@ export default function AdminPage() {
                       value={gymForm.category}
                       onValueChange={(value) => setGymForm({...gymForm, category: value})}
                     >
-                      <SelectTrigger data-testid="select-gym-category">
+                      <SelectTrigger id="gym-category" data-testid="select-gym-category">
                         <SelectValue placeholder="Kategoriya tanlang" />
                       </SelectTrigger>
                       <SelectContent>
