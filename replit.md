@@ -178,3 +178,38 @@ Preferred communication style: Simple, everyday language.
 - Generated images stored in `/attached_assets/generated_images/`
 - Hero images, gym photos, class thumbnails
 - Imported directly in components using Vite asset imports
+
+## Recent Changes
+
+### October 16, 2025 - Database Migration System Setup
+
+**Migration System Implementation**
+- Set up automatic database migrations for production deployment
+- Created `server/migrate.ts` for running migrations programmatically
+- Added migration generation and execution to build/start scripts
+- Migration workflow:
+  - Development: Use `npm run db:push` for schema changes
+  - Production: Migrations auto-run on startup via `npm start`
+  - GitHub to Droplet: Database structure auto-creates on deployment
+
+**Updated Scripts**
+- `npm run build`: Now generates migrations during build
+- `npm start`: Runs migrations before starting server (production)
+- `npm run db:generate`: Manually generate migration files
+- `npm run db:migrate`: Manually run migrations (development)
+
+**Deployment Flow**
+1. Push code to GitHub
+2. Deploy to Droplet
+3. Build runs: `vite build && drizzle-kit generate && esbuild...`
+4. Start runs: migrations execute → server starts
+5. Database structure auto-created
+
+### Pending Integrations
+
+**Twilio SMS Authentication (Postponed)**
+- User requested phone number authentication with SMS verification
+- Twilio integration dismissed for later implementation
+- Required secrets: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+- Feature: Replace login/signup forms with phone-only auth flow
+- Status: Waiting for Twilio account setup
