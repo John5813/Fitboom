@@ -362,11 +362,14 @@ export default function AdminPage() {
                         <SelectValue placeholder="Kategoriya tanlang" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Gym">Gym</SelectItem>
-                        <SelectItem value="Suzish">Suzish</SelectItem>
-                        <SelectItem value="Yoga">Yoga</SelectItem>
                         <SelectItem value="Boks">Boks</SelectItem>
+                        <SelectItem value="Suzish">Suzish</SelectItem>
+                        <SelectItem value="Ot sporti">Ot sporti</SelectItem>
+                        <SelectItem value="Yoga">Yoga</SelectItem>
+                        <SelectItem value="Velosport">Velosport</SelectItem>
+                        <SelectItem value="Karate">Karate</SelectItem>
                         <SelectItem value="Fitnes">Fitnes</SelectItem>
+                        <SelectItem value="Gym">Gym</SelectItem>
                         <SelectItem value="Pilates">Pilates</SelectItem>
                         <SelectItem value="Crossfit">Crossfit</SelectItem>
                       </SelectContent>
