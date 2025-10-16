@@ -44,9 +44,10 @@ Preferred communication style: Simple, everyday language.
 
 **API Structure**
 - Authentication routes: `/api/register`, `/api/login`, `/api/logout`, `/api/user`
-- Resource routes: `/api/gyms`, `/api/classes`, `/api/bookings`
-- CRUD operations for gyms, classes, and bookings
+- Resource routes: `/api/gyms`, `/api/classes`, `/api/bookings`, `/api/categories`
+- CRUD operations for gyms, classes, bookings, and categories
 - Protected routes require authentication middleware
+- Admin-only routes for category management
 
 **Authentication & Sessions**
 - Passport.js with Local Strategy for username/password authentication
@@ -67,6 +68,7 @@ Preferred communication style: Simple, everyday language.
 - `gyms`: Gym listings with location, pricing, facilities, and metadata
 - `onlineClasses`: Video fitness classes with instructor and duration info
 - `bookings`: User gym reservations with date, time, and QR code tracking
+- `categories`: Dynamic category management with name and icon for organizing gyms and classes
 
 **Storage Layer**
 - Repository pattern implemented in `server/storage.ts`
@@ -180,6 +182,26 @@ Preferred communication style: Simple, everyday language.
 - Imported directly in components using Vite asset imports
 
 ## Recent Changes
+
+### October 16, 2025 - Category Management & Compact Gym Cards
+
+**Dynamic Category System**
+- Created `categories` database table with name and icon fields
+- Implemented category CRUD API endpoints (GET, POST, DELETE)
+- Added Categories tab in Admin Panel with create/delete UI
+- Seeded 10 default categories (Gym, Yoga, Boks, Suzish, etc.)
+- HomePage and AdminPage now fetch categories dynamically from API
+
+**Fiternity-Style UI Implementation**
+- Redesigned gym cards to compact square format (56px width)
+- Changed from grid layout to horizontal scrolling carousel
+- Improved visual hierarchy with icon-based navigation
+- Mobile-first responsive design matching Fiternity app aesthetics
+
+**Storage Layer Updates**
+- Added `createCategory`, `getCategories`, and `deleteCategory` methods
+- Proper type safety with Drizzle-generated schemas
+- Admin-only permissions for category mutations
 
 ### October 16, 2025 - Database Migration System Setup
 
