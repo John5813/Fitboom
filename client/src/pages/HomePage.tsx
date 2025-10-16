@@ -354,11 +354,11 @@ export default function HomePage() {
             {gymsLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : gyms.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {gyms.slice(0, 4).map((gym) => (
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
+                {gyms.slice(0, 6).map((gym) => (
                   <Card 
                     key={gym.id}
-                    className="overflow-hidden cursor-pointer hover-elevate aspect-square"
+                    className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[160px] flex-shrink-0 snap-start"
                     onClick={() => handleBookGym(gym.id)}
                     data-testid={`card-gym-square-${gym.id}`}
                   >
@@ -382,11 +382,11 @@ export default function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
                 {[1, 2, 3, 4].map((i) => (
                   <div 
                     key={i}
-                    className="aspect-square rounded-lg bg-muted/20 border-2 border-dashed border-muted-foreground/20"
+                    className="aspect-square min-w-[160px] flex-shrink-0 rounded-lg bg-muted/20 border-2 border-dashed border-muted-foreground/20"
                   />
                 ))}
               </div>
@@ -398,11 +398,11 @@ export default function HomePage() {
             {classesLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : onlineClasses.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {onlineClasses.slice(0, 3).map((classItem) => (
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
+                {onlineClasses.slice(0, 6).map((classItem) => (
                   <Card 
                     key={classItem.id}
-                    className="overflow-hidden cursor-pointer hover-elevate aspect-[3/4]"
+                    className="overflow-hidden cursor-pointer hover-elevate aspect-[3/4] min-w-[140px] flex-shrink-0 snap-start"
                     onClick={() => {
                       if (credits > 0) {
                         toast({
