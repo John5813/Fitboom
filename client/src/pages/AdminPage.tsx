@@ -366,6 +366,9 @@ export default function AdminPage() {
                         <SelectItem value="Suzish">Suzish</SelectItem>
                         <SelectItem value="Yoga">Yoga</SelectItem>
                         <SelectItem value="Boks">Boks</SelectItem>
+                        <SelectItem value="Fitnes">Fitnes</SelectItem>
+                        <SelectItem value="Pilates">Pilates</SelectItem>
+                        <SelectItem value="Crossfit">Crossfit</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -554,7 +557,7 @@ export default function AdminPage() {
                             <p>Narx: {gym.credits} kredit</p>
                             <p className="truncate">Manzil: {gym.address}</p>
                           </div>
-                          
+
                           {/* QR Code - Always visible */}
                           <div className="bg-white p-3 rounded-lg mb-3 border-2 border-primary/10">
                             <p className="text-xs font-semibold mb-2 text-center text-primary">QR Kod:</p>
@@ -599,7 +602,7 @@ export default function AdminPage() {
                               </Button>
                             </div>
                           </div>
-                          
+
                           <div className="flex flex-col sm:flex-row gap-2 mt-auto">
                             <Button 
                               size="sm" 
