@@ -2,6 +2,9 @@ import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, 
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
+// SSL sertifikat muammosini hal qilish uchun
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByPhone(phone: string): Promise<User | undefined>;
