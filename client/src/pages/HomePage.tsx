@@ -402,7 +402,7 @@ export default function HomePage() {
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">Yaqinidagi Eng Baholangan Zallar</h2>
+              <h2 className="font-display font-semibold text-xl">Sizga eng yaqin zallar</h2>
               <Link href="/gyms">
                 <Button variant="ghost" size="sm" className="text-primary">
                   Barchasini ko'rish
@@ -410,7 +410,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              {userLocation ? "Sizga eng yaqin zallar" : "Yaqin atrofdagi sport zallari"}
+              {userLocation ? "Masofaga qarab saralangan" : "Yaqin atrofdagi sport zallari"}
             </p>
             {gymsLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
