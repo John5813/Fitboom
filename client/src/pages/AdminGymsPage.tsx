@@ -161,6 +161,26 @@ export default function AdminGymsPage() {
       return;
     }
 
+    // URL formatini tekshirish
+    try {
+      new URL(gymForm.address);
+      if (!gymForm.address.includes('maps.google') && !gymForm.address.includes('goo.gl')) {
+        toast({
+          title: "Noto'g'ri manzil formati",
+          description: "Iltimos, Google Maps URL manzilini kiriting.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } catch {
+      toast({
+        title: "Noto'g'ri URL formati",
+        description: "Iltimos, to'g'ri URL manzilini kiriting (https://... bilan boshlanishi kerak).",
+        variant: "destructive"
+      });
+      return;
+    }
+
     createGymMutation.mutate({
       ...gymForm,
       credits: parseInt(gymForm.credits)
@@ -654,14 +674,18 @@ export default function AdminGymsPage() {
             </div>
 
             <div>
-              <Label htmlFor="address">Manzil *</Label>
+              <Label htmlFor="address">Manzil (Google Maps URL) *</Label>
               <Input
                 id="address"
+                type="url"
                 value={gymForm.address}
                 onChange={(e) => setGymForm({ ...gymForm, address: e.target.value })}
-                placeholder="Toshkent, Yunusobod tumani"
+                placeholder="https://maps.google.com/..."
                 data-testid="input-gym-address"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Google Maps dan manzil URL ni kiriting
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
