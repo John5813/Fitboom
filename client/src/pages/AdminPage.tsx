@@ -355,7 +355,7 @@ export default function AdminPage() {
                   <div>
                     <Label htmlFor="gym-category">Kategoriya</Label>
                     <Select 
-                      value={gymForm.category}
+                      value={gymForm.category || undefined}
                       onValueChange={(value) => setGymForm({...gymForm, category: value})}
                     >
                       <SelectTrigger id="gym-category" data-testid="select-gym-category">
