@@ -265,6 +265,24 @@
     background-color: var(--elevate-2);
   }
 
+  /* Hide scrollbar for horizontal scroll elements */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth scrolling for mobile */
+  @media (max-width: 768px) {
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+  }
+
   /* Active scale animation for all buttons */
   button:active,
   a[role="button"]:active,

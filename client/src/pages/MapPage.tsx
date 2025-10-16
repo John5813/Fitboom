@@ -45,6 +45,12 @@ export default function MapPage() {
         },
         (error) => {
           console.error("Geolocation error:", error);
+          // Use Tashkent as fallback
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         }
       );
     }
@@ -73,9 +79,9 @@ export default function MapPage() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+    <div className="container mx-auto p-3 sm:p-6">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-3xl font-display font-bold">Eng Yaqin Zallar</h1>
             <p className="text-muted-foreground mt-2">
@@ -89,17 +95,17 @@ export default function MapPage() {
         </div>
       </div>
 
-      <Card className="p-4">
+      <Card className="p-2 sm:p-4">
         {isLoading ? (
-          <div className="h-[600px] flex items-center justify-center">
+          <div className="h-[400px] sm:h-[600px] flex items-center justify-center">
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           </div>
         ) : (
           <MapContainer
             center={mapCenter}
             zoom={13}
-            style={{ height: '600px', width: '100%' }}
-            className="rounded-lg"
+            style={{ height: '400px', width: '100%' }}
+            className="rounded-lg sm:h-[600px]"
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

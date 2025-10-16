@@ -33,12 +33,28 @@ interface TimeSlot {
   availableSpots: number;
 }
 
+// Function to calculate distance between two lat/lng points
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; // Distance in km
+  return distance;
+}
+
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'gyms' | 'classes' | 'bookings'>('home');
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -46,6 +62,26 @@ export default function HomePage() {
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [, setLocation] = useLocation();
+
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+          // Optionally show a toast or default to a general location
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+    }
+  }, []);
 
   // Check for payment success/cancel in URL
   useEffect(() => {
@@ -81,6 +117,25 @@ export default function HomePage() {
 
   const gyms = gymsData?.gyms || [];
 
+  // Calculate distance for each gym and sort by distance
+  const gymsWithDistance = gyms.map(gym => {
+    let distance = undefined;
+    if (userLocation && gym.latitude && gym.longitude) {
+      distance = calculateDistance(
+        userLocation.lat,
+        userLocation.lng,
+        gym.latitude,
+        gym.longitude
+      );
+    }
+    return { ...gym, distance };
+  }).sort((a, b) => {
+    if (a.distance === undefined && b.distance === undefined) return 0;
+    if (a.distance === undefined) return 1;
+    if (b.distance === undefined) return -1;
+    return a.distance - b.distance;
+  });
+
   // Fetch time slots from API
   const { data: timeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
     queryKey: ['/api/time-slots', selectedGymForBooking?.id],
@@ -115,10 +170,11 @@ export default function HomePage() {
 
   const bookings = bookingsData?.bookings || [];
 
-  const filteredGyms = gyms.filter(gym => {
+  const filteredGyms = gymsWithDistance.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.category === selectedCategory;
     const matchesSearch = gym.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesPrice = maxPrice === undefined || gym.credits <= maxPrice;
+    return matchesCategory && matchesSearch && matchesPrice;
   });
 
   const bookGymMutation = useMutation({
@@ -346,7 +402,7 @@ export default function HomePage() {
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">Yaqinigizdadi Yuyori Baholangen Zallar</h2>
+              <h2 className="font-display font-semibold text-xl">Yaqinidagi Eng Baholangan Zallar</h2>
               <Link href="/gyms">
                 <Button variant="ghost" size="sm" className="text-primary">
                   Barchasini ko'rish
@@ -354,13 +410,13 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              Hozircha yayin atrofda sport zall mayud emas.
+              {userLocation ? "Sizga eng yaqin zallar" : "Yaqin atrofdagi sport zallari"}
             </p>
             {gymsLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
-            ) : gyms.length > 0 ? (
+            ) : gymsWithDistance.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
-                {gyms.slice(0, 6).map((gym) => (
+                {gymsWithDistance.slice(0, 6).map((gym) => (
                   <Card 
                     key={gym.id}
                     className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[160px] flex-shrink-0 snap-start"
@@ -381,6 +437,11 @@ export default function HomePage() {
                         <p className="text-white/80 text-xs">
                           {gym.category}
                         </p>
+                        {gym.distance !== undefined && (
+                          <p className="text-white/80 text-xs">
+                            {gym.distance.toFixed(2)} km
+                          </p>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -479,6 +540,8 @@ export default function HomePage() {
             onCategoryChange={setSelectedCategory}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            maxPrice={maxPrice}
+            onMaxPriceChange={setMaxPrice}
           />
 
           {gymsLoading ? (

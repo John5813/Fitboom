@@ -26,9 +26,9 @@ export default function GymCard({
 }: GymCardProps) {
   return (
     <Card 
-      className="overflow-hidden hover-elevate flex-shrink-0 w-52 cursor-pointer transition-transform hover:scale-105" 
-      data-testid={`card-gym-${id}`}
+      className="overflow-hidden cursor-pointer hover-elevate min-w-[280px] sm:min-w-[300px] flex-shrink-0 snap-start"
       onClick={() => onBook(id)}
+      data-testid={`card-gym-${id}`}
     >
       <div className="relative">
         <img 
@@ -43,8 +43,8 @@ export default function GymCard({
           {credits} ⭐
         </Badge>
       </div>
-      <CardContent className="p-3">
-        <h3 className="font-display font-semibold text-sm mb-1 truncate" data-testid={`text-gym-name-${id}`}>
+      <CardContent className="p-3 sm:p-4">
+        <h3 className="font-bold text-base sm:text-lg mb-2 truncate" data-testid={`text-gym-name-${id}`}>
           {name}
         </h3>
         <Badge variant="secondary" className="mb-2 text-xs">
