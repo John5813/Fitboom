@@ -341,79 +341,81 @@ export default function AdminPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="gym-name">Zal nomi</Label>
-                    <Input
-                      id="gym-name"
-                      value={gymForm.name}
-                      onChange={(e) => setGymForm({...gymForm, name: e.target.value})}
-                      placeholder="PowerFit Gym"
-                      data-testid="input-gym-name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="gym-category">Kategoriya</Label>
-                    <Select 
-                      value={gymForm.category || undefined}
-                      onValueChange={(value) => setGymForm({...gymForm, category: value})}
-                    >
-                      <SelectTrigger id="gym-category" data-testid="select-gym-category">
-                        <SelectValue placeholder="Kategoriya tanlang" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Boks">Boks</SelectItem>
-                        <SelectItem value="Suzish">Suzish</SelectItem>
-                        <SelectItem value="Ot sporti">Ot sporti</SelectItem>
-                        <SelectItem value="Yoga">Yoga</SelectItem>
-                        <SelectItem value="Velosport">Velosport</SelectItem>
-                        <SelectItem value="Karate">Karate</SelectItem>
-                        <SelectItem value="Fitnes">Fitnes</SelectItem>
-                        <SelectItem value="Gym">Gym</SelectItem>
-                        <SelectItem value="Pilates">Pilates</SelectItem>
-                        <SelectItem value="Crossfit">Crossfit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="gym-price">Narx (kredit)</Label>
-                    <Input
-                      id="gym-price"
-                      type="number"
-                      value={gymForm.credits}
-                      onChange={(e) => setGymForm({...gymForm, credits: e.target.value})}
-                      placeholder="4"
-                      data-testid="input-gym-credits"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="gym-rating">Reyting</Label>
-                    <Select 
-                      value={gymForm.rating} 
-                      onValueChange={(value) => setGymForm({...gymForm, rating: value})}
-                    >
-                      <SelectTrigger data-testid="select-gym-rating">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                        <SelectItem value="4">4</SelectItem>
-                        <SelectItem value="5">5</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="gym-hours">Ish vaqti</Label>
-                    <Input
-                      id="gym-hours"
-                      value={gymForm.hours}
-                      onChange={(e) => setGymForm({...gymForm, hours: e.target.value})}
-                      placeholder="06:00 - 23:00"
-                      data-testid="input-gym-hours"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="gym-name">Zal nomi</Label>
+                  <Input
+                    id="gym-name"
+                    value={gymForm.name}
+                    onChange={(e) => setGymForm({...gymForm, name: e.target.value})}
+                    placeholder="PowerFit Gym"
+                    data-testid="input-gym-name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="gym-category">Kategoriya</Label>
+                  <Select 
+                    value={gymForm.category || undefined}
+                    onValueChange={(value) => setGymForm({...gymForm, category: value})}
+                  >
+                    <SelectTrigger id="gym-category" data-testid="select-gym-category">
+                      <SelectValue placeholder="Kategoriya tanlang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Boks">Boks</SelectItem>
+                      <SelectItem value="Suzish">Suzish</SelectItem>
+                      <SelectItem value="Ot sporti">Ot sporti</SelectItem>
+                      <SelectItem value="Yoga">Yoga</SelectItem>
+                      <SelectItem value="Velosport">Velosport</SelectItem>
+                      <SelectItem value="Karate">Karate</SelectItem>
+                      <SelectItem value="Fitnes">Fitnes</SelectItem>
+                      <SelectItem value="Gym">Gym</SelectItem>
+                      <SelectItem value="Pilates">Pilates</SelectItem>
+                      <SelectItem value="Crossfit">Crossfit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="gym-price">Narx (kredit)</Label>
+                  <Input
+                    id="gym-price"
+                    type="number"
+                    value={gymForm.credits}
+                    onChange={(e) => setGymForm({...gymForm, credits: e.target.value})}
+                    placeholder="4"
+                    data-testid="input-gym-credits"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="gym-rating">Reyting</Label>
+                  <Select 
+                    value={gymForm.rating} 
+                    onValueChange={(value) => setGymForm({...gymForm, rating: value})}
+                  >
+                    <SelectTrigger data-testid="select-gym-rating">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="4">4</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="gym-hours">Ish vaqti</Label>
+                  <Input
+                    id="gym-hours"
+                    value={gymForm.hours}
+                    onChange={(e) => setGymForm({...gymForm, hours: e.target.value})}
+                    placeholder="06:00 - 23:00"
+                    data-testid="input-gym-hours"
+                  />
                 </div>
 
                 <div>
