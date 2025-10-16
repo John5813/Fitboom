@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Gym, TimeSlot } from "@shared/schema";
+import type { Gym, TimeSlot, Category } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -57,8 +57,13 @@ export default function AdminGymsPage() {
     queryFn: () => fetch(`/api/time-slots?gymId=${selectedGym?.id}`, { credentials: 'include' }).then(res => res.json()),
   });
 
+  const { data: categoriesData } = useQuery<{ categories: Category[] }>({
+    queryKey: ['/api/categories'],
+  });
+
   const gyms = gymsData?.gyms || [];
   const timeSlots = timeSlotsData?.timeSlots || [];
+  const categories = categoriesData?.categories || [];
 
   const createGymMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -606,13 +611,21 @@ export default function AdminGymsPage() {
               </div>
               <div>
                 <Label htmlFor="category">Kategoriya *</Label>
-                <Input
-                  id="category"
+                <Select
                   value={gymForm.category}
-                  onChange={(e) => setGymForm({ ...gymForm, category: e.target.value })}
-                  placeholder="Misol: Fitnes, Yoga"
-                  data-testid="input-gym-category"
-                />
+                  onValueChange={(value) => setGymForm({ ...gymForm, category: value })}
+                >
+                  <SelectTrigger id="category" data-testid="select-gym-category">
+                    <SelectValue placeholder="Kategoriyani tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.icon} {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
