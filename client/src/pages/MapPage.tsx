@@ -128,8 +128,34 @@ export default function MapPage() {
               const lat = parseFloat(gym.latitude!);
               const lng = parseFloat(gym.longitude!);
               
+              // Custom icon with gym name
+              const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `
+                  <div style="position: relative;">
+                    <img src="${icon}" style="width: 25px; height: 41px;" />
+                    <div style="
+                      position: absolute;
+                      top: -25px;
+                      left: 50%;
+                      transform: translateX(-50%);
+                      background: white;
+                      padding: 4px 8px;
+                      border-radius: 4px;
+                      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                      white-space: nowrap;
+                      font-size: 12px;
+                      font-weight: 600;
+                      color: #000;
+                    ">${gym.name}</div>
+                  </div>
+                `,
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+              });
+              
               return (
-                <Marker key={gym.id} position={[lat, lng]}>
+                <Marker key={gym.id} position={[lat, lng]} icon={customIcon}>
                   <Popup>
                     <div className="min-w-[200px]">
                       {gym.imageUrl && (
@@ -143,7 +169,14 @@ export default function MapPage() {
                       <p className="text-sm text-muted-foreground mb-2">{gym.category}</p>
                       <div className="flex items-center gap-1 text-sm mb-2">
                         <MapPin className="h-3 w-3" />
-                        <span>{gym.address}</span>
+                        <a 
+                          href={gym.address} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Manzilni ko'rish
+                        </a>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold">{gym.credits} kredit</span>
