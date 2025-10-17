@@ -409,7 +409,9 @@ export default function AdminGymsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Kredit</p>
-                  <p className="font-semibold">{selectedGym.credits} kredit</p>
+                  <Badge variant="secondary" className="font-semibold px-3 py-1">
+                    {selectedGym.credits} kredit
+                  </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Ish vaqti</p>
@@ -422,8 +424,15 @@ export default function AdminGymsPage() {
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground">Manzil</p>
-                <p className="font-semibold">{selectedGym.address}</p>
+                <p className="text-sm text-muted-foreground mb-2">Manzil</p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.open(selectedGym.address, '_blank')}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Haritada ko'rish
+                </Button>
               </div>
 
               {selectedGym.description && (
