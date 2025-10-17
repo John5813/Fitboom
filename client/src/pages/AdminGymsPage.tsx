@@ -221,6 +221,34 @@ export default function AdminGymsPage() {
     deleteTimeSlotMutation.mutate(id);
   };
 
+  const deleteGymMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/gyms/${id}`, 'DELETE');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+      toast({
+        title: "Zal o'chirildi",
+        description: "Zal muvaffaqiyatli o'chirildi.",
+      });
+      setSelectedGym(null);
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Zal o'chirishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDeleteGym = (id: string) => {
+    if (confirm("Haqiqatan ham bu zalni o'chirmoqchimisiz?")) {
+      deleteGymMutation.mutate(id);
+    }
+  };
+
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
     try {
@@ -464,14 +492,25 @@ export default function AdminGymsPage() {
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Vaqt slotlari</h3>
-                  <Button
-                    size="sm"
-                    onClick={() => setIsTimeSlotDialogOpen(true)}
-                    data-testid="button-add-time-slot"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Qo'shish
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeleteGym(selectedGym.id)}
+                      data-testid="button-delete-gym"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Zalni o'chirish
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setIsTimeSlotDialogOpen(true)}
+                      data-testid="button-add-time-slot"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Slot qo'shish
+                    </Button>
+                  </div>
                 </div>
                 
                 {timeSlots.length === 0 ? (
