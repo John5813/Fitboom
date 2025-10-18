@@ -628,7 +628,12 @@ export default function AdminPage() {
                           />
                           <h3 className="font-semibold mb-2 truncate">{gym.name}</h3>
                           <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                            <p className="truncate">Kategoriya: {gym.category}</p>
+                            <p className="truncate flex items-center gap-1">
+                              <span>Kategoriya:</span>
+                              <span className="font-medium text-foreground">
+                                {categories.find(c => c.name === gym.category)?.icon} {gym.category}
+                              </span>
+                            </p>
                             <p>Narx: {gym.credits} kredit</p>
                             <p className="truncate">Manzil: {gym.address}</p>
                           </div>
