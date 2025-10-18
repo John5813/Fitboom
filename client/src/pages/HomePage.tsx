@@ -414,9 +414,9 @@ export default function HomePage() {
             </p>
             {gymsLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
-            ) : gymsWithDistance.filter(g => g.distance !== undefined && g.distance <= 10).length > 0 ? (
+            ) : gymsWithDistance.length > 0 ? (
               <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
-                {gymsWithDistance.filter(g => g.distance !== undefined && g.distance <= 10).slice(0, 8).map((gym) => (
+                {gymsWithDistance.slice(0, 8).map((gym) => (
                   <Card 
                     key={gym.id}
                     className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
@@ -437,9 +437,13 @@ export default function HomePage() {
                         <p className="text-white/70 text-[10px] truncate">
                           {gym.category}
                         </p>
-                        {gym.distance !== undefined && (
+                        {gym.distance !== undefined ? (
                           <p className="text-white/70 text-[10px]">
                             {gym.distance.toFixed(1)} km
+                          </p>
+                        ) : (
+                          <p className="text-white/70 text-[10px]">
+                            Masofa noma'lum
                           </p>
                         )}
                       </div>
@@ -447,13 +451,9 @@ export default function HomePage() {
                   </Card>
                 ))}
               </div>
-            ) : userLocation ? (
-              <p className="text-muted-foreground text-sm text-center py-4">
-                10 km radiusda zallar topilmadi
-              </p>
             ) : (
               <p className="text-muted-foreground text-sm text-center py-4">
-                Yaqin atrofdagi zallarni ko'rish uchun joylashuvingizni yoqing
+                Hozircha zallar mavjud emas
               </p>
             )}
           </div>
