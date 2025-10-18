@@ -332,9 +332,9 @@ export default function HomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           qrCode: data,
-          gymId: selectedBooking.gymId 
+          gymId: selectedBooking.gymId
         }),
       });
 
@@ -383,8 +383,8 @@ export default function HomePage() {
               <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
             </div>
             {/* Test Admin tugmasi */}
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={() => {
                 setLocation('/admin');
               }}
@@ -395,7 +395,7 @@ export default function HomePage() {
             </Button>
           </div>
 
-          <CreditBalance 
+          <CreditBalance
             credits={credits}
             onPurchase={() => setIsPurchaseDialogOpen(true)}
           />
@@ -417,15 +417,15 @@ export default function HomePage() {
             ) : gymsWithDistance.length > 0 ? (
               <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
                 {gymsWithDistance.slice(0, 8).map((gym) => (
-                  <Card 
+                  <Card
                     key={gym.id}
                     className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
                     onClick={() => handleBookGym(gym.id)}
                     data-testid={`card-gym-square-${gym.id}`}
                   >
                     <div className="relative h-full">
-                      <img 
-                        src={gym.imageUrl || getGymImage(gym.category)} 
+                      <img
+                        src={gym.imageUrl || getGymImage(gym.category)}
                         alt={gym.name}
                         className="w-full h-full object-cover"
                       />
@@ -465,7 +465,7 @@ export default function HomePage() {
             ) : onlineClasses.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
                 {onlineClasses.slice(0, 6).map((classItem) => (
-                  <Card 
+                  <Card
                     key={classItem.id}
                     className="overflow-hidden cursor-pointer hover-elevate aspect-[3/4] min-w-[140px] flex-shrink-0 snap-start"
                     onClick={() => {
@@ -486,8 +486,8 @@ export default function HomePage() {
                   >
                     <div className="relative h-full flex flex-col">
                       <div className="relative flex-1">
-                        <img 
-                          src={classItem.thumbnailUrl || classImage} 
+                        <img
+                          src={classItem.thumbnailUrl || classImage}
                           alt={classItem.title}
                           className="w-full h-full object-cover"
                         />
@@ -542,7 +542,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <GymFilters 
+          <GymFilters
             categories={categories}
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
@@ -561,7 +561,7 @@ export default function HomePage() {
           ) : (
             <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
               {filteredGyms.map((gym) => (
-                <GymCard 
+                <GymCard
                   key={gym.id}
                   id={gym.id}
                   name={gym.name}
@@ -588,7 +588,7 @@ export default function HomePage() {
           ) : onlineClasses.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {onlineClasses.map((classItem) => (
-              <OnlineClassCard 
+              <OnlineClassCard
                 key={classItem.id}
                 {...classItem}
                 isLocked={credits === 0}
@@ -622,28 +622,38 @@ export default function HomePage() {
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
 
-          <div className="space-y-3">
-            {bookings.map((booking) => {
-              const gym = gyms.find(g => g.id === booking.gymId);
-              return (
-                <BookingCard 
-                  key={booking.id}
-                  id={booking.id}
-                  gymName={gym?.name || 'Sport Zali'}
-                  gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
-                  date={booking.date}
-                  time={booking.time}
-                  onScanQR={() => handleScanQR(booking.id)} // Pass booking ID to handleScanQR
-                  onCancel={handleCancelBooking}
-                />
-              );
-            })}
-          </div>
-
-          {bookings.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Bronlar yo'q</p>
+          {bookings.length > 0 ? (
+            <div className="space-y-3">
+              {bookings.map((booking) => {
+                const gym = gyms.find(g => g.id === booking.gymId);
+                return (
+                  <div key={booking.id} className="space-y-2">
+                    <BookingCard
+                      id={booking.id}
+                      gymName={gym?.name || "Unknown"}
+                      gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
+                      date={new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
+                      time={booking.time}
+                      onScanQR={() => handleScanQR(booking.id)}
+                      onCancel={handleCancelBooking}
+                    />
+                    {gym?.latitude && gym?.longitude && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(`https://www.google.com/maps?q=${gym.latitude},${gym.longitude}`, '_blank')}
+                        className="w-full"
+                      >
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Joylashuvni haritada ko'rish
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">Hozircha bronlar yo'q</p>
           )}
         </div>
       )}
@@ -657,7 +667,7 @@ export default function HomePage() {
               Zalga kirish uchun QR kodni skanerlang
             </p>
             <div className="rounded-lg overflow-hidden">
-              <QRScanner 
+              <QRScanner
                 isOpen={true}
                 onClose={() => setActiveTab('home')}
                 onScan={handleQRScan}
@@ -668,7 +678,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <BottomNav 
+      <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onScanQR={() => {
@@ -676,17 +686,17 @@ export default function HomePage() {
           // The user will select a booking first from the 'bookings' tab.
           // For now, just open the scanner, but it will prompt for booking selection.
           // A better UX would be to navigate to 'bookings' tab first if no booking is selected.
-          setIsScannerOpen(true); 
+          setIsScannerOpen(true);
         }}
       />
 
-      <PurchaseCreditsDialog 
+      <PurchaseCreditsDialog
         isOpen={isPurchaseDialogOpen}
         onClose={() => setIsPurchaseDialogOpen(false)}
         onPurchase={handlePurchase}
       />
 
-      <QRScanner 
+      <QRScanner
         isOpen={isScannerOpen}
         onClose={() => {
           setIsScannerOpen(false);

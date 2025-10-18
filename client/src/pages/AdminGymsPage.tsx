@@ -409,9 +409,22 @@ export default function AdminGymsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Kredit</p>
-                  <Badge variant="secondary" className="font-semibold px-3 py-1">
-                    {selectedGym.credits} kredit
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="font-semibold px-3 py-1">
+                      {selectedGym.credits} kredit
+                    </Badge>
+                    {selectedGym.latitude && selectedGym.longitude && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(`https://www.google.com/maps?q=${selectedGym.latitude},${selectedGym.longitude}`, '_blank')}
+                        className="h-7"
+                      >
+                        <MapPin className="h-3 w-3 mr-1" />
+                        Joylashuv
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Ish vaqti</p>
