@@ -5,6 +5,8 @@ import type { Express } from "express";
 import session from "express-session";
 import type { User } from "@shared/schema";
 import bcrypt from "bcrypt";
+import ConnectPgSimple from "connect-pg-simple";
+import { neon } from "@neondatabase/serverless";
 
 declare global {
   namespace Express {
@@ -18,6 +20,8 @@ declare global {
   }
 }
 
+const PgSession = ConnectPgSimple(session);
+
 export function setupAuth(app: Express) {
   // Require SESSION_SECRET in production
   if (app.get("env") === "production" && !process.env.SESSION_SECRET) {
@@ -28,6 +32,10 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || "fitboom-dev-secret-change-in-production",
     resave: false,
     saveUninitialized: false,
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+    }),
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7,
     },
