@@ -1,84 +1,58 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 
 interface User {
   id: string;
-  username: string;
+  phone: string;
+  name: string;
   credits: number;
   isAdmin: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
-  setUserAsAdmin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
-  register: async () => {},
   logout: async () => {},
   isLoading: true,
   isAuthenticated: false,
-  setUserAsAdmin: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
-  const [localUser, setLocalUser] = useState<User | null>(null);
 
-  const { data, isLoading } = useQuery<{ user: User }>({
+  const { data, isLoading } = useQuery<{ user: User } | null>({
     queryKey: ['/api/user'],
+    queryFn: getQueryFn<{ user: User } | null>({ on401: "returnNull" }),
     retry: false,
   });
 
-  const serverUser = data?.user || null;
-  const user = localUser || serverUser;
+  const user = data?.user || null;
   const isAuthenticated = !!user;
 
-  const login = async (username: string, password: string) => {
-    // Implement login logic here
-  };
-
-  const register = async (username: string, password: string) => {
-    // Implement register logic here
-  };
-
   const logout = async () => {
-    // Implement logout logic here
-    setLocalUser(null);
-    setLocation("/login");
-  };
-
-  const setUserAsAdmin = () => {
-    if (user) {
-      setLocalUser({
-        ...user,
-        isAdmin: true
-      });
+    try {
+      await apiRequest('/api/logout', 'POST');
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      setLocation("/");
+    } catch (error) {
+      console.error('Logout error:', error);
+      setLocation("/");
     }
   };
-
-  useEffect(() => {
-    if (serverUser) {
-      setLocalUser(serverUser);
-    }
-  }, [serverUser]);
 
   const value = {
     user,
-    login,
-    register,
     logout,
     isLoading,
     isAuthenticated,
-    setUserAsAdmin,
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dumbbell } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
@@ -23,6 +24,13 @@ export default function RegisterPage() {
   const [gender, setGender] = useState<"Erkak" | "Ayol" | "">("");
   
   const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      setLocation('/home');
+    }
+  }, [isAuthenticated, isLoading, setLocation]);
 
   // Telefon raqamini tekshirish uchun mutation
   const checkPhoneMutation = useMutation({
