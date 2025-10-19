@@ -1,17 +1,18 @@
 import WelcomeScreen from "@/components/WelcomeScreen";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+  const handleStart = () => {
+    if (isAuthenticated) {
       setLocation('/home');
+    } else {
+      setLocation('/register');
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  };
 
   if (isLoading) {
     return (
@@ -25,6 +26,6 @@ export default function Welcome() {
   }
 
   return (
-    <WelcomeScreen onStart={() => setLocation('/register')} />
+    <WelcomeScreen onStart={handleStart} />
   );
 }
