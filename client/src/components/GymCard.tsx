@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, ExternalLink } from "lucide-react";
 
 interface GymCardProps {
   id: string;
@@ -11,6 +11,7 @@ interface GymCardProps {
   distance: string;
   hours: string;
   imageUrl: string;
+  address: string; // Added address prop for the map link
   onBook: (id: string) => void;
 }
 
@@ -22,6 +23,7 @@ export default function GymCard({
   distance, 
   hours, 
   imageUrl, 
+  address, // Destructure address prop
   onBook 
 }: GymCardProps) {
   return (
@@ -58,6 +60,21 @@ export default function GymCard({
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{hours}</span>
+          </div>
+          {/* Updated section for address to be a clickable map link */}
+          <div className="flex items-start gap-2 text-sm">
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <Button
+              variant="link"
+              className="h-auto p-0 text-sm text-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(address, '_blank'); // Use the address prop here
+              }}
+            >
+              Haritada ko'rish
+              <ExternalLink className="w-3 h-3 ml-1 inline" />
+            </Button>
           </div>
         </div>
       </CardContent>
