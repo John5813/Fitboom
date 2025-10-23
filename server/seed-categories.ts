@@ -1,4 +1,3 @@
-
 import { db } from "./db";
 import { categories } from "@shared/schema";
 
@@ -39,15 +38,4 @@ export async function seedCategories() {
   } catch (error) {
     console.error("Kategoriyalarni seed qilishda xatolik:", error);
   }
-}
-
-// Agar fayl to'g'ridan-to'g'ri ishga tushirilsa
-if (require.main === module) {
-  seedCategories().then(() => {
-    console.log("Kategoriyalar seed qilindi!");
-    process.exit(0);
-  }).catch((error) => {
-    console.error("Xatolik:", error);
-    process.exit(1);
-  });
 }
