@@ -1,3 +1,4 @@
+
 import { db } from "./db";
 import { categories } from "@shared/schema";
 
@@ -16,29 +17,37 @@ const defaultCategories = [
   { name: "Ot sporti", icon: "🐎" },
 ];
 
-async function seedCategories() {
+export async function seedCategories() {
   try {
-    console.log("Kategoriyalar qo'shilmoqda...");
+    let addedCount = 0;
     
     for (const category of defaultCategories) {
       try {
         await db.insert(categories).values(category);
-        console.log(`✓ ${category.name} qo'shildi`);
+        addedCount++;
       } catch (error: any) {
-        if (error.message?.includes('unique')) {
-          console.log(`- ${category.name} allaqachon mavjud`);
-        } else {
-          console.error(`✗ ${category.name} qo'shishda xatolik:`, error.message);
+        // Agar kategoriya allaqachon mavjud bo'lsa, xatolikni e'tiborsiz qoldiramiz
+        if (!error.message?.includes('unique')) {
+          console.error(`Kategoriya qo'shishda xatolik (${category.name}):`, error.message);
         }
       }
     }
     
-    console.log("Kategoriyalar muvaffaqiyatli qo'shildi!");
-    process.exit(0);
+    if (addedCount > 0) {
+      console.log(`✓ ${addedCount} ta yangi kategoriya qo'shildi`);
+    }
   } catch (error) {
-    console.error("Xatolik:", error);
-    process.exit(1);
+    console.error("Kategoriyalarni seed qilishda xatolik:", error);
   }
 }
 
-seedCategories();
+// Agar fayl to'g'ridan-to'g'ri ishga tushirilsa
+if (require.main === module) {
+  seedCategories().then(() => {
+    console.log("Kategoriyalar seed qilindi!");
+    process.exit(0);
+  }).catch((error) => {
+    console.error("Xatolik:", error);
+    process.exit(1);
+  });
+}
