@@ -181,10 +181,19 @@ export default function AdminGymsPage() {
       return;
     }
 
-    createGymMutation.mutate({
+    // Parse coordinates properly
+    const gymData: any = {
       ...gymForm,
       credits: parseInt(gymForm.credits)
-    });
+    };
+
+    // Only include coordinates if they are provided
+    if (gymForm.latitude && gymForm.longitude) {
+      gymData.latitude = gymForm.latitude.trim();
+      gymData.longitude = gymForm.longitude.trim();
+    }
+
+    createGymMutation.mutate(gymData);
   };
 
   const handleCreateTimeSlot = () => {

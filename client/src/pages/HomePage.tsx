@@ -121,12 +121,17 @@ export default function HomePage() {
   const gymsWithDistance = gyms.map(gym => {
     let distance = undefined;
     if (userLocation && gym.latitude && gym.longitude) {
-      distance = calculateDistance(
-        userLocation.lat,
-        userLocation.lng,
-        gym.latitude,
-        gym.longitude
-      );
+      const gymLat = parseFloat(gym.latitude.toString().trim());
+      const gymLng = parseFloat(gym.longitude.toString().trim());
+      
+      if (!isNaN(gymLat) && !isNaN(gymLng)) {
+        distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          gymLat,
+          gymLng
+        );
+      }
     }
     return { ...gym, distance };
   }).sort((a, b) => {

@@ -63,6 +63,16 @@ export default function MapPage() {
            !isNaN(parseFloat(gym.longitude))
   );
 
+  // Update map center to show gyms if available
+  useEffect(() => {
+    if (gymsWithLocation.length > 0 && !userLocation) {
+      const firstGym = gymsWithLocation[0];
+      const lat = parseFloat(firstGym.latitude!);
+      const lng = parseFloat(firstGym.longitude!);
+      setMapCenter([lat, lng]);
+    }
+  }, [gymsWithLocation.length, userLocation]);
+
   const handleLocateMe = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -125,8 +135,11 @@ export default function MapPage() {
 
             {/* Gym markers */}
             {gymsWithLocation.map((gym) => {
-              const lat = parseFloat(gym.latitude!);
-              const lng = parseFloat(gym.longitude!);
+              // Parse coordinates with proper trimming
+              const lat = parseFloat(gym.latitude!.toString().trim());
+              const lng = parseFloat(gym.longitude!.toString().trim());
+              
+              console.log(`Gym: ${gym.name}, Lat: ${lat}, Lng: ${lng}`); // Debug log
               
               // Custom icon with gym name
               const customIcon = L.divIcon({
