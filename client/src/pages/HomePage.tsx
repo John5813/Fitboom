@@ -570,6 +570,9 @@ export default function HomePage() {
                   distance={gym.distance}
                   hours={gym.hours}
                   imageUrl={gym.imageUrl || getGymImage(gym.category)}
+                  address={gym.address}
+                  latitude={gym.latitude || undefined}
+                  longitude={gym.longitude || undefined}
                   onBook={handleBookGym}
                 />
               ))}
@@ -717,6 +720,26 @@ export default function HomePage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {selectedGymForBooking && (selectedGymForBooking.latitude && selectedGymForBooking.longitude || selectedGymForBooking.address) && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Manzil</p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedGymForBooking.latitude && selectedGymForBooking.longitude) {
+                      window.open(`https://www.google.com/maps?q=${selectedGymForBooking.latitude},${selectedGymForBooking.longitude}`, '_blank');
+                    } else if (selectedGymForBooking.address) {
+                      window.open(selectedGymForBooking.address, '_blank');
+                    }
+                  }}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Haritada ko'rish • {selectedGymForBooking.hours}
+                </Button>
+              </div>
+            )}
             {timeSlotsData?.timeSlots && timeSlotsData.timeSlots.length > 0 ? (
               <div className="space-y-2">
                 {timeSlotsData.timeSlots

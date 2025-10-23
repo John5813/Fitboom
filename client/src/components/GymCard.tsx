@@ -15,30 +15,30 @@ interface GymCardProps {
   onBook: (id: string) => void;
 }
 
-export default function GymCard({ 
-  id, 
-  name, 
-  category, 
-  credits, 
-  distance, 
-  hours, 
-  imageUrl, 
+export default function GymCard({
+  id,
+  name,
+  category,
+  credits,
+  distance,
+  hours,
+  imageUrl,
   address, // Destructure address prop
-  onBook 
+  onBook
 }: GymCardProps) {
   return (
-    <Card 
+    <Card
       className="overflow-hidden cursor-pointer hover-elevate min-w-[280px] sm:min-w-[300px] flex-shrink-0 snap-start"
       onClick={() => onBook(id)}
       data-testid={`card-gym-${id}`}
     >
       <div className="relative">
-        <img 
-          src={imageUrl} 
+        <img
+          src={imageUrl}
           alt={name}
           className="w-full h-32 object-cover"
         />
-        <Badge 
+        <Badge
           className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5"
           data-testid={`badge-credits-${id}`}
         >
