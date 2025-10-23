@@ -630,28 +630,18 @@ export default function HomePage() {
               {bookings.map((booking) => {
                 const gym = gyms.find(g => g.id === booking.gymId);
                 return (
-                  <div key={booking.id} className="space-y-2">
-                    <BookingCard
-                      id={booking.id}
-                      gymName={gym?.name || "Unknown"}
-                      gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
-                      date={new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
-                      time={booking.time}
-                      onScanQR={() => handleScanQR(booking.id)}
-                      onCancel={handleCancelBooking}
-                    />
-                    {gym?.latitude && gym?.longitude && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(`https://www.google.com/maps?q=${gym.latitude},${gym.longitude}`, '_blank')}
-                        className="w-full"
-                      >
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Joylashuvni haritada ko'rish
-                      </Button>
-                    )}
-                  </div>
+                  <BookingCard
+                    key={booking.id}
+                    id={booking.id}
+                    gymName={gym?.name || "Unknown"}
+                    gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
+                    date={new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
+                    time={booking.time}
+                    latitude={gym?.latitude || undefined}
+                    longitude={gym?.longitude || undefined}
+                    onScanQR={() => handleScanQR(booking.id)}
+                    onCancel={handleCancelBooking}
+                  />
                 );
               })}
             </div>

@@ -170,12 +170,12 @@ export default function MapPage() {
                       <div className="flex items-center gap-1 text-sm mb-2">
                         <MapPin className="h-3 w-3" />
                         <a 
-                          href={gym.address} 
+                          href={`https://www.google.com/maps?q=${lat},${lng}`}
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-primary hover:underline"
                         >
-                          Manzilni ko'rish
+                          Google Maps'da ko'rish
                         </a>
                       </div>
                       <div className="flex items-center justify-between">

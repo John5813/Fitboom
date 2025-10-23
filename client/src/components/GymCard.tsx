@@ -11,7 +11,9 @@ interface GymCardProps {
   distance: string;
   hours: string;
   imageUrl: string;
-  address: string; // Added address prop for the map link
+  address?: string;
+  latitude?: string;
+  longitude?: string;
   onBook: (id: string) => void;
 }
 
@@ -23,7 +25,9 @@ export default function GymCard({
   distance,
   hours,
   imageUrl,
-  address, // Destructure address prop
+  address,
+  latitude,
+  longitude,
   onBook
 }: GymCardProps) {
   return (
@@ -61,21 +65,22 @@ export default function GymCard({
             <Clock className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{hours}</span>
           </div>
-          {/* Updated section for address to be a clickable map link */}
-          <div className="flex items-start gap-2 text-sm">
-            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-            <Button
-              variant="link"
-              className="h-auto p-0 text-sm text-left"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(address, '_blank'); // Use the address prop here
-              }}
-            >
-              Haritada ko'rish
-              <ExternalLink className="w-3 h-3 ml-1 inline" />
-            </Button>
-          </div>
+          {(latitude && longitude) && (
+            <div className="flex items-start gap-2 text-sm">
+              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+              <Button
+                variant="link"
+                className="h-auto p-0 text-sm text-left"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
+                }}
+              >
+                Haritada ko'rish
+                <ExternalLink className="w-3 h-3 ml-1 inline" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

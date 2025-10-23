@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, QrCode, X } from "lucide-react";
 import { ExternalLink } from "lucide-react"; // Import ExternalLink icon
@@ -9,17 +9,21 @@ interface BookingCardProps {
   gymImage: string;
   date: string;
   time: string;
+  latitude?: string;
+  longitude?: string;
   onScanQR: (id: string) => void;
   onCancel: (id: string) => void;
   gymAddress: string; // Added gymAddress prop
 }
 
-export default function BookingCard({ 
-  id, 
-  gymName, 
-  gymImage, 
-  date, 
-  time, 
+export default function BookingCard({
+  id,
+  gymName,
+  gymImage,
+  date,
+  time,
+  latitude,
+  longitude,
   onScanQR,
   onCancel,
   gymAddress // Destructure gymAddress
@@ -28,8 +32,8 @@ export default function BookingCard({
     <Card className="hover-elevate" data-testid={`card-booking-${id}`}>
       <CardContent className="p-4">
         <div className="flex gap-4">
-          <img 
-            src={gymImage} 
+          <img
+            src={gymImage}
             alt={gymName}
             className="w-20 h-20 rounded-md object-cover"
           />
@@ -54,7 +58,7 @@ export default function BookingCard({
               </div>
             </div>
             <div className="flex gap-2 mt-3">
-              <Button 
+              <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onScanQR(id)}
@@ -64,7 +68,7 @@ export default function BookingCard({
                 <QrCode className="w-3 h-3 mr-1" />
                 QR kod
               </Button>
-              <Button 
+              <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onCancel(id)}
@@ -78,6 +82,36 @@ export default function BookingCard({
           </div>
         </div>
       </CardContent>
+      <CardFooter className="p-3 sm:p-4 pt-0 flex flex-col gap-2">
+        <div className="flex gap-2 w-full">
+          <Button
+            onClick={() => onScanQR(id)}
+            className="flex-1"
+            data-testid={`button-scan-qr-${id}`}
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            QR Skanerlash
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => onCancel(id)}
+            data-testid={`button-cancel-booking-${id}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        {latitude && longitude && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank')}
+            className="w-full"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Haritada ko'rish
+          </Button>
+        )}
+      </CardFooter>
     </Card>
   );
 }
