@@ -726,7 +726,7 @@ export default function HomePage() {
                   }}
                 >
                   <MapPin className="h-4 w-4 mr-2" />
-                  Haritada ko'rish • {selectedGymForBooking.hours}
+                  Haritada ko'rish
                 </Button>
               </div>
             )}

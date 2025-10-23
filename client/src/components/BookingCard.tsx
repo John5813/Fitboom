@@ -100,11 +100,17 @@ export default function BookingCard({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        {latitude && longitude && (
+        {(latitude && longitude) || gymAddress && (
           <Button
             size="sm"
             variant="outline"
-            onClick={() => window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank')}
+            onClick={() => {
+              if (latitude && longitude) {
+                window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
+              } else if (gymAddress) {
+                window.open(gymAddress, '_blank');
+              }
+            }}
             className="w-full"
           >
             <MapPin className="h-4 w-4 mr-2" />
