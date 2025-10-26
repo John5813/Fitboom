@@ -354,7 +354,7 @@ export default function AdminCollectionsPage() {
 
       {/* Create Collection Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-create-collection">
+        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-create-collection">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">Yangi To'plam Yaratish</DialogTitle>
             <DialogDescription>
@@ -362,7 +362,8 @@ export default function AdminCollectionsPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+            <div className="space-y-4">
             <div>
               <Label htmlFor="name">To'plam nomi *</Label>
               <Input
@@ -509,7 +510,8 @@ export default function AdminCollectionsPage() {
                 Bekor qilish
               </Button>
             </div>
-          </div>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
