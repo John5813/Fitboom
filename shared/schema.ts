@@ -17,6 +17,7 @@ export const gyms = pgTable("gyms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   category: text("category").notNull(),
+  categories: text("categories").array(),
   credits: integer("credits").notNull(),
   distance: text("distance").notNull().default("0 km"),
   hours: text("hours").notNull().default("00:00 - 24:00"),
@@ -35,9 +36,11 @@ export const videoCollections = pgTable("video_collections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description").notNull(),
-  price: integer("price").notNull(),
+  price: integer("price").notNull().default(0),
+  isFree: boolean("is_free").notNull().default(false),
   thumbnailUrl: text("thumbnail_url").notNull(),
   category: text("category").notNull(),
+  categories: text("categories").array(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -46,6 +49,7 @@ export const onlineClasses = pgTable("online_classes", {
   collectionId: varchar("collection_id").notNull(),
   title: text("title").notNull(),
   category: text("category").notNull(),
+  categories: text("categories").array(),
   duration: text("duration").notNull(),
   instructor: text("instructor").notNull(),
   thumbnailUrl: text("thumbnail_url").notNull(),

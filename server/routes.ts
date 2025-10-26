@@ -9,8 +9,15 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
+import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Stripe sozlamalari
+  let stripe: Stripe | null = null;
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+
   // Rasmlar uchun papka yaratish
   const uploadsDir = path.join(process.cwd(), 'uploads');
   try {
@@ -640,22 +647,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/purchase-collection', requireAuth, async (req, res) => {
+  // Stripe payment intent yaratish
+  app.post('/api/create-payment-intent', requireAuth, async (req, res) => {
     try {
+      if (!stripe) {
+        return res.status(500).json({ error: "To'lov tizimi sozlanmagan" });
+      }
+
       const { collectionId } = req.body;
 
       if (!collectionId) {
-        return res.status(400).json({ message: "To'plam ID majburiy" });
+        return res.status(400).json({ error: "To'plam ID majburiy" });
       }
 
       const collection = await storage.getVideoCollection(collectionId);
       if (!collection) {
-        return res.status(404).json({ message: "To'plam topilmadi" });
+        return res.status(404).json({ error: "To'plam topilmadi" });
+      }
+
+      if (collection.isFree) {
+        return res.status(400).json({ error: "Bu to'plam bepul" });
       }
 
       const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
       if (alreadyPurchased) {
-        return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
+        return res.status(400).json({ error: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: collection.price * 100,
+        currency: "uzs",
+        metadata: {
+          userId: req.user!.id,
+          collectionId: collectionId,
+          collectionName: collection.name
+        },
+      });
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error("Payment intent yaratishda xatolik:", error);
+      res.status(500).json({ error: error.message || "To'lov yaratishda xatolik" });
+    }
+  });
+
+  // To'lov muvaffaqiyatli bo'lgandan so'ng sotib olishni tasdiqlash
+  app.post('/api/confirm-purchase', requireAuth, async (req, res) => {
+    try {
+      const { collectionId, paymentIntentId } = req.body;
+
+      if (!collectionId || !paymentIntentId) {
+        return res.status(400).json({ error: "To'plam ID va to'lov ID majburiy" });
+      }
+
+      if (stripe && paymentIntentId) {
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        
+        if (paymentIntent.status !== 'succeeded') {
+          return res.status(400).json({ error: "To'lov muvaffaqiyatsiz" });
+        }
+
+        if (paymentIntent.metadata.userId !== req.user!.id || 
+            paymentIntent.metadata.collectionId !== collectionId) {
+          return res.status(400).json({ error: "To'lov ma'lumotlari mos kelmaydi" });
+        }
+      }
+
+      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      if (alreadyPurchased) {
+        return res.status(400).json({ error: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
       }
 
       const purchase = await storage.createUserPurchase({
@@ -669,7 +729,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         purchase
       });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      console.error("Sotib olishni tasdiqlashda xatolik:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Bepul to'plamlarni sotib olish (Stripe kerak emas)
+  app.post('/api/purchase-free-collection', requireAuth, async (req, res) => {
+    try {
+      const { collectionId } = req.body;
+
+      if (!collectionId) {
+        return res.status(400).json({ error: "To'plam ID majburiy" });
+      }
+
+      const collection = await storage.getVideoCollection(collectionId);
+      if (!collection) {
+        return res.status(404).json({ error: "To'plam topilmadi" });
+      }
+
+      if (!collection.isFree) {
+        return res.status(400).json({ error: "Bu to'plam pullik, to'lov qilishingiz kerak" });
+      }
+
+      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      if (alreadyPurchased) {
+        return res.status(400).json({ error: "Siz bu to'plamni allaqachon qo'shgansiz" });
+      }
+
+      const purchase = await storage.createUserPurchase({
+        userId: req.user!.id,
+        collectionId: collectionId,
+      });
+
+      res.json({
+        success: true,
+        message: "To'plam muvaffaqiyatli qo'shildi",
+        purchase
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

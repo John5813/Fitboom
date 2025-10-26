@@ -15,6 +15,7 @@ import AdminCollectionsPage from "@/pages/AdminCollectionsPage";
 import CoursesPage from "@/pages/CoursesPage";
 import MyCourseDetailPage from "@/pages/MyCourseDetailPage";
 import VideoPlayerPage from "@/pages/VideoPlayerPage";
+import CheckoutPage from "@/pages/CheckoutPage";
 import MapPage from "@/pages/MapPage";
 import NotFound from "@/pages/not-found";
 
@@ -57,6 +58,11 @@ function Router() {
       <Route path="/my-courses/:id">
         <ProtectedRoute>
           <MyCourseDetailPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/checkout/:id">
+        <ProtectedRoute>
+          <CheckoutPage />
         </ProtectedRoute>
       </Route>
       <Route path="/watch/:id">

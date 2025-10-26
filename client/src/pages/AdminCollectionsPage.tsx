@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { VideoCollection, OnlineClass } from "@shared/schema";
+import type { VideoCollection, OnlineClass, Category } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,11 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Eye, Plus, ArrowLeft, Video } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Video, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function AdminCollectionsPage() {
   const [selectedCollection, setSelectedCollection] = useState<VideoCollection | null>(null);
@@ -28,7 +30,12 @@ export default function AdminCollectionsPage() {
     price: '',
     thumbnailUrl: '',
     category: '',
+    categories: [] as string[],
+    isFree: 'false',
   });
+
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [selectedThumbnail, setSelectedThumbnail] = useState<File | null>(null);
 
   const [videoForm, setVideoForm] = useState({
     title: '',
@@ -54,6 +61,62 @@ export default function AdminCollectionsPage() {
   const collections = collectionsData?.collections || [];
   const collectionVideos = collectionVideosData?.classes || [];
 
+  const { data: categoriesData } = useQuery<{ categories: Category[] }>({
+    queryKey: ['/api/categories'],
+  });
+
+  const categories = categoriesData?.categories || [];
+
+  const toggleCategory = (categoryName: string) => {
+    const cats = collectionForm.categories || [];
+    if (cats.includes(categoryName)) {
+      setCollectionForm({
+        ...collectionForm,
+        categories: cats.filter(c => c !== categoryName)
+      });
+    } else {
+      setCollectionForm({
+        ...collectionForm,
+        categories: [...cats, categoryName]
+      });
+    }
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    setUploadingThumbnail(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Rasm yuklashda xatolik');
+      }
+
+      const data = await response.json();
+      setCollectionForm({ ...collectionForm, thumbnailUrl: data.imageUrl });
+      setSelectedThumbnail(file);
+      
+      toast({
+        title: "Rasm yuklandi",
+        description: "Rasm muvaffaqiyatli yuklandi",
+      });
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "Rasm yuklashda xatolik yuz berdi",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
   const createCollectionMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest('/api/collections', 'POST', data);
@@ -72,7 +135,10 @@ export default function AdminCollectionsPage() {
         price: '',
         thumbnailUrl: '',
         category: '',
+        categories: [],
+        isFree: 'false',
       });
+      setSelectedThumbnail(null);
     },
     onError: () => {
       toast({
@@ -114,19 +180,35 @@ export default function AdminCollectionsPage() {
   });
 
   const handleCreateCollection = () => {
-    if (!collectionForm.name || !collectionForm.price || !collectionForm.category) {
+    if (!collectionForm.name || (!collectionForm.category && collectionForm.categories.length === 0)) {
       toast({
         title: "Ma'lumot to'liq emas",
-        description: "Iltimos, nomi, kategoriya va narxni kiriting.",
+        description: "Iltimos, nomi va kategoriyani kiriting.",
         variant: "destructive"
       });
       return;
     }
 
-    createCollectionMutation.mutate({
-      ...collectionForm,
-      price: parseFloat(collectionForm.price)
-    });
+    if (collectionForm.isFree === 'false' && !collectionForm.price) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "Pullik video uchun narxni kiriting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const collectionData: any = {
+      name: collectionForm.name,
+      description: collectionForm.description,
+      thumbnailUrl: collectionForm.thumbnailUrl,
+      category: collectionForm.category || collectionForm.categories[0] || '',
+      categories: collectionForm.categories.length > 0 ? collectionForm.categories : [collectionForm.category],
+      isFree: collectionForm.isFree === 'true',
+      price: collectionForm.isFree === 'true' ? 0 : parseInt(collectionForm.price)
+    };
+
+    createCollectionMutation.mutate(collectionData);
   };
 
   const handleAddVideo = () => {
@@ -293,37 +375,108 @@ export default function AdminCollectionsPage() {
             </div>
 
             <div>
-              <Label htmlFor="price">Narx (so'm) *</Label>
-              <Input
-                id="price"
-                type="number"
-                value={collectionForm.price}
-                onChange={(e) => setCollectionForm({ ...collectionForm, price: e.target.value })}
-                placeholder="150000"
-                data-testid="input-collection-price"
-              />
+              <Label>Kategoriyalar *</Label>
+              <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Hozircha kategoriyalar yo'q</p>
+                ) : (
+                  categories.map((category) => (
+                    <div key={category.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`col-cat-${category.id}`}
+                        checked={collectionForm.categories.includes(category.name)}
+                        onCheckedChange={() => toggleCategory(category.name)}
+                        data-testid={`checkbox-collection-category-${category.name}`}
+                      />
+                      <label
+                        htmlFor={`col-cat-${category.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {category.icon} {category.name}
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+              {collectionForm.categories.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {collectionForm.categories.map((cat) => (
+                    <Badge key={cat} variant="secondary" className="text-xs">
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(cat)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="category">Kategoriya *</Label>
-              <Input
-                id="category"
-                value={collectionForm.category}
-                onChange={(e) => setCollectionForm({ ...collectionForm, category: e.target.value })}
-                placeholder="Misol: Yoga, Fitnes, Pilates"
-                data-testid="input-collection-category"
-              />
+              <Label>To'plam turi *</Label>
+              <RadioGroup 
+                value={collectionForm.isFree} 
+                onValueChange={(value) => setCollectionForm({ ...collectionForm, isFree: value })}
+                className="flex gap-4 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="false" id="paid" data-testid="radio-paid" />
+                  <Label htmlFor="paid" className="cursor-pointer font-normal">💰 Pullik</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="true" id="free" data-testid="radio-free" />
+                  <Label htmlFor="free" className="cursor-pointer font-normal">🎁 Bepul</Label>
+                </div>
+              </RadioGroup>
             </div>
 
+            {collectionForm.isFree === 'false' && (
+              <div>
+                <Label htmlFor="price">Narx (so'm) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={collectionForm.price}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, price: e.target.value })}
+                  placeholder="150000"
+                  data-testid="input-collection-price"
+                />
+              </div>
+            )}
+
             <div>
-              <Label htmlFor="thumbnailUrl">Rasm URL</Label>
-              <Input
-                id="thumbnailUrl"
-                value={collectionForm.thumbnailUrl}
-                onChange={(e) => setCollectionForm({ ...collectionForm, thumbnailUrl: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                data-testid="input-collection-thumbnail"
-              />
+              <Label htmlFor="thumbnailFile">Rasm Yuklash *</Label>
+              <div className="space-y-2">
+                <Input
+                  id="thumbnailFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleThumbnailUpload(file);
+                    }
+                  }}
+                  disabled={uploadingThumbnail}
+                  data-testid="input-collection-thumbnail"
+                />
+                {uploadingThumbnail && (
+                  <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
+                )}
+                {collectionForm.thumbnailUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={collectionForm.thumbnailUrl} 
+                      alt="Preview" 
+                      className="rounded-lg w-full h-32 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

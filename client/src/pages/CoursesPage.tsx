@@ -3,7 +3,7 @@ import type { VideoCollection, UserPurchase, OnlineClass } from "@shared/schema"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Video, Check, ShoppingCart, PlayCircle } from "lucide-react";
+import { Video, Check, ShoppingCart, PlayCircle, Star, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -24,32 +24,35 @@ export default function CoursesPage() {
   const purchases = purchasesData?.purchases || [];
   const purchasedCollectionIds = new Set(purchases.map(p => p.collectionId));
 
-  const purchaseMutation = useMutation({
+  const freePurchaseMutation = useMutation({
     mutationFn: async (collectionId: string) => {
-      const response = await apiRequest('/api/purchase-collection', 'POST', { collectionId });
+      const response = await apiRequest('/api/purchase-free-collection', 'POST', { collectionId });
       return response.json();
     },
     onSuccess: (data, collectionId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-purchases'] });
       toast({
-        title: "To'plam sotib olindi",
-        description: data.testMode 
-          ? "Test rejimda to'plam muvaffaqiyatli sotib olindi" 
-          : "To'plam muvaffaqiyatli sotib olindi",
+        title: "To'plam qo'shildi",
+        description: "Bepul to'plam muvaffaqiyatli qo'shildi",
       });
       navigate(`/my-courses/${collectionId}`);
     },
     onError: (error: any) => {
       toast({
         title: "Xatolik",
-        description: error.message || "Sotib olishda xatolik yuz berdi.",
+        description: error.message || "Qo'shishda xatolik yuz berdi.",
         variant: "destructive"
       });
     }
   });
 
-  const handlePurchase = (collectionId: string) => {
-    purchaseMutation.mutate(collectionId);
+  const handlePurchase = (collection: VideoCollection) => {
+    if (collection.isFree) {
+      freePurchaseMutation.mutate(collection.id);
+    } else {
+      // Pullik to'plamlar uchun checkout sahifasiga o'tkazish
+      navigate(`/checkout/${collection.id}`);
+    }
   };
 
   const handleViewCollection = (collectionId: string) => {
@@ -130,9 +133,19 @@ export default function CoursesPage() {
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold">
-                          {collection.price.toLocaleString()} so'm
-                        </p>
+                        {collection.isFree ? (
+                          <Badge variant="secondary" className="text-lg px-3 py-1">
+                            <Gift className="h-4 w-4 mr-1" />
+                            Bepul
+                          </Badge>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                            <p className="text-2xl font-bold">
+                              {collection.price.toLocaleString()} so'm
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -148,12 +161,21 @@ export default function CoursesPage() {
                     ) : (
                       <Button 
                         className="w-full" 
-                        onClick={() => handlePurchase(collection.id)}
-                        disabled={purchaseMutation.isPending}
+                        onClick={() => handlePurchase(collection)}
+                        disabled={freePurchaseMutation.isPending}
                         data-testid={`button-purchase-${collection.id}`}
                       >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        {purchaseMutation.isPending ? 'Yuklanmoqda...' : 'Sotib Olish'}
+                        {collection.isFree ? (
+                          <>
+                            <Gift className="h-4 w-4 mr-2" />
+                            {freePurchaseMutation.isPending ? 'Yuklanmoqda...' : "Bepul Qo'shish"}
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Sotib Olish
+                          </>
+                        )}
                       </Button>
                     )}
                   </CardContent>

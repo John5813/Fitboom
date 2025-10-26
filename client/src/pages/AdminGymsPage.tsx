@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -22,6 +23,9 @@ export default function AdminGymsPage() {
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const [createdGym, setCreatedGym] = useState<Gym | null>(null);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('');
   const { toast } = useToast();
 
   const [gymForm, setGymForm] = useState({
@@ -30,11 +34,13 @@ export default function AdminGymsPage() {
     description: '',
     credits: '',
     category: '',
+    categories: [] as string[],
     imageUrl: '',
     facilities: '',
     hours: '09:00 - 22:00',
     latitude: '',
     longitude: '',
+    locationLink: '',
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -65,6 +71,61 @@ export default function AdminGymsPage() {
   const timeSlots = timeSlotsData?.timeSlots || [];
   const categories = categoriesData?.categories || [];
 
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('/api/categories', 'POST', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({
+        title: "Kategoriya qo'shildi",
+        description: `${newCategoryName} muvaffaqiyatli qo'shildi.`,
+      });
+      setIsAddCategoryDialogOpen(false);
+      setNewCategoryName('');
+      setNewCategoryIcon('');
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Kategoriya qo'shishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleCreateCategory = () => {
+    if (!newCategoryName) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "Kategoriya nomini kiriting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    createCategoryMutation.mutate({
+      name: newCategoryName,
+      icon: newCategoryIcon || '🏋️'
+    });
+  };
+
+  const toggleCategory = (categoryName: string) => {
+    const categories = gymForm.categories || [];
+    if (categories.includes(categoryName)) {
+      setGymForm({
+        ...gymForm,
+        categories: categories.filter(c => c !== categoryName)
+      });
+    } else {
+      setGymForm({
+        ...gymForm,
+        categories: [...categories, categoryName]
+      });
+    }
+  };
+
   const createGymMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest('/api/gyms', 'POST', data);
@@ -85,11 +146,13 @@ export default function AdminGymsPage() {
         description: '',
         credits: '',
         category: '',
+        categories: [],
         imageUrl: '',
         facilities: '',
         hours: '09:00 - 22:00',
         latitude: '',
         longitude: '',
+        locationLink: '',
       });
       setSelectedImage(null);
     },
@@ -151,8 +214,51 @@ export default function AdminGymsPage() {
     }
   });
 
+  const extractCoordinatesFromLink = (link: string) => {
+    try {
+      const patterns = [
+        /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+        /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+        /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+        /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/
+      ];
+
+      for (const pattern of patterns) {
+        const match = link.match(pattern);
+        if (match) {
+          return {
+            latitude: match[1],
+            longitude: match[2]
+          };
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleLocationLinkChange = (link: string) => {
+    setGymForm({ ...gymForm, locationLink: link, address: link });
+    
+    const coords = extractCoordinatesFromLink(link);
+    if (coords) {
+      setGymForm(prev => ({
+        ...prev,
+        locationLink: link,
+        address: link,
+        latitude: coords.latitude,
+        longitude: coords.longitude
+      }));
+      toast({
+        title: "Koordinatalar topildi",
+        description: `Lat: ${coords.latitude}, Lng: ${coords.longitude}`,
+      });
+    }
+  };
+
   const handleCreateGym = () => {
-    if (!gymForm.name || !gymForm.address || !gymForm.credits || !gymForm.category) {
+    if (!gymForm.name || !gymForm.address || !gymForm.credits || (!gymForm.category && gymForm.categories.length === 0)) {
       toast({
         title: "Ma'lumot to'liq emas",
         description: "Iltimos, barcha majburiy maydonlarni to'ldiring.",
@@ -161,33 +267,13 @@ export default function AdminGymsPage() {
       return;
     }
 
-    // URL formatini tekshirish
-    try {
-      new URL(gymForm.address);
-      if (!gymForm.address.includes('maps.google') && !gymForm.address.includes('goo.gl')) {
-        toast({
-          title: "Noto'g'ri manzil formati",
-          description: "Iltimos, Google Maps URL manzilini kiriting.",
-          variant: "destructive"
-        });
-        return;
-      }
-    } catch {
-      toast({
-        title: "Noto'g'ri URL formati",
-        description: "Iltimos, to'g'ri URL manzilini kiriting (https://... bilan boshlanishi kerak).",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Parse coordinates properly
     const gymData: any = {
       ...gymForm,
-      credits: parseInt(gymForm.credits)
+      credits: parseInt(gymForm.credits),
+      category: gymForm.category || gymForm.categories[0] || '',
+      categories: gymForm.categories.length > 0 ? gymForm.categories : [gymForm.category]
     };
 
-    // Only include coordinates if they are provided
     if (gymForm.latitude && gymForm.longitude) {
       gymData.latitude = gymForm.latitude.trim();
       gymData.longitude = gymForm.longitude.trim();
@@ -681,35 +767,69 @@ export default function AdminGymsPage() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Zal nomi *</Label>
-                <Input
-                  id="name"
-                  value={gymForm.name}
-                  onChange={(e) => setGymForm({ ...gymForm, name: e.target.value })}
-                  placeholder="Misol: FitZone Gym"
-                  data-testid="input-gym-name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Kategoriya *</Label>
-                <Select
-                  value={gymForm.category}
-                  onValueChange={(value) => setGymForm({ ...gymForm, category: value })}
+            <div>
+              <Label htmlFor="name">Zal nomi *</Label>
+              <Input
+                id="name"
+                value={gymForm.name}
+                onChange={(e) => setGymForm({ ...gymForm, name: e.target.value })}
+                placeholder="Misol: FitZone Gym"
+                data-testid="input-gym-name"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Kategoriyalar *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddCategoryDialogOpen(true)}
+                  data-testid="button-add-category"
                 >
-                  <SelectTrigger id="category" data-testid="select-gym-category">
-                    <SelectValue placeholder="Kategoriyani tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.icon} {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Yangi kategoriya
+                </Button>
               </div>
+              <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Hozircha kategoriyalar yo'q</p>
+                ) : (
+                  categories.map((category) => (
+                    <div key={category.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cat-${category.id}`}
+                        checked={gymForm.categories.includes(category.name)}
+                        onCheckedChange={() => toggleCategory(category.name)}
+                        data-testid={`checkbox-category-${category.name}`}
+                      />
+                      <label
+                        htmlFor={`cat-${category.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {category.icon} {category.name}
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+              {gymForm.categories.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {gymForm.categories.map((cat) => (
+                    <Badge key={cat} variant="secondary" className="text-xs">
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(cat)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -737,39 +857,43 @@ export default function AdminGymsPage() {
             </div>
 
             <div>
-              <Label htmlFor="address">Manzil (Google Maps URL) *</Label>
+              <Label htmlFor="locationLink">Joylashuv (Google Maps Link) *</Label>
               <Input
-                id="address"
+                id="locationLink"
                 type="url"
-                value={gymForm.address}
-                onChange={(e) => setGymForm({ ...gymForm, address: e.target.value })}
-                placeholder="https://maps.google.com/..."
-                data-testid="input-gym-address"
+                value={gymForm.locationLink}
+                onChange={(e) => handleLocationLinkChange(e.target.value)}
+                placeholder="https://maps.google.com/?q=41.311151,69.279737"
+                data-testid="input-gym-location-link"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Google Maps dan manzil URL ni kiriting
+                Google Maps dan link kiritsangiz, koordinatalar avtomatik ajratib olinadi
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="latitude">Kenglik (Latitude)</Label>
+                <Label htmlFor="latitude">Kenglik (Latitude) {gymForm.latitude && '✓'}</Label>
                 <Input
                   id="latitude"
                   value={gymForm.latitude}
                   onChange={(e) => setGymForm({ ...gymForm, latitude: e.target.value })}
                   placeholder="41.311151"
                   data-testid="input-gym-latitude"
+                  readOnly={!!gymForm.locationLink}
+                  className={gymForm.latitude ? 'border-green-500' : ''}
                 />
               </div>
               <div>
-                <Label htmlFor="longitude">Uzunlik (Longitude)</Label>
+                <Label htmlFor="longitude">Uzunlik (Longitude) {gymForm.longitude && '✓'}</Label>
                 <Input
                   id="longitude"
                   value={gymForm.longitude}
                   onChange={(e) => setGymForm({ ...gymForm, longitude: e.target.value })}
                   placeholder="69.279737"
                   data-testid="input-gym-longitude"
+                  readOnly={!!gymForm.locationLink}
+                  className={gymForm.longitude ? 'border-green-500' : ''}
                 />
               </div>
             </div>
@@ -906,6 +1030,64 @@ export default function AdminGymsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Category Dialog */}
+      <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-add-category">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Yangi Kategoriya Qo'shish</DialogTitle>
+            <DialogDescription>
+              Yangi kategoriya yarating
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="categoryName">Kategoriya nomi *</Label>
+              <Input
+                id="categoryName"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Misol: Yoga, Boxing, Pilates"
+                data-testid="input-category-name"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="categoryIcon">Emoji icon</Label>
+              <Input
+                id="categoryIcon"
+                value={newCategoryIcon}
+                onChange={(e) => setNewCategoryIcon(e.target.value)}
+                placeholder="🏋️"
+                data-testid="input-category-icon"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Emoji belgisi kiriting (masalan: 🏋️, 🧘, 🥊)
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleCreateCategory}
+                disabled={createCategoryMutation.isPending}
+                className="flex-1"
+                data-testid="button-submit-category"
+              >
+                {createCategoryMutation.isPending ? 'Yuklanmoqda...' : "Qo'shish"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddCategoryDialogOpen(false)}
+                className="flex-1"
+                data-testid="button-cancel-category"
+              >
+                Bekor qilish
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
