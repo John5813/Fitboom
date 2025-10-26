@@ -515,7 +515,7 @@ export default function AdminCollectionsPage() {
 
       {/* Add Video Dialog */}
       <Dialog open={isAddVideoDialogOpen} onOpenChange={setIsAddVideoDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-add-video">
+        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-add-video">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">Video Qo'shish</DialogTitle>
             <DialogDescription>
@@ -523,7 +523,8 @@ export default function AdminCollectionsPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+            <div className="space-y-4">
             <div>
               <Label htmlFor="title">Video nomi *</Label>
               <Input
@@ -603,7 +604,8 @@ export default function AdminCollectionsPage() {
                 Bekor qilish
               </Button>
             </div>
-          </div>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
