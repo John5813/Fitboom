@@ -29,9 +29,9 @@ export default function MyCourseDetailPage() {
   const purchases = purchasesData?.purchases || [];
   const isPurchased = purchases.some(p => p.collectionId === id);
 
-  const handleVideoClick = (videoId: string) => {
+  const handleVideoClick = (videoUrl: string) => {
     if (isPurchased) {
-      navigate(`/watch/${videoId}`);
+      window.open(videoUrl, '_blank');
     }
   };
 
@@ -134,7 +134,7 @@ export default function MyCourseDetailPage() {
                   className={`overflow-hidden transition-all ${
                     isPurchased ? 'cursor-pointer hover:shadow-lg' : 'opacity-75'
                   }`}
-                  onClick={() => handleVideoClick(video.id)}
+                  onClick={() => handleVideoClick(video.videoUrl)}
                   data-testid={`card-video-${video.id}`}
                 >
                   <div className="flex">

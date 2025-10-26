@@ -7,6 +7,7 @@ import { Video, Check, ShoppingCart, PlayCircle, Star, Gift } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import Link from "next/link";
 
 export default function CoursesPage() {
   const { toast } = useToast();
@@ -90,7 +91,7 @@ export default function CoursesPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {collections.map((collection) => {
               const isPurchased = purchasedCollectionIds.has(collection.id);
-              
+
               return (
                 <Card 
                   key={collection.id} 
@@ -114,7 +115,7 @@ export default function CoursesPage() {
                       )}
                     </div>
                   )}
-                  
+
                   <CardHeader>
                     <CardTitle className="flex items-start justify-between">
                       <span>{collection.name}</span>
