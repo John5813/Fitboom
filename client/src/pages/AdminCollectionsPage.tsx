@@ -101,7 +101,7 @@ export default function AdminCollectionsPage() {
       const data = await response.json();
       setCollectionForm({ ...collectionForm, thumbnailUrl: data.imageUrl });
       setSelectedThumbnail(file);
-      
+
       toast({
         title: "Rasm yuklandi",
         description: "Rasm muvaffaqiyatli yuklandi",
@@ -320,7 +320,7 @@ export default function AdminCollectionsPage() {
               {selectedCollection?.name}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedCollection && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -361,7 +361,7 @@ export default function AdminCollectionsPage() {
               Yangi video to'plam ma'lumotlarini kiriting
             </DialogDescription>
           </DialogHeader>
-          
+
           <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
             <div className="space-y-4">
             <div>
@@ -524,7 +524,7 @@ export default function AdminCollectionsPage() {
               To'plamga yangi video qo'shing
             </DialogDescription>
           </DialogHeader>
-          
+
           <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
             <div className="space-y-4">
             <div>
