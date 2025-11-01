@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
@@ -23,12 +24,12 @@ export default function AdminPage() {
     address: '',
     description: '',
     credits: '',
-    category: '',
+    categories: [] as string[],
     imageUrl: '',
     facilities: '',
     rating: '5',
     hours: '',
-    qrCode: '' // Added qrCode to gymForm state
+    qrCode: ''
   });
 
   // Class form state
@@ -140,12 +141,12 @@ export default function AdminPage() {
       address: '',
       description: '',
       credits: '',
-      category: '',
+      categories: [],
       imageUrl: '',
       facilities: '',
       rating: '5',
       hours: '',
-      qrCode: '' // Reset qrCode
+      qrCode: ''
     });
   };
 
@@ -161,10 +162,10 @@ export default function AdminPage() {
       return;
     }
 
-    if (!gymForm.category) {
+    if (!gymForm.categories || gymForm.categories.length === 0) {
       toast({
         title: "Xatolik",
-        description: "Kategoriyani tanlang.",
+        description: "Kamida bitta kategoriya tanlang.",
         variant: "destructive"
       });
       return;
@@ -229,7 +230,7 @@ export default function AdminPage() {
       address: trimmedAddress,
       description: trimmedDescription || null,
       credits: creditsValue,
-      category: gymForm.category,
+      categories: gymForm.categories,
       imageUrl: trimmedImageUrl,
       facilities: trimmedFacilities || null,
       rating: parseInt(gymForm.rating, 10),
@@ -250,12 +251,12 @@ export default function AdminPage() {
       address: gym.address,
       description: gym.description || '',
       credits: gym.credits.toString(),
-      category: gym.category,
+      categories: gym.categories || [],
       imageUrl: gym.imageUrl,
       facilities: gym.facilities || '',
       rating: gym.rating.toString(),
       hours: gym.hours,
-      qrCode: gym.qrCode || '' // Set qrCode when editing
+      qrCode: gym.qrCode || ''
     });
   };
 
@@ -428,22 +429,36 @@ export default function AdminPage() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="gym-category">Kategoriya</Label>
-                  <Select 
-                    value={gymForm.category || undefined}
-                    onValueChange={(value) => setGymForm({...gymForm, category: value})}
-                  >
-                    <SelectTrigger id="gym-category" data-testid="select-gym-category">
-                      <SelectValue placeholder="Kategoriya tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.name}>
+                  <Label>Kategoriyalar (bir nechta tanlash mumkin)</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`cat-${category.id}`}
+                          checked={gymForm.categories.includes(category.name)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setGymForm({
+                                ...gymForm,
+                                categories: [...gymForm.categories, category.name]
+                              });
+                            } else {
+                              setGymForm({
+                                ...gymForm,
+                                categories: gymForm.categories.filter(c => c !== category.name)
+                              });
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`cat-${category.id}`}
+                          className="text-sm cursor-pointer"
+                        >
                           {category.icon} {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
                 <div>
@@ -629,9 +644,12 @@ export default function AdminPage() {
                           <h3 className="font-semibold mb-2 truncate">{gym.name}</h3>
                           <div className="space-y-1 text-sm text-muted-foreground mb-3">
                             <p className="truncate flex items-center gap-1">
-                              <span>Kategoriya:</span>
+                              <span>Kategoriyalar:</span>
                               <span className="font-medium text-foreground">
-                                {categories.find(c => c.name === gym.category)?.icon} {gym.category}
+                                {gym.categories?.map(cat => {
+                                  const catData = categories.find(c => c.name === cat);
+                                  return catData ? `${catData.icon} ${cat}` : cat;
+                                }).join(', ') || 'Yo\'q'}
                               </span>
                             </p>
                             <p>Narx: {gym.credits} kredit</p>

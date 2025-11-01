@@ -179,7 +179,7 @@ export default function MapPage() {
                         />
                       )}
                       <h3 className="font-bold text-lg mb-1">{gym.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">{gym.category}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{gym.categories?.join(', ') || ''}</p>
                       <div className="flex items-center gap-1 text-sm mb-2">
                         <MapPin className="h-3 w-3" />
                         <a 

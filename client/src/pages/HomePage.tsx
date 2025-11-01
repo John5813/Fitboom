@@ -48,7 +48,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'home' | 'gyms' | 'classes' | 'bookings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'gyms' | 'classes' | 'bookings' | 'scanner'>('home');
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -176,7 +176,7 @@ export default function HomePage() {
   const bookings = bookingsData?.bookings || [];
 
   const filteredGyms = gymsWithDistance.filter(gym => {
-    const matchesCategory = selectedCategory === 'all' || gym.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategory);
     const matchesSearch = gym.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPrice = maxPrice === undefined || gym.credits <= maxPrice;
     return matchesCategory && matchesSearch && matchesPrice;
@@ -430,7 +430,7 @@ export default function HomePage() {
                   >
                     <div className="relative h-full">
                       <img
-                        src={gym.imageUrl || getGymImage(gym.category)}
+                        src={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
                         alt={gym.name}
                         className="w-full h-full object-cover"
                       />
@@ -440,7 +440,7 @@ export default function HomePage() {
                           {gym.name}
                         </h3>
                         <p className="text-white/70 text-[10px] truncate">
-                          {gym.category}
+                          {gym.categories?.join(', ') || ''}
                         </p>
                         {gym.distance !== undefined ? (
                           <p className="text-white/70 text-[10px]">
@@ -570,11 +570,11 @@ export default function HomePage() {
                   key={gym.id}
                   id={gym.id}
                   name={gym.name}
-                  category={gym.category}
+                  category={gym.categories?.[0] || ''}
                   credits={gym.credits}
                   distance={gym.distance}
                   hours={gym.hours}
-                  imageUrl={gym.imageUrl || getGymImage(gym.category)}
+                  imageUrl={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
                   address={gym.address}
                   latitude={gym.latitude || undefined}
                   longitude={gym.longitude || undefined}
@@ -639,7 +639,8 @@ export default function HomePage() {
                     key={booking.id}
                     id={booking.id}
                     gymName={gym?.name || "Unknown"}
-                    gymImage={gym?.imageUrl || getGymImage(gym?.category || '')}
+                    gymImage={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
+                    gymAddress={gym?.address || ""}
                     date={new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
                     time={booking.time}
                     latitude={gym?.latitude || undefined}

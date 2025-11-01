@@ -25,8 +25,22 @@ const PgSession = ConnectPgSimple(session);
 export function setupAuth(app: Express) {
   // Require SESSION_SECRET in production
   if (app.get("env") === "production" && !process.env.SESSION_SECRET) {
+    console.error("⚠️ SESSION_SECRET environment variable bo'sh!");
+    console.error("Production hosting-da SESSION_SECRET sozlash shart.");
+    console.error("Masalan: SESSION_SECRET=my-super-secret-key-12345");
     throw new Error("SESSION_SECRET environment variable is required in production");
   }
+
+  // DATABASE_URL tekshirish
+  if (!process.env.DATABASE_URL) {
+    console.error("⚠️ DATABASE_URL environment variable bo'sh!");
+    console.error("PostgreSQL database manzilini sozlang.");
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
+  // Trust proxy - hosting providerlar uchun
+  // Render, Railway, Vercel, Heroku kabi hosting-lar uchun zarur
+  app.set("trust proxy", 1);
 
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "fitboom-dev-secret-change-in-production",
@@ -37,17 +51,12 @@ export function setupAuth(app: Express) {
       createTableIfMissing: true,
     }),
     cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 kun
+      httpOnly: true, // XSS himoyasi
+      sameSite: app.get("env") === "production" ? "none" : "lax",
+      secure: app.get("env") === "production", // HTTPS da secure
     },
   };
-
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-    sessionSettings.cookie = {
-      ...sessionSettings.cookie,
-      secure: true,
-    };
-  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());

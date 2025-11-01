@@ -8,7 +8,7 @@ interface GymCardProps {
   name: string;
   category: string;
   credits: number;
-  distance: string;
+  distance: string | number | undefined;
   hours: string;
   imageUrl: string;
   address?: string;
@@ -59,7 +59,9 @@ export default function GymCard({
         <div className="space-y-1 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <MapPin className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{distance}</span>
+            <span className="truncate">
+              {typeof distance === 'number' ? `${distance.toFixed(1)} km` : distance || 'Masofa noma\'lum'}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 flex-shrink-0" />
@@ -69,8 +71,8 @@ export default function GymCard({
             <div className="flex items-start gap-2 text-sm">
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
               <Button
-                variant="link"
-                className="h-auto p-0 text-sm text-left"
+                variant="ghost"
+                className="h-auto p-0 text-sm text-left hover:underline"
                 onClick={(e) => {
                   e.stopPropagation();
                   window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');

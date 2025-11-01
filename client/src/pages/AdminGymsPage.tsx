@@ -33,7 +33,6 @@ export default function AdminGymsPage() {
     address: '',
     description: '',
     credits: '',
-    category: '',
     categories: [] as string[],
     imageUrl: '',
     facilities: '',
@@ -145,7 +144,6 @@ export default function AdminGymsPage() {
         address: '',
         description: '',
         credits: '',
-        category: '',
         categories: [],
         imageUrl: '',
         facilities: '',
@@ -258,10 +256,10 @@ export default function AdminGymsPage() {
   };
 
   const handleCreateGym = () => {
-    if (!gymForm.name || !gymForm.address || !gymForm.credits || (!gymForm.category && gymForm.categories.length === 0)) {
+    if (!gymForm.name || !gymForm.address || !gymForm.credits || gymForm.categories.length === 0) {
       toast({
         title: "Ma'lumot to'liq emas",
-        description: "Iltimos, barcha majburiy maydonlarni to'ldiring.",
+        description: "Iltimos, barcha majburiy maydonlarni to'ldiring va kamida bitta kategoriya tanlang.",
         variant: "destructive"
       });
       return;
@@ -270,8 +268,7 @@ export default function AdminGymsPage() {
     const gymData: any = {
       ...gymForm,
       credits: parseInt(gymForm.credits),
-      category: gymForm.category || gymForm.categories[0] || '',
-      categories: gymForm.categories.length > 0 ? gymForm.categories : [gymForm.category]
+      categories: gymForm.categories
     };
 
     if (gymForm.latitude && gymForm.longitude) {
@@ -499,8 +496,8 @@ export default function AdminGymsPage() {
               <div className="space-y-4"></div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Kategoriya</p>
-                  <p className="font-semibold">{selectedGym.category}</p>
+                  <p className="text-sm text-muted-foreground">Kategoriyalar</p>
+                  <p className="font-semibold">{selectedGym.categories?.join(', ') || 'Yo\'q'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Kredit</p>
