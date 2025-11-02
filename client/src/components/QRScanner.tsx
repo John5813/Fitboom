@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
@@ -17,18 +16,18 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
   const [error, setError] = useState<string | null>(null);
   const [hasScanned, setHasScanned] = useState(false);
 
-  const handleScan = (result: any) => {
-    if (result && result.length > 0 && !hasScanned) {
+  const handleScan = (detectedCodes: any) => {
+    if (detectedCodes && detectedCodes.length > 0 && !hasScanned) {
       setHasScanned(true);
-      const qrText = result[0].rawValue;
-      
+      const qrText = detectedCodes[0].rawValue;
+
       console.log('QR scanned:', qrText);
-      
+
       if (gymId) {
         try {
           const scannedData = JSON.parse(qrText);
           console.log('Parsed QR data:', scannedData);
-          
+
           if (scannedData.gymId === gymId) {
             onScan(qrText);
             if (isDialog) {
