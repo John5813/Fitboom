@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1760789543991,
-      "tag": "0001_goofy_morg",
+      "when": 1761474527357,
+      "tag": "0001_add_categories_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762060800000,
+      "tag": "0003_add_description_to_online_classes",
       "breakpoints": true
     }
   ]
