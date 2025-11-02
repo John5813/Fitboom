@@ -18,7 +18,7 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
   const [hasScanned, setHasScanned] = useState(false);
 
   const handleScan = (result: any) => {
-    if (result && result[0] && !hasScanned) {
+    if (result && result.length > 0 && !hasScanned) {
       setHasScanned(true);
       const qrText = result[0].rawValue;
       
@@ -34,14 +34,21 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
             if (isDialog) {
               onClose();
             }
+            setHasScanned(false);
           } else {
             setError("Bu QR kod ushbu zal uchun emas.");
-            setHasScanned(false);
+            setTimeout(() => {
+              setHasScanned(false);
+              setError(null);
+            }, 2000);
           }
         } catch (e) {
           console.error('QR parse error:', e);
           setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
-          setHasScanned(false);
+          setTimeout(() => {
+            setHasScanned(false);
+            setError(null);
+          }, 2000);
         }
       } else {
         try {
@@ -50,10 +57,14 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
           if (isDialog) {
             onClose();
           }
+          setHasScanned(false);
         } catch (e) {
           console.error('QR parse error:', e);
           setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
-          setHasScanned(false);
+          setTimeout(() => {
+            setHasScanned(false);
+            setError(null);
+          }, 2000);
         }
       }
     }
