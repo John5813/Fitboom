@@ -105,7 +105,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVideoCollections(): Promise<VideoCollection[]> {
-    return await db.select().from(videoCollections);
+    try {
+      return await db.select().from(videoCollections);
+    } catch (error) {
+      console.error("Error fetching video collections:", error);
+      throw error;
+    }
   }
 
   async getVideoCollection(id: string): Promise<VideoCollection | undefined> {
@@ -136,10 +141,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClasses(collectionId?: string): Promise<OnlineClass[]> {
-    if (collectionId) {
-      return await db.select().from(onlineClasses).where(eq(onlineClasses.collectionId, collectionId));
+    try {
+      if (collectionId) {
+        return await db.select().from(onlineClasses).where(eq(onlineClasses.collectionId, collectionId));
+      }
+      return await db.select().from(onlineClasses);
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+      throw error;
     }
-    return await db.select().from(onlineClasses);
   }
 
   async getClass(id: string): Promise<OnlineClass | undefined> {

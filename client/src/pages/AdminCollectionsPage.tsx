@@ -161,7 +161,7 @@ export default function AdminCollectionsPage() {
       const response = await apiRequest('/api/collections', 'POST', data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
       toast({
         title: "To'plam yaratildi",
@@ -178,6 +178,13 @@ export default function AdminCollectionsPage() {
         isFree: 'false',
       });
       setSelectedThumbnail(null);
+      
+      // Avtomatik ravishda video qo'shish dialogini ochish
+      if (data.collection?.id) {
+        setTimeout(() => {
+          openAddVideoDialog(data.collection.id);
+        }, 300);
+      }
     },
     onError: () => {
       toast({

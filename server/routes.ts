@@ -533,8 +533,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       res.json({ collections: collectionsWithCount });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch collections' });
+    } catch (error: any) {
+      console.error("Error fetching collections:", error);
+      res.status(500).json({ error: error.message || 'Failed to fetch collections' });
     }
   });
 
@@ -613,8 +614,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const purchasedClasses = allClasses.filter(c => purchasedCollectionIds.includes(c.collectionId));
         return res.json({ classes: purchasedClasses });
       }
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch classes' });
+    } catch (error: any) {
+      console.error("Error fetching classes:", error);
+      res.status(500).json({ error: error.message || 'Failed to fetch classes' });
     }
   });
 
