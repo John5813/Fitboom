@@ -1,6 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QrCode, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import QrScanner from 'react-qr-scanner';
 
@@ -9,20 +10,25 @@ interface QRScannerProps {
   onClose: () => void;
   onScan: (data: string) => void;
   isDialog?: boolean;
-  gymId?: string; // Qaysi zal uchun skanerlayotganini bilish uchun
+  gymId?: string;
 }
 
 export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gymId }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
+  const [hasScanned, setHasScanned] = useState(false);
 
   const handleScan = (data: any) => {
-    if (data) {
+    if (data && !hasScanned) {
+      setHasScanned(true);
       const qrText = data.text || data;
       
-      // Agar gymId berilgan bo'lsa, QR koddan olingan ma'lumotda gymId borligini tekshiramiz
+      console.log('QR scanned:', qrText);
+      
       if (gymId) {
         try {
           const scannedData = JSON.parse(qrText);
+          console.log('Parsed QR data:', scannedData);
+          
           if (scannedData.gymId === gymId) {
             onScan(qrText);
             if (isDialog) {
@@ -30,13 +36,14 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
             }
           } else {
             setError("Bu QR kod ushbu zal uchun emas.");
+            setHasScanned(false);
           }
         } catch (e) {
           console.error('QR parse error:', e);
           setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
+          setHasScanned(false);
         }
       } else {
-        // Agar gymId berilmagan bo'lsa, JSON formatni tekshiramiz
         try {
           JSON.parse(qrText);
           onScan(qrText);
@@ -44,15 +51,22 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
             onClose();
           }
         } catch (e) {
+          console.error('QR parse error:', e);
           setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
+          setHasScanned(false);
         }
       }
     }
   };
 
   const handleError = (err: any) => {
-    console.error(err);
+    console.error('QR Scanner error:', err);
     setError("Kamera ochishda xatolik yuz berdi. Iltimos, kamera ruxsatini tekshiring.");
+  };
+
+  const resetScanner = () => {
+    setError(null);
+    setHasScanned(false);
   };
 
   const scannerContent = (
@@ -63,9 +77,7 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
             <AlertCircle className="w-16 h-16 text-destructive mb-4" />
             <p className="text-sm text-muted-foreground mb-4">{error}</p>
             <Button
-              onClick={() => {
-                setError(null);
-              }}
+              onClick={resetScanner}
               variant="outline"
             >
               Qayta urinish
@@ -110,6 +122,9 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>QR kodni skanerlash</DialogTitle>
+          <DialogDescription>
+            QR kodni kamera oldiga joylashtiring va tasdiqlash uchun kuting
+          </DialogDescription>
         </DialogHeader>
         {scannerContent}
       </DialogContent>
