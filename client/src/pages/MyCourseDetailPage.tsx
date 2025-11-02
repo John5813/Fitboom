@@ -29,9 +29,15 @@ export default function MyCourseDetailPage() {
   const purchases = purchasesData?.purchases || [];
   const isPurchased = purchases.some(p => p.collectionId === id);
 
-  const handleVideoClick = (videoUrl: string) => {
+  const handleVideoClick = (videoId: string, videoUrl: string) => {
     if (isPurchased) {
-      window.open(videoUrl, '_blank');
+      // Agar URL tashqi havola bo'lsa, yangi tabda ochish
+      if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+        window.open(videoUrl, '_blank');
+      } else {
+        // Ichki video player uchun
+        navigate(`/video/${videoId}`);
+      }
     }
   };
 
@@ -116,7 +122,7 @@ export default function MyCourseDetailPage() {
 
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">Video Darsliklar</h2>
-          
+
           {visibleClasses.length === 0 ? (
             <Card>
               <CardContent className="p-12">
@@ -134,7 +140,7 @@ export default function MyCourseDetailPage() {
                   className={`overflow-hidden transition-all ${
                     isPurchased ? 'cursor-pointer hover:shadow-lg' : 'opacity-75'
                   }`}
-                  onClick={() => handleVideoClick(video.videoUrl)}
+                  onClick={() => handleVideoClick(video.id, video.videoUrl)}
                   data-testid={`card-video-${video.id}`}
                 >
                   <div className="flex">

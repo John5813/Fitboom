@@ -43,7 +43,11 @@ export default function AdminCollectionsPage() {
     videoUrl: '',
     duration: '',
     instructor: '',
+    thumbnailUrl: '',
   });
+
+  const [uploadingVideoThumbnail, setUploadingVideoThumbnail] = useState(false);
+  const [selectedVideoThumbnail, setSelectedVideoThumbnail] = useState<File | null>(null);
 
   const { data: collectionsData, isLoading } = useQuery<{ collections: VideoCollection[] }>({
     queryKey: ['/api/collections'],
@@ -117,6 +121,41 @@ export default function AdminCollectionsPage() {
     }
   };
 
+  const handleVideoThumbnailUpload = async (file: File) => {
+    setUploadingVideoThumbnail(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Rasm yuklashda xatolik');
+      }
+
+      const data = await response.json();
+      setVideoForm({ ...videoForm, thumbnailUrl: data.imageUrl });
+      setSelectedVideoThumbnail(file);
+
+      toast({
+        title: "Rasm yuklandi",
+        description: "Video rasmi muvaffaqiyatli yuklandi",
+      });
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "Rasm yuklashda xatolik yuz berdi",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingVideoThumbnail(false);
+    }
+  };
+
   const createCollectionMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest('/api/collections', 'POST', data);
@@ -168,7 +207,9 @@ export default function AdminCollectionsPage() {
         videoUrl: '',
         duration: '',
         instructor: '',
+        thumbnailUrl: '',
       });
+      setSelectedVideoThumbnail(null);
     },
     onError: () => {
       toast({
@@ -212,10 +253,10 @@ export default function AdminCollectionsPage() {
   };
 
   const handleAddVideo = () => {
-    if (!videoForm.title || !videoForm.videoUrl || !videoForm.duration || !activeCollectionId) {
+    if (!videoForm.title || !videoForm.videoUrl || !videoForm.duration || !videoForm.thumbnailUrl || !activeCollectionId) {
       toast({
         title: "Ma'lumot to'liq emas",
-        description: "Iltimos, barcha majburiy maydonlarni to'ldiring.",
+        description: "Iltimos, barcha majburiy maydonlarni to'ldiring (nom, rasm, URL, davomiylik).",
         variant: "destructive"
       });
       return;
@@ -539,16 +580,47 @@ export default function AdminCollectionsPage() {
             </div>
 
             <div>
+              <Label htmlFor="videoThumbnailFile">Video Rasmi *</Label>
+              <div className="space-y-2">
+                <Input
+                  id="videoThumbnailFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleVideoThumbnailUpload(file);
+                    }
+                  }}
+                  disabled={uploadingVideoThumbnail}
+                  data-testid="input-video-thumbnail"
+                />
+                {uploadingVideoThumbnail && (
+                  <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
+                )}
+                {videoForm.thumbnailUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={videoForm.thumbnailUrl} 
+                      alt="Preview" 
+                      className="rounded-lg w-full h-32 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
               <Label htmlFor="videoUrl">Video URL *</Label>
               <Input
                 id="videoUrl"
                 value={videoForm.videoUrl}
                 onChange={(e) => setVideoForm({ ...videoForm, videoUrl: e.target.value })}
-                placeholder="https://... (YouTube, Vimeo, yoki boshqa video URL)"
+                placeholder="https://... (YouTube, Instagram, Telegram, va boshqalar)"
                 data-testid="input-video-url"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Har qanday video platformasidan URL kiriting
+                YouTube, Instagram, Telegram yoki har qanday platformadan video URL kiriting
               </p>
             </div>
 
