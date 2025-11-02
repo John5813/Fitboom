@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
-import QrScanner from 'react-qr-scanner';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 interface QRScannerProps {
   isOpen: boolean;
@@ -17,10 +17,10 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
   const [error, setError] = useState<string | null>(null);
   const [hasScanned, setHasScanned] = useState(false);
 
-  const handleScan = (data: any) => {
-    if (data && !hasScanned) {
+  const handleScan = (result: any) => {
+    if (result && result[0] && !hasScanned) {
       setHasScanned(true);
-      const qrText = data.text || data;
+      const qrText = result[0].rawValue;
       
       console.log('QR scanned:', qrText);
       
@@ -85,13 +85,17 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
           </div>
         ) : (
           <>
-            <QrScanner
-              delay={300}
-              onError={handleError}
+            <Scanner
               onScan={handleScan}
-              style={{ width: '100%' }}
+              onError={handleError}
               constraints={{
-                video: { facingMode: 'environment' }
+                facingMode: 'environment'
+              }}
+              styles={{
+                container: {
+                  width: '100%',
+                  height: '100%'
+                }
               }}
             />
             <div className="absolute inset-0 pointer-events-none">
