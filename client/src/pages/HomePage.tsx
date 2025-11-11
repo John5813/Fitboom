@@ -573,12 +573,32 @@ export default function HomePage() {
           {classesLoading ? (
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           ) : onlineClasses.length > 0 ? (
-            <div className="space-y-4">
-              <Link href="/courses">
-                <Button variant="outline" className="w-full">
-                  Barcha kurslarni ko'rish
-                </Button>
-              </Link>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {onlineClasses.map((collection) => (
+                <Card
+                  key={collection.id}
+                  className="overflow-hidden cursor-pointer hover-elevate"
+                  onClick={() => setLocation(`/courses`)}
+                  data-testid={`card-collection-${collection.id}`}
+                >
+                  <div className="relative h-48">
+                    <img
+                      src={collection.thumbnailUrl || classImage}
+                      alt={collection.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <h3 className="text-white font-semibold text-lg truncate">
+                        {collection.name}
+                      </h3>
+                      <p className="text-white/70 text-sm truncate">
+                        {collection.isFree ? 'Bepul' : `${collection.price} kredit`}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="text-center py-12">
