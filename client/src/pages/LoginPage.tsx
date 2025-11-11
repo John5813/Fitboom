@@ -48,10 +48,6 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, isLoading, user, setLocation]);
 
-  const { data: telegramAuthUrl } = useQuery({
-    queryKey: ['/api/telegram/auth-url'],
-  });
-
   const verifyCodeMutation = useMutation({
     mutationFn: async (code: string) => {
       const response = await apiRequest('/api/telegram/verify-code', 'POST', { code });
@@ -107,10 +103,8 @@ export default function LoginPage() {
   });
 
   const handleTelegramAuth = () => {
-    if (telegramAuthUrl && typeof telegramAuthUrl === 'object' && 'url' in telegramAuthUrl) {
-      window.open((telegramAuthUrl as any).url, '_blank');
-      setShowCodeInput(true);
-    }
+    window.open('https://t.me/uzfitboom_bot', '_blank');
+    setShowCodeInput(true);
   };
 
   const handleVerifyCode = (e: React.FormEvent) => {

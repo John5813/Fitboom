@@ -155,7 +155,11 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           user = await storage.createUser({
             telegramId: telegramUserId,
             phone: phoneNumber,
+            chatId: chatId,
           });
+        } else {
+          // Agar user mavjud bo'lsa, chatId ni yangilash
+          await storage.updateUser(user.id, { chatId: chatId });
         }
 
         const loginCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -266,20 +270,12 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
 }
 
 export async function notifyProfileCompleted(user: any) {
-  if (!user.telegramId) {
+  if (!user.telegramId || !user.chatId) {
+    console.log(`[Telegram] No Telegram ID or chat ID for user ${user.id}`);
     return;
   }
 
   try {
-    const loginData = Array.from(loginCodes.values()).find(
-      data => data.telegramId === user.telegramId
-    );
-
-    if (!loginData) {
-      console.log(`[Telegram] No chat ID found for user ${user.telegramId}`);
-      return;
-    }
-
     const message = 
       `🎉 <b>Tabriklaymiz!</b>\n\n` +
       `Profilingiz muvaffaqiyatli to'ldirildi:\n\n` +
@@ -289,7 +285,7 @@ export async function notifyProfileCompleted(user: any) {
       `👫 Jins: ${user.gender === 'male' ? 'Erkak' : 'Ayol'}\n\n` +
       `Endi siz barcha xizmatlardan foydalanishingiz mumkin! 💪`;
 
-    await sendTelegramMessage(loginData.chatId, message);
+    await sendTelegramMessage(user.chatId, message);
     console.log(`[Telegram] Profile completion notification sent to ${user.telegramId}`);
   } catch (error) {
     console.error('[Telegram] Error sending profile completion notification:', error);
