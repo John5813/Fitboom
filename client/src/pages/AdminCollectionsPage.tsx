@@ -58,18 +58,18 @@ export default function AdminCollectionsPage() {
   });
 
   const { data: collectionVideosData } = useQuery<{ classes: OnlineClass[] }>({
-    queryKey: ['/api/classes', activeCollectionId],
+    queryKey: ['/api/admin/classes', activeCollectionId],
     queryFn: () => 
-      fetch(`/api/classes?collectionId=${activeCollectionId}`, {
+      fetch(`/api/admin/classes?collectionId=${activeCollectionId}`, {
         credentials: 'include'
       }).then(res => res.json()),
     enabled: !!activeCollectionId,
   });
 
   const { data: viewingVideosData } = useQuery<{ classes: OnlineClass[] }>({
-    queryKey: ['/api/classes', viewingCollectionId],
+    queryKey: ['/api/admin/classes', viewingCollectionId],
     queryFn: () => 
-      fetch(`/api/classes?collectionId=${viewingCollectionId}`, {
+      fetch(`/api/admin/classes?collectionId=${viewingCollectionId}`, {
         credentials: 'include'
       }).then(res => res.json()),
     enabled: !!viewingCollectionId,
@@ -205,14 +205,14 @@ export default function AdminCollectionsPage() {
 
   const addVideoMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('/api/classes', 'POST', data);
+      const response = await apiRequest('/api/admin/classes', 'POST', data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/classes', activeCollectionId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/classes', viewingCollectionId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes', activeCollectionId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes', viewingCollectionId] });
       toast({
         title: "Video qo'shildi",
         description: `${videoForm.title} muvaffaqiyatli qo'shildi.`,
@@ -288,13 +288,13 @@ export default function AdminCollectionsPage() {
 
   const deleteVideoMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest(`/api/classes/${id}`, 'DELETE');
+      const response = await apiRequest(`/api/admin/classes/${id}`, 'DELETE');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/classes', viewingCollectionId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes', viewingCollectionId] });
       toast({
         title: "Video o'chirildi",
         description: "Video muvaffaqiyatli o'chirildi.",

@@ -561,16 +561,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Online Classes routes
+  // Admin panel endpointlari - faqat adminlar uchun
+  app.get('/api/admin/classes', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const collectionId = req.query.collectionId as string | undefined;
+      const classes = await storage.getClasses(collectionId);
+      res.json({ classes });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch classes' });
+    }
+  });
+
+  app.post('/api/admin/classes', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const classData = insertOnlineClassSchema.parse(req.body);
+      const newClass = await storage.createClass(classData);
+      res.json({ class: newClass });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to create class' });
+    }
+  });
+
+  app.delete('/api/admin/classes/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteClass(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete class' });
+    }
+  });
+
+  // Online Classes routes - foydalanuvchilar uchun
   app.get('/api/classes', requireAuth, async (req, res) => {
     try {
       const collectionId = req.query.collectionId as string | undefined;
-
-      // Admin uchun barcha classlarni qaytarish
-      if (req.user!.isAdmin) {
-        const classes = await storage.getClasses(collectionId);
-        return res.json({ classes });
-      }
 
       // Oddiy foydalanuvchi uchun faqat sotib olingan to'plamlar
       if (collectionId) {
@@ -647,10 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Faqat adminlar video o\'chira oladi' });
       }
 
-      const success = await storage.deleteClass(req.params.id);
-      if (!success) {
-        return res.status(404).json({ error: 'Class not found' });
-      }
+      await storage.deleteClass(req.params.id);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete class' });
@@ -909,7 +930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
       }
 
-      const updatedUser = await storage.updateUser(user.id, { isAdmin: true });
+      const updatedUser = await storage.updateUser(user.id, { isAdmin: true } as any);
 
       res.json({
         message: "Foydalanuvchi admin qilindi",
