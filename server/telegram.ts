@@ -265,6 +265,37 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
   });
 }
 
+export async function notifyProfileCompleted(user: any) {
+  if (!user.telegramId) {
+    return;
+  }
+
+  try {
+    const loginData = Array.from(loginCodes.values()).find(
+      data => data.telegramId === user.telegramId
+    );
+
+    if (!loginData) {
+      console.log(`[Telegram] No chat ID found for user ${user.telegramId}`);
+      return;
+    }
+
+    const message = 
+      `🎉 <b>Tabriklaymiz!</b>\n\n` +
+      `Profilingiz muvaffaqiyatli to'ldirildi:\n\n` +
+      `👤 Ism: ${user.name}\n` +
+      `📞 Telefon: ${user.phone}\n` +
+      `🎂 Yosh: ${user.age}\n` +
+      `👫 Jins: ${user.gender === 'male' ? 'Erkak' : 'Ayol'}\n\n` +
+      `Endi siz barcha xizmatlardan foydalanishingiz mumkin! 💪`;
+
+    await sendTelegramMessage(loginData.chatId, message);
+    console.log(`[Telegram] Profile completion notification sent to ${user.telegramId}`);
+  } catch (error) {
+    console.error('[Telegram] Error sending profile completion notification:', error);
+  }
+}
+
 export async function setTelegramWebhook(webhookUrl: string) {
   if (!TELEGRAM_BOT_TOKEN) {
     console.warn('TELEGRAM_BOT_TOKEN not set. Skipping webhook registration.');

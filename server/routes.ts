@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // URL yaratish
       const imageUrl = `/api/images/${req.file.filename}`;
-      
+
       res.json({ imageUrl });
     } catch (error: any) {
       console.error("Rasm yuklash xatosi:", error);
@@ -74,20 +74,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const filename = req.params.filename;
       const filePath = path.join(uploadsDir, filename);
-      
+
       // Faylni tekshirish
       try {
         await fs.access(filePath);
       } catch {
         return res.status(404).json({ error: "Rasm topilmadi" });
       }
-      
+
       // Content-Type ni aniqlash
       let contentType = 'image/jpeg';
       if (filename.endsWith('.png')) contentType = 'image/png';
       else if (filename.endsWith('.gif')) contentType = 'image/gif';
       else if (filename.endsWith('.webp')) contentType = 'image/webp';
-      
+
       res.setHeader('Content-Type', contentType);
       res.setHeader('Cache-Control', 'public, max-age=31536000');
       res.sendFile(filePath);
@@ -105,12 +105,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userData.phone) {
         const existingUser = await storage.getUserByPhone(userData.phone);
         if (existingUser) {
-          req.login({ 
-            id: existingUser.id, 
-            phone: existingUser.phone || undefined, 
-            name: existingUser.name || undefined, 
-            credits: existingUser.credits, 
-            isAdmin: existingUser.isAdmin 
+          req.login({
+            id: existingUser.id,
+            phone: existingUser.phone || undefined,
+            name: existingUser.name || undefined,
+            credits: existingUser.credits,
+            isAdmin: existingUser.isAdmin
           }, (err) => {
             if (err) {
               return next(err);
@@ -402,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Kredit qo'shildi: ${credits} kredit foydalanuvchi ${req.user!.id} ga. Yangi balans: ${newCredits}`);
 
-      res.json({ 
+      res.json({
         success: true,
         message: "Kredit muvaffaqiyatli qo'shildi",
         credits: newCredits
@@ -641,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Purchases routes  
+  // User Purchases routes
   app.get('/api/my-purchases', requireAuth, async (req, res) => {
     try {
       const purchases = await storage.getUserPurchases(req.user!.id);
@@ -706,12 +706,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (stripe && paymentIntentId) {
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-        
+
         if (paymentIntent.status !== 'succeeded') {
           return res.status(400).json({ error: "To'lov muvaffaqiyatsiz" });
         }
 
-        if (paymentIntent.metadata.userId !== req.user!.id || 
+        if (paymentIntent.metadata.userId !== req.user!.id ||
             paymentIntent.metadata.collectionId !== collectionId) {
           return res.status(400).json({ error: "To'lov ma'lumotlari mos kelmaydi" });
         }
@@ -845,10 +845,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/users/delete-all", requireAdmin, async (req, res) => {
     try {
       const result = await db.delete(users);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Barcha foydalanuvchilar o'chirildi",
-        deletedCount: result.rowCount 
+        deletedCount: result.rowCount
       });
     } catch (error: any) {
       console.error("Error deleting all users:", error);
@@ -859,11 +859,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/complete-profile", requireAuth, async (req, res) => {
     try {
       const profileData = completeProfileSchema.parse(req.body);
-      
+
       const updatedUser = await storage.completeUserProfile(req.user!.id, profileData);
-      
+
       if (!updatedUser) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      // Telegram botga ma'lumot yuborish
+      if (updatedUser.telegramId) {
+        const { notifyProfileCompleted } = await import('./telegram');
+        await notifyProfileCompleted(updatedUser);
       }
 
       res.json({
@@ -871,7 +877,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: updatedUser
       });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error("Profil to'ldirishda xatolik:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  // Admin qilish endpoint (faqat ma'lum Telegram ID uchun)
+  app.post("/api/make-admin/:telegramId", async (req, res) => {
+    try {
+      const { telegramId } = req.params;
+      const ADMIN_TELEGRAM_ID = "5304482470";
+
+      if (telegramId !== ADMIN_TELEGRAM_ID) {
+        return res.status(403).json({ message: "Ruxsat yo'q" });
+      }
+
+      const user = await storage.getUserByTelegramId(telegramId);
+      if (!user) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      const updatedUser = await storage.updateUser(user.id, { isAdmin: true });
+
+      res.json({
+        message: "Foydalanuvchi admin qilindi",
+        user: updatedUser
+      });
+    } catch (error: any) {
+      console.error("Admin qilishda xatolik:", error);
+      res.status(500).json({ message: "Server xatosi" });
     }
   });
 
