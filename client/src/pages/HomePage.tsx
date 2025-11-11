@@ -124,7 +124,7 @@ export default function HomePage() {
     if (userLocation && gym.latitude && gym.longitude) {
       const gymLat = parseFloat(gym.latitude.toString().trim());
       const gymLng = parseFloat(gym.longitude.toString().trim());
-      
+
       if (!isNaN(gymLat) && !isNaN(gymLng)) {
         distance = calculateDistance(
           userLocation.lat,
@@ -373,6 +373,50 @@ export default function HomePage() {
 
   const categories = CATEGORIES.map(c => c.name);
 
+  // Fetch purchased collections
+  const { data: purchasesData, isLoading: purchasesLoading } = useQuery<{ purchases: UserPurchase[] }>({
+    queryKey: ['/api/my-purchases'],
+    enabled: !!user,
+  });
+  const purchases = purchasesData?.purchases || [];
+  const purchasedCollectionIds = new Set(purchases.map(p => p.collectionId));
+
+  // Mutation to purchase a collection
+  const purchaseCollectionMutation = useMutation({
+    mutationFn: async (collectionId: string) => {
+      const response = await fetch('/api/purchase-collection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ collectionId }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'To\'plamni sotib olishda xatolik yuz berdi');
+      }
+      return response.json();
+    },
+    onSuccess: async (data, collectionId) => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/my-purchases'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/my-purchases'] });
+      toast({
+        title: "Muvaffaqiyatli!",
+        description: `To'plam muvaffaqiyatli sotib olindi.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePurchaseCollection = (collectionId: string) => {
+    purchaseCollectionMutation.mutate(collectionId);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Home Tab */}
@@ -461,46 +505,56 @@ export default function HomePage() {
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">Online Darslar</h2>
-              <Link href="/courses">
-                <Button variant="ghost" size="sm" className="text-primary">
-                  Barchasini ko'rish
-                </Button>
-              </Link>
+              <h2 className="font-display font-semibold text-xl">Video Kurslar</h2>
             </div>
-            {classesLoading ? (
+            {classesLoading || purchasesLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : onlineClasses.length > 0 ? (
-              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
-                {onlineClasses.slice(0, 8).map((collection) => (
-                  <Card
-                    key={collection.id}
-                    className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
-                    onClick={() => setLocation(`/my-courses/${collection.id}`)}
-                    data-testid={`card-collection-square-${collection.id}`}
-                  >
-                    <div className="relative h-full">
+              <div className="flex flex-col gap-4">
+                {onlineClasses.map((collection) => {
+                  const isPurchased = purchasedCollectionIds.has(collection.id);
+                  return (
+                    <Card
+                      key={collection.id}
+                      className="flex items-center p-4 gap-4 hover:shadow-lg transition-shadow"
+                      data-testid={`card-collection-table-${collection.id}`}
+                    >
                       <img
                         src={collection.thumbnailUrl || classImage}
                         alt={collection.name}
-                        className="w-full h-full object-cover"
+                        className="w-24 h-16 object-cover rounded-md flex-shrink-0"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-2">
-                        <h3 className="text-white font-semibold text-xs truncate leading-tight">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg truncate">
                           {collection.name}
                         </h3>
-                        <p className="text-white/70 text-[10px] truncate">
-                          {collection.isFree ? 'Bepul' : `${collection.price} sum`}
+                        <p className="text-muted-foreground text-sm truncate">
+                          {collection.description || "Bu kurs haqida batafsil ma'lumot berilmagan."}
                         </p>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="font-bold text-lg">
+                          {isPurchased ? 'Sotib olingan' : `${collection.price} so'm`}
+                        </p>
+                        {isPurchased ? (
+                          <Button variant="outline" size="sm" onClick={() => setLocation(`/my-courses/${collection.id}`)}>
+                            <Video className="h-4 w-4 mr-2" />
+                            Ko'rish
+                          </Button>
+                        ) : (
+                          <Button onClick={() => handlePurchaseCollection(collection.id)} disabled={purchaseCollectionMutation.isPending}>
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            {purchaseCollectionMutation.isPending ? 'Sotib olinmoqda...' : 'Sotib olish'}
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-muted-foreground text-sm">Hozircha online darslar mavjud emas</p>
+                <p className="text-muted-foreground text-sm">Hozircha video kurslar mavjud emas. Tez orada yangi kurslar qo'shiladi!</p>
                 <Link href="/courses">
                   <Button className="mt-4" data-testid="button-explore-courses">
                     <Video className="h-4 w-4 mr-2" />
@@ -570,35 +624,51 @@ export default function HomePage() {
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Video Kurslar</h1>
 
-          {classesLoading ? (
+          {classesLoading || purchasesLoading ? (
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           ) : onlineClasses.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {onlineClasses.map((collection) => (
-                <Card
-                  key={collection.id}
-                  className="overflow-hidden cursor-pointer hover-elevate"
-                  onClick={() => setLocation(`/courses`)}
-                  data-testid={`card-collection-${collection.id}`}
-                >
-                  <div className="relative h-48">
-                    <img
-                      src={collection.thumbnailUrl || classImage}
-                      alt={collection.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-white font-semibold text-lg truncate">
-                        {collection.name}
-                      </h3>
-                      <p className="text-white/70 text-sm truncate">
-                        {collection.isFree ? 'Bepul' : `${collection.price} sum`}
-                      </p>
+              {onlineClasses.map((collection) => {
+                const isPurchased = purchasedCollectionIds.has(collection.id);
+                return (
+                  <Card
+                    key={collection.id}
+                    className="overflow-hidden cursor-pointer hover-elevate"
+                    onClick={() => isPurchased ? setLocation(`/my-courses/${collection.id}`) : handlePurchaseCollection(collection.id)}
+                    data-testid={`card-collection-${collection.id}`}
+                  >
+                    <div className="relative h-48">
+                      <img
+                        src={collection.thumbnailUrl || classImage}
+                        alt={collection.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 className="text-white font-semibold text-lg truncate">
+                          {collection.name}
+                        </h3>
+                        <p className="text-white/70 text-sm truncate">
+                          {collection.isFree ? 'Bepul' : `${collection.price} sum`}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                    <div className="p-4">
+                      {isPurchased ? (
+                        <Button variant="outline" className="w-full" onClick={() => setLocation(`/my-courses/${collection.id}`)}>
+                          <Video className="h-4 w-4 mr-2" />
+                          Kursni ko'rish
+                        </Button>
+                      ) : (
+                        <Button className="w-full" onClick={() => handlePurchaseCollection(collection.id)} disabled={purchaseCollectionMutation.isPending}>
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          {purchaseCollectionMutation.isPending ? 'Sotib olinmoqda...' : 'Sotib olish'}
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12">
