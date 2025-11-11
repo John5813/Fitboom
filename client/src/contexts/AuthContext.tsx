@@ -5,10 +5,14 @@ import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 
 interface User {
   id: string;
-  phone: string;
-  name: string;
+  phone: string | null;
+  telegramId?: string | null;
+  name: string | null;
+  age?: number | null;
+  gender?: string | null;
   credits: number;
   isAdmin: boolean;
+  profileCompleted: boolean;
 }
 
 interface AuthContextType {

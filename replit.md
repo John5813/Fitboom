@@ -227,11 +227,46 @@ Preferred communication style: Simple, everyday language.
 4. Start runs: migrations execute → server starts
 5. Database structure auto-created
 
-### Pending Integrations
+### November 11, 2025 - Telegram Bot Authentication Integration
 
-**Twilio SMS Authentication (Postponed)**
-- User requested phone number authentication with SMS verification
-- Twilio integration dismissed for later implementation
-- Required secrets: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
-- Feature: Replace login/signup forms with phone-only auth flow
-- Status: Waiting for Twilio account setup
+**Telegram Bot Authentication System**
+- Integrated Telegram Bot for user registration and authentication
+- Environment variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`
+- Server URL: `https://9f2beedf-dee6-47ee-b118-7218aa5551a9-00-3a5xq4fh7mz1n.spock.replit.dev`
+- Webhook URL: `/api/telegram/webhook` (automatically set on server start)
+
+**Database Schema Updates**
+- Added `telegramId` (TEXT, UNIQUE) to users table
+- Changed `phone`, `name`, `age`, `gender` to optional (nullable)
+- Added `profileCompleted` (BOOLEAN, default false) to track profile status
+- Added `createdAt` (TIMESTAMP) to users table
+
+**Backend Changes**
+- Created `server/telegram.ts` for webhook handling and bot interactions
+- Added `/api/telegram/webhook` endpoint for Telegram bot callbacks
+- Added `/api/telegram/auth-url` endpoint to get bot link
+- Added `/api/telegram/check-auth` endpoint for auth verification
+- Added `/api/complete-profile` endpoint for profile completion
+- Updated storage interface with `getUserByTelegramId` and `completeUserProfile` methods
+- Webhook automatically set on server startup using REPLIT_DEV_DOMAIN
+
+**Frontend Changes**
+- Redesigned LoginPage to use Telegram bot authentication
+- Added profile completion dialog for new users
+- Updated AuthContext User interface to include Telegram fields
+- Removed phone number login form, replaced with "Telegram orqali kirish" button
+
+**Authentication Flow**
+1. User clicks "Telegram orqali kirish" button on LoginPage
+2. User redirected to Telegram bot (@uzfitboom_bot)
+3. User sends /start command and shares phone number via contact
+4. Bot creates user account with telegramId and phone
+5. User returns to app and clicks continue
+6. App checks authentication status via telegramId
+7. If new user: Profile completion dialog appears (name, age, gender)
+8. Profile completed: User redirected to HomePage
+
+**Security & Session Updates**
+- Updated Express User type to include optional Telegram fields
+- Modified user serialization/deserialization for Telegram users
+- Maintained backward compatibility with phone-based auth

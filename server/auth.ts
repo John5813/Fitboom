@@ -12,10 +12,12 @@ declare global {
   namespace Express {
     interface User {
       id: string;
-      phone: string;
-      name: string;
+      phone?: string;
+      telegramId?: string;
+      name?: string;
       credits: number;
       isAdmin: boolean;
+      profileCompleted?: boolean;
     }
   }
 }
@@ -71,10 +73,12 @@ export function setupAuth(app: Express) {
         }
         return done(null, {
           id: user.id,
-          phone: user.phone,
-          name: user.name,
+          phone: user.phone || undefined,
+          telegramId: user.telegramId || undefined,
+          name: user.name || undefined,
           credits: user.credits,
           isAdmin: user.isAdmin,
+          profileCompleted: user.profileCompleted,
         });
       } catch (err) {
         return done(err);
@@ -94,10 +98,12 @@ export function setupAuth(app: Express) {
       }
       done(null, {
         id: user.id,
-        phone: user.phone,
-        name: user.name,
+        phone: user.phone || undefined,
+        telegramId: user.telegramId || undefined,
+        name: user.name || undefined,
         credits: user.credits,
         isAdmin: user.isAdmin,
+        profileCompleted: user.profileCompleted,
       });
     } catch (err) {
       done(err);
