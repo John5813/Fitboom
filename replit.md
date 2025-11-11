@@ -258,13 +258,15 @@ Preferred communication style: Simple, everyday language.
 
 **Authentication Flow**
 1. User clicks "Telegram orqali kirish" button on LoginPage
-2. User redirected to Telegram bot (@uzfitboom_bot)
-3. User sends /start command and shares phone number via contact
-4. Bot creates user account with telegramId and phone
-5. User returns to app and clicks continue
-6. App checks authentication status via telegramId
-7. If new user: Profile completion dialog appears (name, age, gender)
-8. Profile completed: User redirected to HomePage
+2. User redirected to Telegram bot (@uzfitboom_bot) - opens in new tab
+3. User sends /start command in Telegram
+4. Bot prompts for phone number via contact sharing button
+5. User shares contact, bot creates account and generates 8-character login code
+6. Bot sends code to user (expires in 5 minutes)
+7. User returns to app and enters code
+8. Backend verifies code via /api/telegram/verify-code
+9. If new user: Profile completion dialog appears (name, age, gender)
+10. Profile completed: User redirected to HomePage
 
 **Security & Session Updates**
 - Updated Express User type to include optional Telegram fields

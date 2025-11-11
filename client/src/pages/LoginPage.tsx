@@ -26,7 +26,8 @@ type CompleteProfileFormData = z.infer<typeof completeProfileSchema>;
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [loginCode, setLoginCode] = useState("");
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
 
@@ -51,13 +52,9 @@ export default function LoginPage() {
     queryKey: ['/api/telegram/auth-url'],
   });
 
-  const checkAuthMutation = useMutation({
-    mutationFn: async () => {
-      const telegramId = localStorage.getItem('telegram_user_id');
-      if (!telegramId) {
-        throw new Error('Telegram ID topilmadi');
-      }
-      const response = await apiRequest('/api/telegram/check-auth', 'POST', { telegramId });
+  const verifyCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await apiRequest('/api/telegram/verify-code', 'POST', { code });
       return response.json();
     },
     onSuccess: async (data) => {
@@ -72,25 +69,17 @@ export default function LoginPage() {
           });
           setLocation("/home");
         } else {
+          setShowCodeInput(false);
           setShowProfileDialog(true);
         }
-      } else {
-        toast({
-          title: "Xatolik",
-          description: "Siz hali ro'yxatdan o'tmagansiz. Telegram botga o'ting va /start bosing.",
-          variant: "destructive",
-        });
       }
-      setCheckingAuth(false);
     },
     onError: (error: any) => {
-      console.error('Check auth error:', error);
       toast({
         title: "Xatolik",
-        description: error.message || "Tizimga kirish amalga oshmadi",
+        description: error.message || "Kod noto'g'ri yoki muddati o'tgan",
         variant: "destructive",
       });
-      setCheckingAuth(false);
     },
   });
 
@@ -120,40 +109,26 @@ export default function LoginPage() {
   const handleTelegramAuth = () => {
     if (telegramAuthUrl && typeof telegramAuthUrl === 'object' && 'url' in telegramAuthUrl) {
       window.open((telegramAuthUrl as any).url, '_blank');
-      setCheckingAuth(true);
-      
-      const checkInterval = setInterval(async () => {
-        const telegramId = localStorage.getItem('telegram_user_id');
-        if (telegramId) {
-          clearInterval(checkInterval);
-          checkAuthMutation.mutate();
-        }
-      }, 2000);
-
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (checkingAuth) {
-          setCheckingAuth(false);
-        }
-      }, 60000);
+      setShowCodeInput(true);
     }
+  };
+
+  const handleVerifyCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginCode || loginCode.length < 6) {
+      toast({
+        title: "Xatolik",
+        description: "Kodni to'liq kiriting",
+        variant: "destructive",
+      });
+      return;
+    }
+    verifyCodeMutation.mutate(loginCode.toUpperCase());
   };
 
   const onSubmit = (data: CompleteProfileFormData) => {
     completeProfileMutation.mutate(data);
   };
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'telegram_auth') {
-        localStorage.setItem('telegram_user_id', event.data.userId);
-        checkAuthMutation.mutate();
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -170,23 +145,67 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <Button
-              onClick={handleTelegramAuth}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-              disabled={checkingAuth || !telegramAuthUrl}
-              data-testid="button-telegram-auth"
-            >
-              <Send className="mr-2 h-5 w-5" />
-              {checkingAuth ? "Telegram-dan javob kutilmoqda..." : "Telegram orqali kirish"}
-            </Button>
-            
-            {checkingAuth && (
+          {!showCodeInput ? (
+            <div className="space-y-4">
+              <Button
+                onClick={handleTelegramAuth}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={!telegramAuthUrl}
+                data-testid="button-telegram-auth"
+              >
+                <Send className="mr-2 h-5 w-5" />
+                Telegram orqali kirish
+              </Button>
+              
               <p className="text-sm text-center text-gray-600 dark:text-gray-400">
                 Telegram botda /start bosing va telefon raqamingizni ulashing
               </p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Telegram botdan kelgan kodni kiriting
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="code" className="text-sm font-medium">
+                  Kirish kodi
+                </label>
+                <Input
+                  id="code"
+                  type="text"
+                  placeholder="XXXXXXXX"
+                  value={loginCode}
+                  onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
+                  data-testid="input-login-code"
+                  autoFocus
+                  className="text-center text-xl font-mono tracking-widest"
+                  maxLength={8}
+                />
+              </div>
+              
+              <Button
+                type="submit"
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={verifyCodeMutation.isPending}
+                data-testid="button-verify-code"
+              >
+                {verifyCodeMutation.isPending ? "Tekshirilmoqda..." : "Tasdiqlash"}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setShowCodeInput(false)}
+                data-testid="button-back"
+              >
+                Orqaga
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
 

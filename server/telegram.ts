@@ -4,6 +4,40 @@ import type { IStorage } from './storage';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME;
 
+interface LoginCodeData {
+  telegramId: string;
+  chatId: number;
+  phone: string;
+  expiresAt: number;
+  attempts: number;
+}
+
+const loginCodes = new Map<string, LoginCodeData>();
+const userLastCodeTime = new Map<string, number>();
+
+const CODE_EXPIRY_MS = 5 * 60 * 1000;
+const CODE_REQUEST_COOLDOWN_MS = 60 * 1000;
+const MAX_VERIFICATION_ATTEMPTS = 3;
+
+setInterval(() => {
+  const now = Date.now();
+  const expiredCodes: string[] = [];
+  loginCodes.forEach((data, code) => {
+    if (data.expiresAt < now) {
+      expiredCodes.push(code);
+    }
+  });
+  expiredCodes.forEach(code => loginCodes.delete(code));
+  
+  const expiredUsers: string[] = [];
+  userLastCodeTime.forEach((time, userId) => {
+    if (now - time > CODE_REQUEST_COOLDOWN_MS) {
+      expiredUsers.push(userId);
+    }
+  });
+  expiredUsers.forEach(userId => userLastCodeTime.delete(userId));
+}, 60 * 1000);
+
 interface TelegramUser {
   id: number;
   first_name: string;
@@ -83,7 +117,7 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       const chatId = message.chat.id;
       const telegramUserId = message.from.id.toString();
 
-      if (message.text === '/start') {
+      if (message.text?.startsWith('/start')) {
         const keyboard = {
           keyboard: [
             [{ text: '📱 Telefon raqamni ulashish', request_contact: true }]
@@ -105,6 +139,16 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           ? contact.phone_number 
           : `+${contact.phone_number}`;
 
+        const lastCodeTime = userLastCodeTime.get(telegramUserId);
+        if (lastCodeTime && Date.now() - lastCodeTime < CODE_REQUEST_COOLDOWN_MS) {
+          const remainingSeconds = Math.ceil((CODE_REQUEST_COOLDOWN_MS - (Date.now() - lastCodeTime)) / 1000);
+          await sendTelegramMessage(
+            chatId,
+            `⏳ Iltimos kuting!\n\nYangi kod olish uchun ${remainingSeconds} soniya kutishingiz kerak.`
+          );
+          return res.sendStatus(200);
+        }
+
         let user = await storage.getUserByTelegramId(telegramUserId);
         
         if (!user) {
@@ -112,21 +156,35 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
             telegramId: telegramUserId,
             phone: phoneNumber,
           });
-
-          await sendTelegramMessage(
-            chatId,
-            '✅ <b>Tabriklaymiz!</b>\n\n' +
-            'Siz muvaffaqiyatli ro\'yxatdan o\'tdingiz!\n\n' +
-            'Endi ilovaga qayting va profilingizni to\'ldiring.'
-          );
-        } else {
-          await sendTelegramMessage(
-            chatId,
-            '👋 <b>Xush kelibsiz!</b>\n\n' +
-            'Siz allaqachon ro\'yxatdan o\'tgansiz.\n\n' +
-            'Ilovaga qayting va davom eting.'
-          );
         }
+
+        const loginCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        
+        loginCodes.set(loginCode, {
+          telegramId: telegramUserId,
+          chatId,
+          phone: phoneNumber,
+          expiresAt: Date.now() + CODE_EXPIRY_MS,
+          attempts: 0,
+        });
+
+        userLastCodeTime.set(telegramUserId, Date.now());
+
+        const welcomeText = user.profileCompleted
+          ? '👋 <b>Xush kelibsiz!</b>\n\n'
+          : '✅ <b>Tabriklaymiz!</b>\n\n' + 'Siz muvaffaqiyatli ro\'yxatdan o\'tdingiz!\n\n';
+
+        await sendTelegramMessage(
+          chatId,
+          welcomeText +
+          `Ilovaga qayting va bu kodni kiriting:\n\n<code>${loginCode}</code>\n\n` +
+          '<b>Diqqat:</b>\n' +
+          '• Kod 5 daqiqa amal qiladi\n' +
+          '• Bu kodni hech kimga bermang!\n' +
+          '• Faqat 3 marta urinish huquqingiz bor'
+        );
+
+        console.log(`[Telegram Auth] Code generated for user ${telegramUserId}: ${loginCode}`);
       }
 
       res.sendStatus(200);
@@ -142,36 +200,66 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
     res.json({ url: authUrl });
   });
 
-  app.post('/api/telegram/check-auth', async (req, res) => {
+  app.post('/api/telegram/verify-code', async (req, res) => {
     try {
-      const { telegramId } = req.body;
+      const { code } = req.body;
       
-      if (!telegramId) {
-        return res.status(400).json({ message: 'Telegram ID talab qilinadi' });
+      if (!code) {
+        return res.status(400).json({ message: 'Kod talab qilinadi' });
       }
 
-      const user = await storage.getUserByTelegramId(telegramId);
+      const codeKey = code.toUpperCase();
+      const loginData = loginCodes.get(codeKey);
       
-      if (user) {
-        (req as any).login(user, (err: any) => {
-          if (err) {
-            console.error('Login error:', err);
-            return res.status(500).json({ message: 'Tizimga kirish xatosi' });
-          }
-          res.json({ 
-            success: true, 
-            user,
-            profileCompleted: user.profileCompleted 
-          });
-        });
-      } else {
-        res.json({ 
-          success: false, 
-          message: 'Foydalanuvchi topilmadi' 
-        });
+      if (!loginData) {
+        console.log(`[Telegram Auth] Invalid code attempt: ${codeKey}`);
+        return res.status(400).json({ message: 'Kod noto\'g\'ri yoki muddati o\'tgan' });
       }
+
+      if (loginData.expiresAt < Date.now()) {
+        loginCodes.delete(codeKey);
+        console.log(`[Telegram Auth] Expired code: ${codeKey}`);
+        return res.status(400).json({ message: 'Kod muddati o\'tgan' });
+      }
+
+      loginData.attempts++;
+      
+      if (loginData.attempts > MAX_VERIFICATION_ATTEMPTS) {
+        loginCodes.delete(codeKey);
+        console.log(`[Telegram Auth] Too many attempts for code: ${codeKey}`);
+        return res.status(400).json({ message: 'Juda ko\'p urinish. Yangi kod oling.' });
+      }
+
+      const user = await storage.getUserByTelegramId(loginData.telegramId);
+      
+      if (!user) {
+        loginCodes.delete(codeKey);
+        console.log(`[Telegram Auth] User not found for telegramId: ${loginData.telegramId}`);
+        return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
+      }
+
+      if (user.phone !== loginData.phone) {
+        loginCodes.delete(codeKey);
+        console.log(`[Telegram Auth] Phone mismatch for code: ${codeKey}`);
+        return res.status(400).json({ message: 'Xavfsizlik xatosi. Qaytadan urinib ko\'ring.' });
+      }
+
+      loginCodes.delete(codeKey);
+      console.log(`[Telegram Auth] Successful login for user: ${user.id}`);
+
+      (req as any).login(user, (err: any) => {
+        if (err) {
+          console.error('[Telegram Auth] Login error:', err);
+          return res.status(500).json({ message: 'Tizimga kirish xatosi' });
+        }
+        res.json({ 
+          success: true, 
+          user,
+          profileCompleted: user.profileCompleted 
+        });
+      });
     } catch (error) {
-      console.error('Check auth error:', error);
+      console.error('[Telegram Auth] Verify code error:', error);
       res.status(500).json({ message: 'Server xatosi' });
     }
   });
