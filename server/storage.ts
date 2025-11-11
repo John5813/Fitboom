@@ -30,6 +30,7 @@ export interface IStorage {
   getUserPurchases(userId: string): Promise<UserPurchase[]>;
   createUserPurchase(purchase: InsertUserPurchase): Promise<UserPurchase>;
   hasPurchased(userId: string, collectionId: string): Promise<boolean>;
+  hasUserPurchasedCollection(userId: string, collectionId: string): Promise<boolean>;
   getBookings(userId?: string): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
   createBooking(booking: InsertBooking): Promise<Booking>;
@@ -207,6 +208,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async hasPurchased(userId: string, collectionId: string): Promise<boolean> {
+    const [purchase] = await db
+      .select()
+      .from(userPurchases)
+      .where(and(
+        eq(userPurchases.userId, userId),
+        eq(userPurchases.collectionId, collectionId)
+      ));
+    return !!purchase;
+  }
+
+  async hasUserPurchasedCollection(userId: string, collectionId: string): Promise<boolean> {
     const [purchase] = await db
       .select()
       .from(userPurchases)
