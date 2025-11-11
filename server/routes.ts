@@ -788,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase collection (bepul yoki pullik - hozircha to'lovsiz)
+  // Purchase collection (test rejimi - to'lovsiz sotib olish)
   app.post('/api/purchase-collection', requireAuth, async (req, res) => {
     try {
       const { collectionId } = req.body;
@@ -797,23 +797,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Collection ID talab qilinadi" });
       }
 
-      const collection = await storage.getCollection(collectionId);
+      const collection = await storage.getVideoCollection(collectionId);
       if (!collection) {
         return res.status(404).json({ message: "To'plam topilmadi" });
       }
 
-      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
       if (alreadyPurchased) {
         return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgansiz" });
       }
 
-      // To'lov tizimi keyinroq qo'shiladi - hozircha shunchaki sotib olingan deb belgilash
+      // Test rejimi - avtomatik sotib olish
       await storage.createUserPurchase({
         userId: req.user!.id,
         collectionId: collectionId,
       });
 
-      res.json({ message: "To'plam muvaffaqiyatli sotib olindi" });
+      console.log(`✅ To'plam sotib olindi: ${collection.name} (${collectionId}) foydalanuvchi ${req.user!.id} tomonidan`);
+
+      res.json({ 
+        message: "To'plam muvaffaqiyatli sotib olindi",
+        success: true 
+      });
     } catch (error) {
       console.error('Purchase error:', error);
       res.status(500).json({ message: "Serverda xatolik yuz berdi" });
