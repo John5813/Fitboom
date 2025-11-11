@@ -561,8 +561,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin panel endpointlari - faqat adminlar uchun
-  app.get('/api/admin/classes', requireAuth, requireAdmin, async (req, res) => {
+  // Admin panel endpointlari - kelajakda alohida kirish tizimi qo'shiladi
+  app.get('/api/admin/classes', async (req, res) => {
     try {
       const collectionId = req.query.collectionId as string | undefined;
       const classes = await storage.getClasses(collectionId);
@@ -572,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/classes', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/admin/classes', async (req, res) => {
     try {
       const classData = insertOnlineClassSchema.parse(req.body);
       const newClass = await storage.createClass(classData);
@@ -582,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/classes/:id', requireAuth, requireAdmin, async (req, res) => {
+  app.delete('/api/admin/classes/:id', async (req, res) => {
     try {
       await storage.deleteClass(req.params.id);
       res.json({ success: true });
