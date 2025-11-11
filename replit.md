@@ -245,13 +245,14 @@ Preferred communication style: Simple, everyday language.
 - Created `server/telegram.ts` for webhook handling and bot interactions
 - Added `/api/telegram/webhook` endpoint for Telegram bot callbacks
 - Added `/api/telegram/auth-url` endpoint to get bot link
-- Added `/api/telegram/check-auth` endpoint for auth verification
+- Added `/api/telegram/verify-code` endpoint for code verification
 - Added `/api/complete-profile` endpoint for profile completion
 - Updated storage interface with `getUserByTelegramId` and `completeUserProfile` methods
 - Webhook automatically set on server startup using REPLIT_DEV_DOMAIN
 
 **Frontend Changes**
 - Redesigned LoginPage to use Telegram bot authentication
+- Added code input form for verification
 - Added profile completion dialog for new users
 - Updated AuthContext User interface to include Telegram fields
 - Removed phone number login form, replaced with "Telegram orqali kirish" button
@@ -263,12 +264,28 @@ Preferred communication style: Simple, everyday language.
 4. Bot prompts for phone number via contact sharing button
 5. User shares contact, bot creates account and generates 8-character login code
 6. Bot sends code to user (expires in 5 minutes)
-7. User returns to app and enters code
+7. User returns to app and enters code in the input field
 8. Backend verifies code via /api/telegram/verify-code
 9. If new user: Profile completion dialog appears (name, age, gender)
 10. Profile completed: User redirected to HomePage
 
-**Security & Session Updates**
+**Security Features**
+- Rate limiting: 1 code per minute per user
+- Code expiry: 5 minutes from generation
+- Attempt throttling: Maximum 3 verification attempts per code
+- Code-to-user binding: Each code linked to specific telegramId, chatId, and phone
+- Phone number validation: Code verification checks phone match
+- Automatic cleanup: Expired codes and rate limit data cleaned every minute
+- Comprehensive logging: All code generation and verification attempts logged
+
+**Security Implementation Details**
+- `loginCodes` Map stores code data: {telegramId, chatId, phone, expiresAt, attempts}
+- `userLastCodeTime` Map enforces per-user rate limiting
+- Constants: CODE_EXPIRY_MS (5 min), CODE_REQUEST_COOLDOWN_MS (1 min), MAX_VERIFICATION_ATTEMPTS (3)
+- Backend validates code existence, expiry, attempt count, and user linkage
+- Codes are immediately deleted after successful verification or max attempts exceeded
+
+**Session Management**
 - Updated Express User type to include optional Telegram fields
 - Modified user serialization/deserialization for Telegram users
-- Maintained backward compatibility with phone-based auth
+- Traditional phone/password authentication removed - Telegram is the only login method
