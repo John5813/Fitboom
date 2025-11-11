@@ -624,47 +624,48 @@ export default function AdminCollectionsPage() {
                       Bu to'plamda videolar yo'q
                     </p>
                   ) : (
-                    <ScrollArea className="h-[400px] w-full">
-                      <div className="min-w-[600px]">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
-                            <TableRow>
-                              <TableHead className="w-12">№</TableHead>
-                              <TableHead className="w-20">Rasm</TableHead>
-                              <TableHead className="min-w-[200px]">Nomi</TableHead>
-                              <TableHead className="w-24">Davomiyligi</TableHead>
-                              <TableHead className="w-20">Harakatlar</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {viewingVideos.map((video, index) => (
-                              <TableRow key={video.id} data-testid={`video-item-${video.id}`}>
-                                <TableCell className="font-medium">{index + 1}</TableCell>
-                                <TableCell>
-                                  {video.thumbnailUrl ? (
-                                    <img
-                                      src={video.thumbnailUrl}
-                                      alt={video.title}
-                                      className="w-16 h-12 object-cover rounded"
-                                    />
-                                  ) : (
-                                    <div className="w-16 h-12 bg-muted rounded flex items-center justify-center">
-                                      <Video className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <div>
-                                    <p className="font-medium text-sm">{video.title}</p>
-                                    {video.instructor && (
-                                      <p className="text-xs text-muted-foreground">{video.instructor}</p>
-                                    )}
+                    <div className="overflow-x-auto">
+                      <ScrollArea className="h-[400px]">
+                        <Table className="w-full">
+                        <TableHeader className="sticky top-0 bg-background z-10">
+                          <TableRow>
+                            <TableHead className="w-12">№</TableHead>
+                            <TableHead className="w-20">Rasm</TableHead>
+                            <TableHead className="min-w-[150px]">Nomi</TableHead>
+                            <TableHead className="w-24">Davomiyligi</TableHead>
+                            <TableHead className="w-20">Harakatlar</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {viewingVideos.map((video, index) => (
+                            <TableRow key={video.id} data-testid={`video-item-${video.id}`}>
+                              <TableCell className="font-medium">{index + 1}</TableCell>
+                              <TableCell>
+                                {video.thumbnailUrl ? (
+                                  <img
+                                    src={video.thumbnailUrl}
+                                    alt={video.title}
+                                    className="w-16 h-12 object-cover rounded"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-12 bg-muted rounded flex items-center justify-center">
+                                    <Video className="h-6 w-6 text-muted-foreground" />
                                   </div>
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {video.duration} daqiqa
-                                </TableCell>
-                                <TableCell>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[200px]">
+                                  <p className="font-medium text-sm break-words line-clamp-2">{video.title}</p>
+                                  {video.instructor && (
+                                    <p className="text-xs text-muted-foreground truncate">{video.instructor}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {video.duration} daqiqa
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -673,13 +674,14 @@ export default function AdminCollectionsPage() {
                                   >
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                   </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </ScrollArea>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      </ScrollArea>
+                    </div>
                   )}
                 </div>
               </div>
