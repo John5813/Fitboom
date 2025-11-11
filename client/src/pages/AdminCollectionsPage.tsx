@@ -372,8 +372,8 @@ export default function AdminCollectionsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedCollection(collection);
                             setViewingCollectionId(collection.id);
+                            setSelectedCollection(collection);
                           }}
                           data-testid={`button-view-${collection.id}`}
                         >
