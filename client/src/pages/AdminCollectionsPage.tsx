@@ -543,7 +543,7 @@ export default function AdminCollectionsPage() {
           setViewingCollectionId(null);
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-collection-detail">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden" data-testid="dialog-collection-detail">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <DialogTitle className="font-display text-2xl">
@@ -572,8 +572,8 @@ export default function AdminCollectionsPage() {
           </DialogHeader>
 
           {selectedCollection && (
-            <ScrollArea className="max-h-[calc(90vh-8rem)]">
-              <div className="space-y-4 pr-4">
+            <ScrollArea className="max-h-[calc(90vh-8rem)] overflow-x-hidden">
+              <div className="space-y-4 pr-4 overflow-x-hidden">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Narx</p>
@@ -624,15 +624,16 @@ export default function AdminCollectionsPage() {
                       Bu to'plamda videolar yo'q
                     </p>
                   ) : (
-                    <ScrollArea className="h-[400px]">
-                      <Table>
+                    <div className="overflow-x-auto">
+                      <ScrollArea className="h-[400px]">
+                        <Table className="w-full">
                         <TableHeader className="sticky top-0 bg-background z-10">
                           <TableRow>
-                            <TableHead className="w-16">№</TableHead>
-                            <TableHead className="w-24">Rasm</TableHead>
-                            <TableHead>Nomi</TableHead>
-                            <TableHead className="w-28">Davomiyligi</TableHead>
-                            <TableHead className="w-32">Harakatlar</TableHead>
+                            <TableHead className="w-12">№</TableHead>
+                            <TableHead className="w-20">Rasm</TableHead>
+                            <TableHead className="min-w-[150px]">Nomi</TableHead>
+                            <TableHead className="w-24">Davomiyligi</TableHead>
+                            <TableHead className="w-20">Harakatlar</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -653,10 +654,10 @@ export default function AdminCollectionsPage() {
                                 )}
                               </TableCell>
                               <TableCell>
-                                <div>
-                                  <p className="font-medium text-sm">{video.title}</p>
+                                <div className="max-w-[200px]">
+                                  <p className="font-medium text-sm break-words line-clamp-2">{video.title}</p>
                                   {video.instructor && (
-                                    <p className="text-xs text-muted-foreground">{video.instructor}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{video.instructor}</p>
                                   )}
                                 </div>
                               </TableCell>
@@ -679,7 +680,8 @@ export default function AdminCollectionsPage() {
                           ))}
                         </TableBody>
                       </Table>
-                    </ScrollArea>
+                      </ScrollArea>
+                    </div>
                   )}
                 </div>
               </div>
