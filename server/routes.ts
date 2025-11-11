@@ -841,6 +841,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   setupTelegramWebhook(app, storage);
 
+  // DANGER: Delete all users (admin only)
+  app.delete("/api/admin/users/delete-all", requireAdmin, async (req, res) => {
+    try {
+      const result = await db.delete(users);
+      res.json({ 
+        success: true, 
+        message: "Barcha foydalanuvchilar o'chirildi",
+        deletedCount: result.rowCount 
+      });
+    } catch (error: any) {
+      console.error("Error deleting all users:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/complete-profile", requireAuth, async (req, res) => {
     try {
       const profileData = completeProfileSchema.parse(req.body);
