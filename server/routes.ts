@@ -622,14 +622,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Barcha sotib olingan to'plamlar videolarini qaytarish
       const purchases = await storage.getUserPurchases(req.user!.id);
       const collectionIds = purchases.map(p => p.collectionId);
-      
+
       if (collectionIds.length === 0) {
         return res.json({ classes: [] });
       }
 
       const allClasses = await storage.getClasses();
       const userClasses = allClasses.filter(c => c.collectionId && collectionIds.includes(c.collectionId));
-      
+
       res.json({ classes: userClasses });
     } catch (error: any) {
       res.status(500).json({ error: error.message || 'Failed to fetch classes' });
@@ -788,41 +788,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bepul to'plamlarni sotib olish (Stripe kerak emas)
+  // Purchase collection (bepul yoki pullik - hozircha to'lovsiz)
+  app.post('/api/purchase-collection', requireAuth, async (req, res) => {
+    try {
+      const { collectionId } = req.body;
+
+      if (!collectionId) {
+        return res.status(400).json({ message: "Collection ID talab qilinadi" });
+      }
+
+      const collection = await storage.getCollection(collectionId);
+      if (!collection) {
+        return res.status(404).json({ message: "To'plam topilmadi" });
+      }
+
+      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      if (alreadyPurchased) {
+        return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgansiz" });
+      }
+
+      // To'lov tizimi keyinroq qo'shiladi - hozircha shunchaki sotib olingan deb belgilash
+      await storage.createUserPurchase({
+        userId: req.user!.id,
+        collectionId: collectionId,
+      });
+
+      res.json({ message: "To'plam muvaffaqiyatli sotib olindi" });
+    } catch (error) {
+      console.error('Purchase error:', error);
+      res.status(500).json({ message: "Serverda xatolik yuz berdi" });
+    }
+  });
+
+  // Purchase free collection (eski endpoint - backward compatibility uchun)
   app.post('/api/purchase-free-collection', requireAuth, async (req, res) => {
     try {
       const { collectionId } = req.body;
 
       if (!collectionId) {
-        return res.status(400).json({ error: "To'plam ID majburiy" });
+        return res.status(400).json({ message: "Collection ID talab qilinadi" });
       }
 
-      const collection = await storage.getVideoCollection(collectionId);
+      const collection = await storage.getCollection(collectionId);
       if (!collection) {
-        return res.status(404).json({ error: "To'plam topilmadi" });
+        return res.status(404).json({ message: "To'plam topilmadi" });
       }
 
       if (!collection.isFree) {
-        return res.status(400).json({ error: "Bu to'plam pullik, to'lov qilishingiz kerak" });
+        return res.status(400).json({ message: "Bu to'plam bepul emas" });
       }
 
-      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
+      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
       if (alreadyPurchased) {
-        return res.status(400).json({ error: "Siz bu to'plamni allaqachon qo'shgansiz" });
+        return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgansiz" });
       }
 
-      const purchase = await storage.createUserPurchase({
+      await storage.createUserPurchase({
         userId: req.user!.id,
         collectionId: collectionId,
       });
 
-      res.json({
-        success: true,
-        message: "To'plam muvaffaqiyatli qo'shildi",
-        purchase
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.json({ message: "To'plam muvaffaqiyatli qo'shildi" });
+    } catch (error) {
+      console.error('Purchase error:', error);
+      res.status(500).json({ message: "Serverda xatolik yuz berdi" });
     }
   });
 
@@ -954,7 +983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server xatosi" });
     }
   });
-        
+
 
   const httpServer = createServer(app);
   return httpServer;

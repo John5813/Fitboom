@@ -24,35 +24,30 @@ export default function CoursesPage() {
   const purchases = purchasesData?.purchases || [];
   const purchasedCollectionIds = new Set(purchases.map(p => p.collectionId));
 
-  const freePurchaseMutation = useMutation({
+  const purchaseMutation = useMutation({
     mutationFn: async (collectionId: string) => {
-      const response = await apiRequest('/api/purchase-free-collection', 'POST', { collectionId });
+      const response = await apiRequest('/api/purchase-collection', 'POST', { collectionId });
       return response.json();
     },
     onSuccess: (data, collectionId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-purchases'] });
       toast({
-        title: "To'plam qo'shildi",
-        description: "Bepul to'plam muvaffaqiyatli qo'shildi",
+        title: "To'plam sotib olindi",
+        description: "Video to'plam muvaffaqiyatli sotib olindi",
       });
       navigate(`/my-courses/${collectionId}`);
     },
     onError: (error: any) => {
       toast({
         title: "Xatolik",
-        description: error.message || "Qo'shishda xatolik yuz berdi.",
+        description: error.message || "Sotib olishda xatolik yuz berdi.",
         variant: "destructive"
       });
     }
   });
 
   const handlePurchase = (collection: VideoCollection) => {
-    if (collection.isFree) {
-      freePurchaseMutation.mutate(collection.id);
-    } else {
-      // Pullik to'plamlar uchun checkout sahifasiga o'tkazish
-      navigate(`/checkout/${collection.id}`);
-    }
+    purchaseMutation.mutate(collection.id);
   };
 
   const handleViewCollection = (collectionId: string) => {
@@ -162,20 +157,11 @@ export default function CoursesPage() {
                       <Button 
                         className="w-full" 
                         onClick={() => handlePurchase(collection)}
-                        disabled={freePurchaseMutation.isPending}
+                        disabled={purchaseMutation.isPending}
                         data-testid={`button-purchase-${collection.id}`}
                       >
-                        {collection.isFree ? (
-                          <>
-                            <Gift className="h-4 w-4 mr-2" />
-                            {freePurchaseMutation.isPending ? 'Yuklanmoqda...' : "Bepul Qo'shish"}
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            Sotib Olish
-                          </>
-                        )}
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        {purchaseMutation.isPending ? 'Yuklanmoqda...' : 'Sotib Olish'}
                       </Button>
                     )}
                   </CardContent>
