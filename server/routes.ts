@@ -572,6 +572,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ classes });
       }
 
+      // Oddiy foydalanuvchi uchun faqat sotib olingan to'plamlar
+      if (collectionId) {
+        const hasPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
+        if (!hasPurchased) {
+          return res.status(403).json({ error: "Bu to'plamga ruxsat yo'q" });
+        }
+        const classes = await storage.getClasses(collectionId);
+        return res.json({ classes });
+      }
+
+      // Barcha sotib olingan to'plamlar videolarini qaytarish
+      const purchases = await storage.getUserPurchases(req.user!.id);
+      const collectionIds = purchases.map(p => p.collectionId);
+      
+      if (collectionIds.length === 0) {
+        return res.json({ classes: [] });
+      }
+
+      const allClasses = await storage.getClasses();
+      const userClasses = allClasses.filter(c => c.collectionId && collectionIds.includes(c.collectionId));
+      
+      res.json({ classes: userClasses });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch classes' });
+    }
+  });
+
+  app.get('/api/classes/:id', requireAuth, async (req, res) => {
+    try {
+      const classItem = await storage.getClass(req.params.id);
+      if (!classItem) {
+        return res.status(404).json({ error: 'Class not found' });
+      }
+
+      // Admin uchun ruxsat berish
+      if (req.user!.isAdmin) {
+        return res.json({ class: classItem });
+      }
+
+      // Oddiy foydalanuvchi uchun sotib olingan to'plamni tekshirish
+      if (classItem.collectionId) {
+        const hasPurchased = await storage.hasUserPurchasedCollection(req.user!.id, classItem.collectionId);
+        if (!hasPurchased) {
+          return res.status(403).json({ error: "Bu darsga ruxsat yo'q" });
+        }
+      }
+
+      res.json({ class: classItem });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch class' });
+    }
+  });
+
+  app.post('/api/classes', requireAuth, async (req, res) => {
+    try {
+      // Faqat adminlar video qo'sha oladi
+      if (!req.user!.isAdmin) {
+        return res.status(403).json({ error: 'Faqat adminlar video qo\'sha oladi' });
+      }
+
+      const classData = insertOnlineClassSchema.parse(req.body);
+      const newClass = await storage.createClass(classData);
+      res.json({ class: newClass });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to create class' });
+    }
+  });
+
+  app.delete('/api/classes/:id', requireAuth, async (req, res) => {
+    try {
+      // Faqat adminlar video o'chira oladi
+      if (!req.user!.isAdmin) {
+        return res.status(403).json({ error: 'Faqat adminlar video o\'chira oladi' });
+      }
+
+      const success = await storage.deleteClass(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Class not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete class' });
+    }
+  });
+      }
+
       // Oddiy foydalanuvchilar uchun
       if (collectionId) {
         // Bitta collection uchun sotib olganligini tekshirish
