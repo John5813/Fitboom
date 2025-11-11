@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, categories, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type Category, type InsertCategory } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -41,10 +41,6 @@ export interface IStorage {
   updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined>;
   deleteTimeSlot(id: string): Promise<boolean>;
   deleteTimeSlotsForGym(gymId: string): Promise<void>;
-  getCategories(): Promise<Category[]>;
-  getCategory(id: string): Promise<Category | undefined>;
-  createCategory(category: InsertCategory): Promise<Category>;
-  deleteCategory(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -288,28 +284,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTimeSlotsForGym(gymId: string): Promise<void> {
     await db.delete(timeSlots).where(eq(timeSlots.gymId, gymId));
-  }
-
-  async getCategories(): Promise<Category[]> {
-    return await db.select().from(categories);
-  }
-
-  async getCategory(id: string): Promise<Category | undefined> {
-    const [category] = await db.select().from(categories).where(eq(categories.id, id));
-    return category || undefined;
-  }
-
-  async createCategory(insertCategory: InsertCategory): Promise<Category> {
-    const [category] = await db
-      .insert(categories)
-      .values(insertCategory)
-      .returning();
-    return category;
-  }
-
-  async deleteCategory(id: string): Promise<boolean> {
-    const result = await db.delete(categories).where(eq(categories.id, id));
-    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

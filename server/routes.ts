@@ -262,35 +262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Category routes
   app.get("/api/categories", async (req, res) => {
-    try {
-      const categories = await storage.getCategories();
-      res.json({ categories });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch categories" });
-    }
-  });
-
-  app.post("/api/categories", requireAdmin, async (req, res) => {
-    try {
-      const categoryData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(categoryData);
-      res.json({ category });
-    } catch (error: any) {
-      console.error("Error creating category:", error);
-      res.status(400).json({ error: error.message || "Invalid category data" });
-    }
-  });
-
-  app.delete("/api/categories/:id", requireAdmin, async (req, res) => {
-    try {
-      const success = await storage.deleteCategory(req.params.id);
-      if (!success) {
-        return res.status(404).json({ error: "Category not found" });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete category" });
-    }
+    const { CATEGORIES } = await import('@shared/categories');
+    res.json({ categories: CATEGORIES });
   });
 
   // Time Slots routes

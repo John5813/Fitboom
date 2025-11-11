@@ -87,13 +87,6 @@ export const timeSlots = pgTable("time_slots", {
   availableSpots: integer("available_spots").notNull(),
 });
 
-export const categories = pgTable("categories", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull().unique(),
-  icon: text("icon"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   credits: true,
@@ -121,9 +114,6 @@ export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ 
 export const insertUserPurchaseSchema = createInsertSchema(userPurchases).omit({ id: true, purchaseDate: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
 export const insertTimeSlotSchema = createInsertSchema(timeSlots).omit({ id: true });
-export const insertCategorySchema = createInsertSchema(categories).omit({ id: true, createdAt: true }).extend({
-  name: z.string().min(2, "Kategoriya nomi kamida 2 belgidan iborat bo'lishi kerak"),
-});
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -139,5 +129,3 @@ export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type TimeSlot = typeof timeSlots.$inferSelect;
-export type InsertCategory = z.infer<typeof insertCategorySchema>;
-export type Category = typeof categories.$inferSelect;
