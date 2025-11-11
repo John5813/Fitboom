@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Video, Check, ShoppingCart, PlayCircle, Star, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useLocation } from "wouter";
-import Link from "next/link";
+import { useLocation, Link } from "wouter";
 
 export default function CoursesPage() {
   const { toast } = useToast();

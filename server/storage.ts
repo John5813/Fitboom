@@ -11,6 +11,7 @@ export interface IStorage {
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserCredits(id: string, credits: number): Promise<User | undefined>;
+  updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined>;
   completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined>;
   getGyms(): Promise<Gym[]>;
   getGym(id: string): Promise<Gym | undefined>;
@@ -71,6 +72,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ credits })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updateData)
       .where(eq(users.id, id))
       .returning();
     return user || undefined;

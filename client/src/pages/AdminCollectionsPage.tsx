@@ -21,9 +21,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 export default function AdminCollectionsPage() {
   const [selectedCollection, setSelectedCollection] = useState<VideoCollection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddVideoDialogOpen, setIsAddVideoDialogOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [viewingCollectionId, setViewingCollectionId] = useState<string | null>(null);
+  const [editingCollection, setEditingCollection] = useState<VideoCollection | null>(null);
   const { toast } = useToast();
 
   const [collectionForm, setCollectionForm] = useState({
@@ -310,6 +312,108 @@ export default function AdminCollectionsPage() {
     }
   };
 
+  const deleteCollectionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/collections/${id}`, 'DELETE');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+      toast({
+        title: "To'plam o'chirildi",
+        description: "Video to'plam muvaffaqiyatli o'chirildi.",
+      });
+      setSelectedCollection(null);
+      setViewingCollectionId(null);
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "To'plam o'chirishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDeleteCollection = (id: string) => {
+    if (confirm("To'plamni va undagi barcha videolarni o'chirishni tasdiqlaysizmi?")) {
+      deleteCollectionMutation.mutate(id);
+    }
+  };
+
+  const updateCollectionMutation = useMutation({
+    mutationFn: async (data: { id: string; updateData: any }) => {
+      const response = await apiRequest(`/api/collections/${data.id}`, 'PUT', data.updateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+      toast({
+        title: "To'plam yangilandi",
+        description: "Video to'plam muvaffaqiyatli yangilandi.",
+      });
+      setIsEditDialogOpen(false);
+      setEditingCollection(null);
+      setCollectionForm({
+        name: '',
+        description: '',
+        price: '',
+        thumbnailUrl: '',
+        category: '',
+        categories: [],
+        isFree: 'false',
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "To'plam yangilashda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleEditCollection = (collection: VideoCollection) => {
+    setEditingCollection(collection);
+    setCollectionForm({
+      name: collection.name,
+      description: collection.description || '',
+      price: collection.price.toString(),
+      thumbnailUrl: collection.thumbnailUrl,
+      category: collection.categories?.[0] || '',
+      categories: collection.categories || [],
+      isFree: collection.isFree ? 'true' : 'false',
+    });
+    setIsEditDialogOpen(true);
+    setSelectedCollection(null);
+    setViewingCollectionId(null);
+  };
+
+  const handleUpdateCollection = () => {
+    if (!editingCollection) return;
+    
+    if (!collectionForm.name || (!collectionForm.category && collectionForm.categories.length === 0)) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "Iltimos, nomi va kategoriyani kiriting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updateData: any = {
+      name: collectionForm.name,
+      description: collectionForm.description,
+      thumbnailUrl: collectionForm.thumbnailUrl,
+      category: collectionForm.category || collectionForm.categories[0] || '',
+      categories: collectionForm.categories.length > 0 ? collectionForm.categories : [collectionForm.category],
+      isFree: collectionForm.isFree === 'true',
+      price: collectionForm.isFree === 'true' ? 0 : parseInt(collectionForm.price)
+    };
+
+    updateCollectionMutation.mutate({ id: editingCollection.id, updateData });
+  };
+
   const openAddVideoDialog = (collectionId: string) => {
     setActiveCollectionId(collectionId);
     setIsAddVideoDialogOpen(true);
@@ -406,9 +510,30 @@ export default function AdminCollectionsPage() {
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-collection-detail">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl">
-              {selectedCollection?.name}
-            </DialogTitle>
+            <div className="flex items-start justify-between">
+              <DialogTitle className="font-display text-2xl">
+                {selectedCollection?.name}
+              </DialogTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectedCollection && handleEditCollection(selectedCollection)}
+                  data-testid="button-edit-collection"
+                >
+                  Tahrirlash
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => selectedCollection && handleDeleteCollection(selectedCollection.id)}
+                  data-testid="button-delete-collection"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  O'chirish
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedCollection && (
@@ -662,6 +787,106 @@ export default function AdminCollectionsPage() {
                 Bekor qilish
               </Button>
             </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Collection Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-edit-collection">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">To'plamni Tahrirlash</DialogTitle>
+            <DialogDescription>
+              Video to'plam ma'lumotlarini yangilang
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">To'plam nomi *</Label>
+                <Input
+                  id="edit-name"
+                  value={collectionForm.name}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, name: e.target.value })}
+                  placeholder="Misol: Beginner Yoga Course"
+                  data-testid="input-edit-collection-name"
+                />
+              </div>
+
+              <div>
+                <Label>Kategoriyalar *</Label>
+                <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                  {CATEGORIES.map((category) => (
+                    <div key={category.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-cat-${category.id}`}
+                        checked={collectionForm.categories.includes(category.name)}
+                        onCheckedChange={() => toggleCategory(category.name)}
+                      />
+                      <label htmlFor={`edit-cat-${category.id}`} className="text-sm cursor-pointer">
+                        {category.icon} {category.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>To'plam turi *</Label>
+                <RadioGroup value={collectionForm.isFree} onValueChange={(value) => setCollectionForm({ ...collectionForm, isFree: value })}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="false" id="edit-paid" />
+                    <Label htmlFor="edit-paid" className="cursor-pointer">Pullik</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="true" id="edit-free" />
+                    <Label htmlFor="edit-free" className="cursor-pointer">Bepul</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {collectionForm.isFree === 'false' && (
+                <div>
+                  <Label htmlFor="edit-price">Narx (kredit) *</Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    value={collectionForm.price}
+                    onChange={(e) => setCollectionForm({ ...collectionForm, price: e.target.value })}
+                    placeholder="10"
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="edit-description">Tavsif</Label>
+                <Textarea
+                  id="edit-description"
+                  value={collectionForm.description}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, description: e.target.value })}
+                  placeholder="To'plam haqida qisqacha ma'lumot..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleUpdateCollection}
+                  disabled={updateCollectionMutation.isPending}
+                  className="flex-1"
+                >
+                  {updateCollectionMutation.isPending ? 'Yuklanmoqda...' : "Saqlash"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Bekor qilish
+                </Button>
+              </div>
             </div>
           </ScrollArea>
         </DialogContent>

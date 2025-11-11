@@ -161,12 +161,12 @@ export default function HomePage() {
     }
   };
 
-  // Fetch online classes from API
-  const { data: classesData, isLoading: classesLoading } = useQuery<{ classes: any[] }>({
-    queryKey: ['/api/classes'],
+  // Fetch video collections from API
+  const { data: collectionsData, isLoading: classesLoading } = useQuery<{ collections: any[] }>({
+    queryKey: ['/api/collections'],
   });
 
-  const onlineClasses = classesData?.classes || [];
+  const onlineClasses = collectionsData?.collections || [];
 
   // Fetch bookings from API
   const { data: bookingsData } = useQuery<{ bookings: Booking[] }>({
@@ -465,51 +465,42 @@ export default function HomePage() {
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : onlineClasses.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
-                {onlineClasses.slice(0, 6).map((classItem) => (
+                {onlineClasses.slice(0, 6).map((collection) => (
                   <Card
-                    key={classItem.id}
+                    key={collection.id}
                     className="overflow-hidden cursor-pointer hover-elevate aspect-[3/4] min-w-[140px] flex-shrink-0 snap-start"
-                    onClick={() => {
-                      if (credits > 0) {
-                        toast({
-                          title: "Dars boshlanmoqda",
-                          description: classItem.title,
-                        });
-                      } else {
-                        toast({
-                          title: "Kredit kerak",
-                          description: "Online darslarni ko'rish uchun kredit sotib oling.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    data-testid={`card-class-square-${classItem.id}`}
+                    onClick={() => setLocation(`/my-courses/${collection.id}`)}
+                    data-testid={`card-collection-square-${collection.id}`}
                   >
                     <div className="relative h-full flex flex-col">
                       <div className="relative flex-1">
                         <img
-                          src={classItem.thumbnailUrl || classImage}
-                          alt={classItem.title}
+                          src={collection.thumbnailUrl || classImage}
+                          alt={collection.name}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute top-2 left-2">
-                          <Badge className="bg-primary/90 text-white">
-                            {classItem.duration}
-                          </Badge>
-                        </div>
+                        {collection.isFree && (
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-green-500/90 text-white">
+                              Bepul
+                            </Badge>
+                          </div>
+                        )}
+                        {!collection.isFree && (
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-primary/90 text-white">
+                              {collection.price} kredit
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                       <div className="p-3 bg-card">
                         <h3 className="font-semibold text-sm mb-1 truncate">
-                          {classItem.title}
+                          {collection.name}
                         </h3>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-                            <span className="text-xs">👤</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            Murabbiy: {classItem.instructor}
-                          </p>
-                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {collection.description}
+                        </p>
                       </div>
                     </div>
                   </Card>

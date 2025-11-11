@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, insertCategorySchema, completeProfileSchema } from "@shared/schema";
+import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, completeProfileSchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
@@ -814,20 +814,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   setupTelegramWebhook(app, storage);
 
-  // DANGER: Delete all users (admin only)
-  app.delete("/api/admin/users/delete-all", requireAdmin, async (req, res) => {
-    try {
-      const result = await db.delete(users);
-      res.json({
-        success: true,
-        message: "Barcha foydalanuvchilar o'chirildi",
-        deletedCount: result.rowCount
-      });
-    } catch (error: any) {
-      console.error("Error deleting all users:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
+  // DANGER: Delete all users (admin only) - ENDPOINT DISABLED FOR SAFETY
+  // app.delete("/api/admin/users/delete-all", requireAdmin, async (req, res) => {
+  //   try {
+  //     // This endpoint is disabled for safety
+  //     res.status(403).json({ error: "This endpoint is disabled for safety" });
+  //   } catch (error: any) {
+  //     console.error("Error deleting all users:", error);
+  //     res.status(500).json({ error: error.message });
+  //   }
+  // });
 
   app.post("/api/complete-profile", requireAuth, async (req, res) => {
     try {
