@@ -140,53 +140,53 @@ export default function MyCourseDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {visibleClasses.map((video, index) => (
                 <Card
                   key={video.id}
                   className={`overflow-hidden transition-all ${
-                    isPurchased ? 'cursor-pointer hover:shadow-lg' : 'opacity-75'
+                    isPurchased ? 'cursor-pointer hover:shadow-md hover:border-primary/50' : 'opacity-75'
                   }`}
                   onClick={() => handleVideoClick(video.id, video.videoUrl)}
                   data-testid={`card-video-${video.id}`}
                 >
-                  <div className="flex">
-                    <div className="relative w-64 flex-shrink-0">
+                  <div className="flex gap-3 p-3">
+                    <div className="relative w-28 h-20 flex-shrink-0 rounded-md overflow-hidden">
                       <img
                         src={video.thumbnailUrl || collection.thumbnailUrl}
                         alt={video.title}
-                        className={`w-full h-40 object-cover ${!isPurchased ? 'blur-sm' : ''}`}
+                        className={`w-full h-full object-cover ${!isPurchased ? 'blur-sm' : ''}`}
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         {isPurchased ? (
-                          <Play className="w-12 h-12 text-white" />
+                          <Play className="w-8 h-8 text-white" />
                         ) : (
-                          <Lock className="w-12 h-12 text-white" />
+                          <Lock className="w-8 h-8 text-white" />
                         )}
                       </div>
-                      <Badge className="absolute top-2 left-2 bg-black/60 text-white border-white/20">
+                      <Badge className="absolute top-1 left-1 bg-black/70 text-white border-none text-xs h-5 px-1.5">
                         {index + 1}
                       </Badge>
                     </div>
-                    <div className="flex-1 p-6">
-                      <h3 className="font-semibold text-lg mb-2" data-testid={`text-video-title-${video.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base mb-1.5 truncate" data-testid={`text-video-title-${video.id}`}>
                         {video.title}
                       </h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         {video.duration && (
                           <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{video.duration} daqiqa</span>
+                            <Clock className="w-3 h-3" />
+                            <span>{video.duration} daq.</span>
                           </div>
                         )}
                         {video.instructor && (
                           <div className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            <span>{video.instructor}</span>
+                            <User className="w-3 h-3" />
+                            <span className="truncate max-w-[120px]">{video.instructor}</span>
                           </div>
                         )}
                         {video.category && (
-                          <Badge variant="outline">{video.category}</Badge>
+                          <Badge variant="outline" className="text-xs h-5 px-1.5">{video.category}</Badge>
                         )}
                       </div>
                     </div>
