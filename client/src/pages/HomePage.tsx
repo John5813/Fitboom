@@ -609,42 +609,51 @@ export default function HomePage() {
           {classesLoading || purchasesLoading ? (
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           ) : onlineClasses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {onlineClasses.map((collection) => {
                 const isPurchased = purchasedCollectionIds.has(collection.id);
                 return (
                   <Card
                     key={collection.id}
-                    className="overflow-hidden cursor-pointer hover-elevate"
-                    onClick={() => isPurchased ? setLocation(`/my-courses/${collection.id}`) : handlePurchaseCollection(collection.id)}
-                    data-testid={`card-collection-${collection.id}`}
+                    className="overflow-hidden hover-elevate"
+                    data-testid={`card-collection-grid-${collection.id}`}
                   >
-                    <div className="relative h-48">
+                    <div className="relative aspect-square">
                       <img
                         src={collection.thumbnailUrl || classImage}
                         alt={collection.name}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-white font-semibold text-lg truncate">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="text-white font-semibold text-sm line-clamp-2">
                           {collection.name}
                         </h3>
-                        <p className="text-white/70 text-sm truncate">
+                        <p className="text-white/80 text-xs mt-1">
                           {collection.isFree ? 'Bepul' : `${collection.price} sum`}
                         </p>
                       </div>
                     </div>
-                    <div className="p-4">
+                    <div className="p-2">
                       {isPurchased ? (
-                        <Button variant="outline" className="w-full" onClick={() => setLocation(`/my-courses/${collection.id}`)}>
-                          <Video className="h-4 w-4 mr-2" />
-                          Kursni ko'rish
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => setLocation(`/my-courses/${collection.id}`)}
+                        >
+                          <Video className="h-3 w-3 mr-1" />
+                          Sotib olingan
                         </Button>
                       ) : (
-                        <Button className="w-full" onClick={() => handlePurchaseCollection(collection.id)} disabled={purchaseCollectionMutation.isPending}>
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          {purchaseCollectionMutation.isPending ? 'Sotib olinmoqda...' : 'Sotib olish'}
+                        <Button
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => handlePurchaseCollection(collection.id)}
+                          disabled={purchaseCollectionMutation.isPending}
+                        >
+                          <ShoppingCart className="h-3 w-3 mr-1" />
+                          {purchaseCollectionMutation.isPending ? 'Yuklanmoqda...' : 'Sotib olish'}
                         </Button>
                       )}
                     </div>
