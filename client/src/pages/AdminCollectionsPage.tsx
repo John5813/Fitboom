@@ -23,9 +23,13 @@ export default function AdminCollectionsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddVideoDialogOpen, setIsAddVideoDialogOpen] = useState(false);
+  const [isEditVideoDialogOpen, setIsEditVideoDialogOpen] = useState(false);
+  const [isViewVideoDialogOpen, setIsViewVideoDialogOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [viewingCollectionId, setViewingCollectionId] = useState<string | null>(null);
   const [editingCollection, setEditingCollection] = useState<VideoCollection | null>(null);
+  const [editingVideo, setEditingVideo] = useState<OnlineClass | null>(null);
+  const [viewingVideo, setViewingVideo] = useState<OnlineClass | null>(null);
   const { toast } = useToast();
 
   const [collectionForm, setCollectionForm] = useState({
@@ -237,6 +241,40 @@ export default function AdminCollectionsPage() {
     }
   });
 
+  const updateVideoMutation = useMutation({
+    mutationFn: async (data: { id: string; updateData: any }) => {
+      const response = await apiRequest(`/api/admin/classes/${data.id}`, 'PUT', data.updateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/classes', viewingCollectionId] });
+      toast({
+        title: "Video yangilandi",
+        description: "Video muvaffaqiyatli yangilandi.",
+      });
+      setIsEditVideoDialogOpen(false);
+      setEditingVideo(null);
+      setVideoForm({
+        title: '',
+        description: '',
+        videoUrl: '',
+        duration: '',
+        instructor: '',
+        thumbnailUrl: '',
+      });
+      setSelectedVideoThumbnail(null);
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Video yangilashda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCreateCollection = () => {
     if (!collectionForm.name || (!collectionForm.category && collectionForm.categories.length === 0)) {
       toast({
@@ -420,6 +458,48 @@ export default function AdminCollectionsPage() {
   const openAddVideoDialog = (collectionId: string) => {
     setActiveCollectionId(collectionId);
     setIsAddVideoDialogOpen(true);
+  };
+
+  const handleEditVideo = (video: OnlineClass) => {
+    setEditingVideo(video);
+    setVideoForm({
+      title: video.title,
+      description: video.description || '',
+      videoUrl: video.videoUrl,
+      duration: video.duration.toString(),
+      instructor: video.instructor || '',
+      thumbnailUrl: video.thumbnailUrl,
+    });
+    setIsEditVideoDialogOpen(true);
+  };
+
+  const handleUpdateVideo = () => {
+    if (!editingVideo) return;
+    
+    if (!videoForm.title || !videoForm.videoUrl || !videoForm.duration || !videoForm.thumbnailUrl) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "Iltimos, barcha majburiy maydonlarni to'ldiring.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updateData = {
+      title: videoForm.title,
+      description: videoForm.description,
+      videoUrl: videoForm.videoUrl,
+      duration: parseInt(videoForm.duration),
+      instructor: videoForm.instructor,
+      thumbnailUrl: videoForm.thumbnailUrl,
+    };
+
+    updateVideoMutation.mutate({ id: editingVideo.id, updateData });
+  };
+
+  const handleViewVideo = (video: OnlineClass) => {
+    setViewingVideo(video);
+    setIsViewVideoDialogOpen(true);
   };
 
   return (
@@ -638,7 +718,12 @@ export default function AdminCollectionsPage() {
                         </TableHeader>
                         <TableBody>
                           {viewingVideos.map((video, index) => (
-                            <TableRow key={video.id} data-testid={`video-item-${video.id}`}>
+                            <TableRow 
+                              key={video.id} 
+                              data-testid={`video-item-${video.id}`}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => handleEditVideo(video)}
+                            >
                               <TableCell className="font-medium text-sm">{index + 1}</TableCell>
                               <TableCell className="p-2">
                                 {video.thumbnailUrl ? (
@@ -669,7 +754,10 @@ export default function AdminCollectionsPage() {
                                   size="sm"
                                   variant="ghost"
                                   className="h-8 w-8 p-0"
-                                  onClick={() => handleDeleteVideo(video.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteVideo(video.id);
+                                  }}
                                   data-testid={`button-delete-video-${video.id}`}
                                 >
                                   <Trash2 className="h-4 w-4 text-destructive" />
@@ -948,6 +1036,219 @@ export default function AdminCollectionsPage() {
                 </Button>
               </div>
             </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Video Dialog */}
+      <Dialog open={isEditVideoDialogOpen} onOpenChange={setIsEditVideoDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-edit-video">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Videoni Tahrirlash</DialogTitle>
+            <DialogDescription>
+              Video ma'lumotlarini yangilang
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-video-title">Video nomi *</Label>
+                <Input
+                  id="edit-video-title"
+                  value={videoForm.title}
+                  onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })}
+                  placeholder="Misol: Day 1: Introduction to Yoga"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-videoThumbnailFile">Video Rasmi *</Label>
+                <div className="space-y-2">
+                  <Input
+                    id="edit-videoThumbnailFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleVideoThumbnailUpload(file);
+                      }
+                    }}
+                    disabled={uploadingVideoThumbnail}
+                  />
+                  {uploadingVideoThumbnail && (
+                    <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
+                  )}
+                  {videoForm.thumbnailUrl && (
+                    <div className="mt-2">
+                      <img 
+                        src={videoForm.thumbnailUrl} 
+                        alt="Preview" 
+                        className="rounded-lg w-full h-32 object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-videoUrl">Video URL *</Label>
+                <Input
+                  id="edit-videoUrl"
+                  value={videoForm.videoUrl}
+                  onChange={(e) => setVideoForm({ ...videoForm, videoUrl: e.target.value })}
+                  placeholder="https://... (YouTube, Instagram, Telegram, va boshqalar)"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  YouTube, Instagram, Telegram yoki har qanday platformadan video URL kiriting
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-duration">Davomiyligi (daqiqa) *</Label>
+                  <Input
+                    id="edit-duration"
+                    type="number"
+                    value={videoForm.duration}
+                    onChange={(e) => setVideoForm({ ...videoForm, duration: e.target.value })}
+                    placeholder="45"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-instructor">Instructor</Label>
+                  <Input
+                    id="edit-instructor"
+                    value={videoForm.instructor}
+                    onChange={(e) => setVideoForm({ ...videoForm, instructor: e.target.value })}
+                    placeholder="John Doe"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-videoDescription">Tavsif</Label>
+                <Textarea
+                  id="edit-videoDescription"
+                  value={videoForm.description}
+                  onChange={(e) => setVideoForm({ ...videoForm, description: e.target.value })}
+                  placeholder="Video haqida qisqacha ma'lumot..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleUpdateVideo}
+                  disabled={updateVideoMutation.isPending}
+                  className="flex-1"
+                >
+                  {updateVideoMutation.isPending ? 'Yuklanmoqda...' : "Saqlash"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleViewVideo(editingVideo!)}
+                  className="flex-1"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ko'rish
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditVideoDialogOpen(false)}
+                >
+                  Yopish
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Video Dialog */}
+      <Dialog open={isViewVideoDialogOpen} onOpenChange={setIsViewVideoDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]" data-testid="dialog-view-video">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">{viewingVideo?.title}</DialogTitle>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[calc(90vh-8rem)]">
+            {viewingVideo && (
+              <div className="space-y-4">
+                <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                  {viewingVideo.videoUrl.includes('youtube.com') || viewingVideo.videoUrl.includes('youtu.be') ? (
+                    <iframe
+                      src={viewingVideo.videoUrl.includes('youtube.com/watch') 
+                        ? `https://www.youtube.com/embed/${new URL(viewingVideo.videoUrl).searchParams.get('v')}`
+                        : viewingVideo.videoUrl.includes('youtu.be/')
+                        ? `https://www.youtube.com/embed/${viewingVideo.videoUrl.split('youtu.be/')[1].split('?')[0]}`
+                        : viewingVideo.videoUrl
+                      }
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : viewingVideo.videoUrl.includes('vimeo.com') ? (
+                    <iframe
+                      src={viewingVideo.videoUrl.includes('player.vimeo.com/video/')
+                        ? viewingVideo.videoUrl
+                        : `https://player.vimeo.com/video/${viewingVideo.videoUrl.split('vimeo.com/')[1].split('?')[0].split('/').pop()}`
+                      }
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <iframe
+                      src={viewingVideo.videoUrl}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  )}
+                </div>
+
+                {viewingVideo.description && (
+                  <div>
+                    <Label>Tavsif</Label>
+                    <p className="text-sm text-muted-foreground mt-1">{viewingVideo.description}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Davomiyligi</Label>
+                    <p className="text-sm font-medium">{viewingVideo.duration} daqiqa</p>
+                  </div>
+                  {viewingVideo.instructor && (
+                    <div>
+                      <Label>Instructor</Label>
+                      <p className="text-sm font-medium">{viewingVideo.instructor}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setIsViewVideoDialogOpen(false);
+                      handleEditVideo(viewingVideo);
+                    }}
+                    className="flex-1"
+                  >
+                    Tahrirlash
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsViewVideoDialogOpen(false)}
+                    className="flex-1"
+                  >
+                    Yopish
+                  </Button>
+                </div>
+              </div>
+            )}
           </ScrollArea>
         </DialogContent>
       </Dialog>

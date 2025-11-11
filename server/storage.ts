@@ -26,6 +26,7 @@ export interface IStorage {
   getClasses(collectionId?: string): Promise<OnlineClass[]>;
   getClass(id: string): Promise<OnlineClass | undefined>;
   createClass(onlineClass: InsertOnlineClass): Promise<OnlineClass>;
+  updateClass(id: string, updateData: Partial<InsertOnlineClass>): Promise<OnlineClass | undefined>;
   deleteClass(id: string): Promise<void>;
   getUserPurchases(userId: string): Promise<UserPurchase[]>;
   createUserPurchase(purchase: InsertUserPurchase): Promise<UserPurchase>;
@@ -183,12 +184,18 @@ export class DatabaseStorage implements IStorage {
     return onlineClass || undefined;
   }
 
-  async createClass(insertClass: InsertOnlineClass): Promise<OnlineClass> {
-    const [onlineClass] = await db
-      .insert(onlineClasses)
-      .values(insertClass)
+  async createClass(data: InsertOnlineClass): Promise<OnlineClass> {
+    const [newClass] = await db.insert(onlineClasses).values(data).returning();
+    return newClass;
+  }
+
+  async updateClass(id: string, data: Partial<InsertOnlineClass>): Promise<OnlineClass | undefined> {
+    const [updatedClass] = await db
+      .update(onlineClasses)
+      .set(data)
+      .where(eq(onlineClasses.id, id))
       .returning();
-    return onlineClass;
+    return updatedClass || undefined;
   }
 
   async deleteClass(id: string): Promise<void> {

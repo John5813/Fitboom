@@ -582,6 +582,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/admin/classes/:id', async (req, res) => {
+    try {
+      const updateData = insertOnlineClassSchema.partial().parse(req.body);
+      const updatedClass = await storage.updateClass(req.params.id, updateData);
+      if (!updatedClass) {
+        return res.status(404).json({ error: 'Class not found' });
+      }
+      res.json({ class: updatedClass });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to update class' });
+    }
+  });
+
   app.delete('/api/admin/classes/:id', async (req, res) => {
     try {
       await storage.deleteClass(req.params.id);
