@@ -656,49 +656,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to delete class' });
     }
   });
-      }
-
-      // Oddiy foydalanuvchilar uchun
-      if (collectionId) {
-        // Bitta collection uchun sotib olganligini tekshirish
-        const hasPurchased = await storage.hasPurchased(req.user!.id, collectionId);
-        if (!hasPurchased) {
-          return res.status(403).json({ error: 'Bu to\'plamga ruxsat yo\'q' });
-        }
-        const classes = await storage.getClasses(collectionId);
-        return res.json({ classes });
-      } else {
-        // CollectionId bo'lmasa, faqat sotib olingan to'plamlardagi classlarni qaytarish
-        const purchases = await storage.getUserPurchases(req.user!.id);
-        const purchasedCollectionIds = purchases.map(p => p.collectionId);
-        const allClasses = await storage.getClasses();
-        const purchasedClasses = allClasses.filter(c => purchasedCollectionIds.includes(c.collectionId));
-        return res.json({ classes: purchasedClasses });
-      }
-    } catch (error: any) {
-      console.error("Error fetching classes:", error);
-      res.status(500).json({ error: error.message || 'Failed to fetch classes' });
-    }
-  });
-
-  app.post('/api/classes', requireAuth, async (req, res) => {
-    try {
-      const classData = insertOnlineClassSchema.parse(req.body);
-      const onlineClass = await storage.createClass(classData);
-      res.json(onlineClass);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || 'Failed to create class' });
-    }
-  });
-
-  app.delete('/api/classes/:id', requireAuth, async (req, res) => {
-    try {
-      await storage.deleteClass(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to delete class' });
-    }
-  });
 
   // User Purchases routes
   app.get('/api/my-purchases', requireAuth, async (req, res) => {
@@ -732,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Bu to'plam bepul" });
       }
 
-      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
       if (alreadyPurchased) {
         return res.status(400).json({ error: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
       }
@@ -776,7 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
       if (alreadyPurchased) {
         return res.status(400).json({ error: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
       }
@@ -815,7 +772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Bu to'plam pullik, to'lov qilishingiz kerak" });
       }
 
-      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
+      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
       if (alreadyPurchased) {
         return res.status(400).json({ error: "Siz bu to'plamni allaqachon qo'shgansiz" });
       }
@@ -963,6 +920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server xatosi" });
     }
   });
+        
 
   const httpServer = createServer(app);
   return httpServer;
