@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, insertCategorySchema } from "@shared/schema";
+import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, insertCategorySchema, completeProfileSchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
@@ -10,6 +10,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
+import { setupTelegramWebhook } from "./telegram";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe sozlamalari
@@ -101,36 +102,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = insertUserSchema.parse(req.body);
 
-      const existingUser = await storage.getUserByPhone(userData.phone);
-      if (existingUser) {
-        // Agar foydalanuvchi mavjud bo'lsa, avtomatik tizimga kiritish
-        req.login({ 
-          id: existingUser.id, 
-          phone: existingUser.phone, 
-          name: existingUser.name, 
-          credits: existingUser.credits, 
-          isAdmin: existingUser.isAdmin 
-        }, (err) => {
-          if (err) {
-            return next(err);
-          }
-          return res.json({
-            user: {
-              id: existingUser.id,
-              phone: existingUser.phone,
-              name: existingUser.name,
-              credits: existingUser.credits,
-              isAdmin: existingUser.isAdmin
-            },
-            existingUser: true
+      if (userData.phone) {
+        const existingUser = await storage.getUserByPhone(userData.phone);
+        if (existingUser) {
+          req.login({ 
+            id: existingUser.id, 
+            phone: existingUser.phone || undefined, 
+            name: existingUser.name || undefined, 
+            credits: existingUser.credits, 
+            isAdmin: existingUser.isAdmin 
+          }, (err) => {
+            if (err) {
+              return next(err);
+            }
+            return res.json({
+              user: {
+                id: existingUser.id,
+                phone: existingUser.phone,
+                name: existingUser.name,
+                credits: existingUser.credits,
+                isAdmin: existingUser.isAdmin
+              },
+              existingUser: true
+            });
           });
-        });
-        return;
+          return;
+        }
       }
 
       const user = await storage.createUser(userData);
 
-      req.login({ id: user.id, phone: user.phone, name: user.name, credits: user.credits, isAdmin: user.isAdmin }, (err) => {
+      req.login({ id: user.id, phone: user.phone || undefined, name: user.name || undefined, credits: user.credits, isAdmin: user.isAdmin }, (err) => {
         if (err) {
           return next(err);
         }
@@ -834,6 +836,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  setupTelegramWebhook(app, storage);
+
+  app.post("/api/complete-profile", requireAuth, async (req, res) => {
+    try {
+      const profileData = completeProfileSchema.parse(req.body);
+      
+      const updatedUser = await storage.completeUserProfile(req.user!.id, profileData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      res.json({
+        message: "Profil muvaffaqiyatli to'ldirildi",
+        user: updatedUser
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

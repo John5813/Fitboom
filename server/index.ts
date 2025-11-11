@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { seedCategories } from "./seed-categories";
+import { setTelegramWebhook } from "./telegram";
 
 const app = express();
 
@@ -72,7 +73,12 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
+    
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      const webhookUrl = `https://${process.env.REPLIT_DEV_DOMAIN}/api/telegram/webhook`;
+      await setTelegramWebhook(webhookUrl);
+    }
   });
 })();

@@ -5,12 +5,15 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  phone: text("phone").notNull().unique(),
-  name: text("name").notNull(),
-  age: integer("age").notNull(),
-  gender: text("gender").notNull(),
+  telegramId: text("telegram_id").unique(),
+  phone: text("phone").unique(),
+  name: text("name"),
+  age: integer("age"),
+  gender: text("gender"),
   credits: integer("credits").notNull().default(0),
   isAdmin: boolean("is_admin").notNull().default(false),
+  profileCompleted: boolean("profile_completed").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const gyms = pgTable("gyms", {
@@ -90,8 +93,21 @@ export const categories = pgTable("categories", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, credits: true, isAdmin: true }).extend({
-  phone: z.string().regex(/^\+998\d{9}$/, "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak"),
+export const insertUserSchema = createInsertSchema(users).omit({ 
+  id: true, 
+  credits: true, 
+  isAdmin: true, 
+  profileCompleted: true,
+  createdAt: true 
+}).extend({
+  phone: z.string().regex(/^\+998\d{9}$/, "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak").optional(),
+  telegramId: z.string().optional(),
+  name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak").optional(),
+  age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak").optional(),
+  gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }).optional(),
+});
+
+export const completeProfileSchema = z.object({
   name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
   age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
   gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),

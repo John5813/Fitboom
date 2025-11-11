@@ -8,8 +8,10 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByPhone(phone: string): Promise<User | undefined>;
+  getUserByTelegramId(telegramId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserCredits(id: string, credits: number): Promise<User | undefined>;
+  completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined>;
   getGyms(): Promise<Gym[]>;
   getGym(id: string): Promise<Gym | undefined>;
   createGym(gym: InsertGym): Promise<Gym>;
@@ -56,6 +58,11 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId));
+    return user || undefined;
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -68,6 +75,18 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ credits })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        ...profileData, 
+        profileCompleted: true 
+      })
       .where(eq(users.id, id))
       .returning();
     return user || undefined;
