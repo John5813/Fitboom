@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -6,132 +7,129 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const completeProfileSchema = z.object({
+  name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
+  age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
+  gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
+});
+
+type CompleteProfileFormData = z.infer<typeof completeProfileSchema>;
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<1 | 2>(1);
-  
-  // Step 1 state
-  const [phone, setPhone] = useState("");
-  
-  // Step 2 state
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState<"Erkak" | "Ayol" | "">("");
-  
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [loginCode, setLoginCode] = useState("");
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  const form = useForm<CompleteProfileFormData>({
+    resolver: zodResolver(completeProfileSchema),
+    defaultValues: {
+      name: "",
+      age: 18,
+      gender: undefined,
+    },
+  });
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && user?.profileCompleted) {
       setLocation('/home');
+    } else if (!isLoading && isAuthenticated && !user?.profileCompleted) {
+      setShowProfileDialog(true);
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, user, setLocation]);
 
-  // Telefon raqamini tekshirish uchun mutation
-  const checkPhoneMutation = useMutation({
-    mutationFn: async (phone: string) => {
-      const response = await apiRequest('/api/login', 'POST', { phone });
-      return response.json();
-    },
-    onSuccess: async (data) => {
-      // Agar foydalanuvchi topilsa, to'g'ridan-to'g'ri tizimga kiritish
-      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      toast({
-        title: "Xush kelibsiz!",
-        description: "Tizimga muvaffaqiyatli kirdingiz",
-      });
-      setTimeout(() => {
-        setLocation("/home");
-      }, 100);
-    },
-    onError: () => {
-      // Agar foydalanuvchi topilmasa, 2-qadamga o'tish
-      setStep(2);
-    },
+  const { data: telegramAuthUrl } = useQuery({
+    queryKey: ['/api/telegram/auth-url'],
   });
 
-  const registerMutation = useMutation({
-    mutationFn: async (data: { phone: string; name: string; age: number; gender: "Erkak" | "Ayol" }) => {
-      const response = await apiRequest('/api/register', 'POST', data);
+  const verifyCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await apiRequest('/api/telegram/verify-code', 'POST', { code });
       return response.json();
     },
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      toast({
-        title: "Xush kelibsiz!",
-        description: "Ro'yxatdan o'tish muvaffaqiyatli!",
-      });
-      setTimeout(() => {
-        setLocation("/home");
-      }, 100);
+      if (data.success) {
+        await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        await queryClient.refetchQueries({ queryKey: ['/api/user'] });
+        
+        if (data.profileCompleted) {
+          toast({
+            title: "Xush kelibsiz!",
+            description: "Tizimga muvaffaqiyatli kirdingiz.",
+          });
+          setLocation("/home");
+        } else {
+          setShowCodeInput(false);
+          setShowProfileDialog(true);
+        }
+      }
     },
     onError: (error: any) => {
-      console.error('Register error:', error);
       toast({
         title: "Xatolik",
-        description: error.message || "Ro'yxatdan o'tishda xatolik yuz berdi",
+        description: error.message || "Kod noto'g'ri yoki muddati o'tgan",
         variant: "destructive",
       });
     },
   });
 
-  const handleStep1Submit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!phone) {
+  const completeProfileMutation = useMutation({
+    mutationFn: async (data: CompleteProfileFormData) => {
+      const response = await apiRequest('/api/complete-profile', 'POST', data);
+      return response.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({
+        title: "Tabriklaymiz!",
+        description: "Profilingiz muvaffaqiyatli to'ldirildi.",
+      });
+      setShowProfileDialog(false);
+      setLocation("/home");
+    },
+    onError: (error: any) => {
       toast({
         title: "Xatolik",
-        description: "Telefon raqamini kiriting",
+        description: error.message || "Profilni to'ldirishda xatolik yuz berdi",
         variant: "destructive",
       });
-      return;
-    }
+    },
+  });
 
-    // Validate phone format
-    const phoneRegex = /^\+998\d{9}$/;
-    if (!phoneRegex.test(phone)) {
-      toast({
-        title: "Xatolik",
-        description: "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak",
-        variant: "destructive",
-      });
-      return;
+  const handleTelegramAuth = () => {
+    if (telegramAuthUrl && typeof telegramAuthUrl === 'object' && 'url' in telegramAuthUrl) {
+      window.open((telegramAuthUrl as any).url, '_blank');
+      setShowCodeInput(true);
     }
-
-    // Avval foydalanuvchi mavjudligini tekshirish
-    checkPhoneMutation.mutate(phone.trim());
   };
 
-  const handleStep2Submit = (e: React.FormEvent) => {
+  const handleVerifyCode = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!name || !age || !gender) {
+    if (!loginCode || loginCode.length < 6) {
       toast({
         title: "Xatolik",
-        description: "Barcha maydonlarni to'ldiring",
+        description: "Kodni to'liq kiriting",
         variant: "destructive",
       });
       return;
     }
+    verifyCodeMutation.mutate(loginCode.toUpperCase());
+  };
 
-    const ageNum = parseInt(age);
-    if (isNaN(ageNum) || ageNum < 10 || ageNum > 100) {
-      toast({
-        title: "Xatolik",
-        description: "Yosh 10 dan 100 gacha bo'lishi kerak",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    registerMutation.mutate({ phone, name, age: ageNum, gender });
+  const onSubmit = (data: CompleteProfileFormData) => {
+    completeProfileMutation.mutate(data);
   };
 
   return (
@@ -144,36 +142,29 @@ export default function RegisterPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold" data-testid="text-title">
-            {step === 1 ? "Ro'yxatdan o'tish" : "Shaxsiy ma'lumotlar"}
+            FitBoom ga xush kelibsiz
           </CardTitle>
           <CardDescription data-testid="text-description">
-            {step === 1 ? "Telefon raqamingizni kiriting" : "Ma'lumotlaringizni to'ldiring"}
+            Ro'yxatdan o'tish uchun Telegram bot orqali kirish
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 1 ? (
-            <form onSubmit={handleStep1Submit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefon raqami</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+998XXXXXXXXX"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  data-testid="input-phone"
-                  autoComplete="tel"
-                />
-                <p className="text-sm text-gray-500">Format: +998XXXXXXXXX</p>
-              </div>
+          {!showCodeInput ? (
+            <div className="space-y-4">
               <Button
-                type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={checkPhoneMutation.isPending}
-                data-testid="button-next"
+                onClick={handleTelegramAuth}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={!telegramAuthUrl}
+                data-testid="button-telegram-auth"
               >
-                {checkPhoneMutation.isPending ? "Tekshirilmoqda..." : "Keyingi"}
+                <Send className="mr-2 h-5 w-5" />
+                Telegram orqali ro'yxatdan o'tish
               </Button>
+              
+              <p className="text-sm text-center text-gray-600 dark:text-gray-400">
+                Telegram botda /start bosing va telefon raqamingizni ulashing
+              </p>
+
               <div className="text-center text-sm">
                 <span className="text-gray-600 dark:text-gray-400">
                   Allaqachon hisobingiz bormi?{" "}
@@ -187,69 +178,132 @@ export default function RegisterPage() {
                   Kirish
                 </button>
               </div>
-            </form>
+            </div>
           ) : (
-            <form onSubmit={handleStep2Submit} className="space-y-4">
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Telegram botdan kelgan kodni kiriting
+                </p>
+              </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="name">Ism</Label>
+                <Label htmlFor="code">Kirish kodi</Label>
                 <Input
-                  id="name"
+                  id="code"
                   type="text"
-                  placeholder="To'liq ismingiz"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  data-testid="input-name"
-                  autoComplete="name"
+                  placeholder="XXXXXXXX"
+                  value={loginCode}
+                  onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
+                  data-testid="input-login-code"
+                  autoFocus
+                  className="text-center text-xl font-mono tracking-widest"
+                  maxLength={8}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="age">Yosh</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  placeholder="18"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  data-testid="input-age"
-                  min="10"
-                  max="100"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gender">Jins</Label>
-                <Select value={gender} onValueChange={(value) => setGender(value as "Erkak" | "Ayol")}>
-                  <SelectTrigger id="gender" data-testid="select-gender">
-                    <SelectValue placeholder="Jinsni tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Erkak" data-testid="option-male">Erkak</SelectItem>
-                    <SelectItem value="Ayol" data-testid="option-female">Ayol</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep(1)}
-                  data-testid="button-back"
-                >
-                  Orqaga
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600"
-                  disabled={registerMutation.isPending}
-                  data-testid="button-register"
-                >
-                  {registerMutation.isPending ? "Ro'yxatdan o'tish..." : "Ro'yxatdan o'tish"}
-                </Button>
-              </div>
+              
+              <Button
+                type="submit"
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={verifyCodeMutation.isPending}
+                data-testid="button-verify-code"
+              >
+                {verifyCodeMutation.isPending ? "Tekshirilmoqda..." : "Tasdiqlash"}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setShowCodeInput(false)}
+                data-testid="button-back"
+              >
+                Orqaga
+              </Button>
             </form>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-complete-profile">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Profilni to'ldirish</DialogTitle>
+            <DialogDescription>
+              Davom etish uchun quyidagi ma'lumotlarni to'ldiring
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ismingiz</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Ismingizni kiriting" data-testid="input-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yoshingiz</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Yoshingizni kiriting"
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        data-testid="input-age"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Jinsingiz</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-gender">
+                          <SelectValue placeholder="Jinsni tanlang" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Erkak" data-testid="option-male">Erkak</SelectItem>
+                        <SelectItem value="Ayol" data-testid="option-female">Ayol</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={completeProfileMutation.isPending}
+                data-testid="button-complete-profile"
+              >
+                {completeProfileMutation.isPending ? "Yuklanmoqda..." : "Davom etish"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
