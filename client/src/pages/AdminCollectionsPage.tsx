@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Eye, Plus, ArrowLeft, Video, X } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Video, X, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -23,6 +23,7 @@ export default function AdminCollectionsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAddVideoDialogOpen, setIsAddVideoDialogOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [viewingCollectionId, setViewingCollectionId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [collectionForm, setCollectionForm] = useState({
@@ -63,8 +64,18 @@ export default function AdminCollectionsPage() {
     enabled: !!activeCollectionId,
   });
 
+  const { data: viewingVideosData } = useQuery<{ classes: OnlineClass[] }>({
+    queryKey: ['/api/classes', viewingCollectionId],
+    queryFn: () => 
+      fetch(`/api/classes?collectionId=${viewingCollectionId}`, {
+        credentials: 'include'
+      }).then(res => res.json()),
+    enabled: !!viewingCollectionId,
+  });
+
   const collections = collectionsData?.collections || [];
   const collectionVideos = collectionVideosData?.classes || [];
+  const viewingVideos = viewingVideosData?.classes || [];
 
   const toggleCategory = (categoryName: string) => {
     const cats = collectionForm.categories || [];
@@ -271,6 +282,34 @@ export default function AdminCollectionsPage() {
     });
   };
 
+  const deleteVideoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/classes/${id}`, 'DELETE');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+      toast({
+        title: "Video o'chirildi",
+        description: "Video muvaffaqiyatli o'chirildi.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Video o'chirishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDeleteVideo = (id: string) => {
+    if (confirm("Haqiqatan ham bu videoni o'chirmoqchimisiz?")) {
+      deleteVideoMutation.mutate(id);
+    }
+  };
+
   const openAddVideoDialog = (collectionId: string) => {
     setActiveCollectionId(collectionId);
     setIsAddVideoDialogOpen(true);
@@ -332,7 +371,10 @@ export default function AdminCollectionsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedCollection(collection)}
+                          onClick={() => {
+                            setSelectedCollection(collection);
+                            setViewingCollectionId(collection.id);
+                          }}
                           data-testid={`button-view-${collection.id}`}
                         >
                           <Eye className="h-4 w-4" />
@@ -356,8 +398,13 @@ export default function AdminCollectionsPage() {
       </Card>
 
       {/* Collection Detail Dialog */}
-      <Dialog open={!!selectedCollection} onOpenChange={(open) => !open && setSelectedCollection(null)}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-collection-detail">
+      <Dialog open={!!selectedCollection} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedCollection(null);
+          setViewingCollectionId(null);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-collection-detail">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">
               {selectedCollection?.name}
@@ -365,32 +412,94 @@ export default function AdminCollectionsPage() {
           </DialogHeader>
 
           {selectedCollection && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Narx</p>
-                  <p className="font-semibold">{selectedCollection.price.toLocaleString()} so'm</p>
+            <ScrollArea className="max-h-[calc(90vh-8rem)]">
+              <div className="space-y-4 pr-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Narx</p>
+                    <p className="font-semibold">{selectedCollection.price.toLocaleString()} so'm</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Videolar soni</p>
+                    <p className="font-semibold">{viewingVideos.length} ta</p>
+                  </div>
+                </div>
+
+                {selectedCollection.description && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tavsif</p>
+                    <p className="text-sm">{selectedCollection.description}</p>
+                  </div>
+                )}
+
+                {selectedCollection.thumbnailUrl && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Rasm</p>
+                    <img 
+                      src={selectedCollection.thumbnailUrl} 
+                      alt={selectedCollection.name}
+                      className="rounded-lg w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold">Videolar</h3>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        openAddVideoDialog(selectedCollection.id);
+                        setSelectedCollection(null);
+                        setViewingCollectionId(null);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Video qo'shish
+                    </Button>
+                  </div>
+                  
+                  {viewingVideos.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Bu to'plamda videolar yo'q
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {viewingVideos.map((video) => (
+                        <div
+                          key={video.id}
+                          className="flex items-center gap-3 p-3 bg-muted rounded-lg"
+                          data-testid={`video-item-${video.id}`}
+                        >
+                          {video.thumbnailUrl && (
+                            <img
+                              src={video.thumbnailUrl}
+                              alt={video.title}
+                              className="w-20 h-14 object-cover rounded"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{video.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {video.duration} daqiqa
+                              {video.instructor && ` • ${video.instructor}`}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteVideo(video.id)}
+                            data-testid={`button-delete-video-${video.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {selectedCollection.description && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Tavsif</p>
-                  <p className="text-sm">{selectedCollection.description}</p>
-                </div>
-              )}
-
-              {selectedCollection.thumbnailUrl && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Rasm</p>
-                  <img 
-                    src={selectedCollection.thumbnailUrl} 
-                    alt={selectedCollection.name}
-                    className="rounded-lg w-full h-48 object-cover"
-                  />
-                </div>
-              )}
-            </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
