@@ -155,11 +155,7 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           user = await storage.createUser({
             telegramId: telegramUserId,
             phone: phoneNumber,
-            chatId: chatId,
           });
-        } else {
-          // Agar user mavjud bo'lsa, chatId ni yangilash
-          await storage.updateUser(user.id, { chatId: chatId });
         }
 
         const loginCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -196,12 +192,6 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       console.error('Telegram webhook error:', error);
       res.sendStatus(500);
     }
-  });
-
-  app.get('/api/telegram/auth-url', (req, res) => {
-    const botUsername = TELEGRAM_BOT_USERNAME;
-    const authUrl = `https://t.me/${botUsername}`;
-    res.json({ url: authUrl });
   });
 
   app.post('/api/telegram/verify-code', async (req, res) => {

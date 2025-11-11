@@ -49,10 +49,6 @@ export default function RegisterPage() {
     }
   }, [isAuthenticated, isLoading, user, setLocation]);
 
-  const { data: telegramAuthData } = useQuery({
-    queryKey: ['/api/telegram/auth-url'],
-  });
-
   const verifyCodeMutation = useMutation({
     mutationFn: async (code: string) => {
       const response = await apiRequest('/api/telegram/verify-code', 'POST', { code });
@@ -108,21 +104,8 @@ export default function RegisterPage() {
   });
 
   const handleTelegramAuth = () => {
-    if (telegramAuthData?.url) {
-      // Telegram deep link - to'g'ridan-to'g'ri botga o'tish
-      const botUsername = 'uzfitboom_bot';
-      const telegramDeepLink = `tg://resolve?domain=${botUsername}`;
-
-      // Deep link orqali ochish
-      window.location.href = telegramDeepLink;
-
-      // Agar deep link ishlamasa, web versiyasini ochish
-      setTimeout(() => {
-        window.open(telegramAuthData.url, '_blank');
-      }, 500);
-
-      setShowCodeInput(true);
-    }
+    window.open('https://t.me/uzfitboom_bot', '_blank');
+    setShowCodeInput(true);
   };
 
   const handleVerifyCode = (e: React.FormEvent) => {
@@ -164,7 +147,6 @@ export default function RegisterPage() {
               <Button
                 onClick={handleTelegramAuth}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                disabled={!telegramAuthData?.url}
                 data-testid="button-telegram-auth"
               >
                 <Send className="mr-2 h-5 w-5" />

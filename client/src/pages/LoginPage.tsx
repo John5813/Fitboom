@@ -102,15 +102,9 @@ export default function LoginPage() {
     },
   });
 
-  const { data: telegramAuthData } = useQuery({
-    queryKey: ['/api/telegram/auth-url'],
-  });
-
   const handleTelegramAuth = () => {
-    if (telegramAuthData?.url) {
-      window.open(telegramAuthData.url, '_blank');
-      setShowCodeInput(true);
-    }
+    window.open('https://t.me/uzfitboom_bot', '_blank');
+    setShowCodeInput(true);
   };
 
   const handleVerifyCode = (e: React.FormEvent) => {
