@@ -460,46 +460,38 @@ export default function HomePage() {
           </div>
 
           <div>
-            <h2 className="font-display font-semibold text-xl mb-4">Professional Murabyillardan Eksklyuziv Kurslar</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-semibold text-xl">Online Darslar</h2>
+              <Link href="/courses">
+                <Button variant="ghost" size="sm" className="text-primary">
+                  Barchasini ko'rish
+                </Button>
+              </Link>
+            </div>
             {classesLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : onlineClasses.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
-                {onlineClasses.slice(0, 6).map((collection) => (
+              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+                {onlineClasses.slice(0, 8).map((collection) => (
                   <Card
                     key={collection.id}
-                    className="overflow-hidden cursor-pointer hover-elevate aspect-[3/4] min-w-[140px] flex-shrink-0 snap-start"
+                    className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
                     onClick={() => setLocation(`/my-courses/${collection.id}`)}
                     data-testid={`card-collection-square-${collection.id}`}
                   >
-                    <div className="relative h-full flex flex-col">
-                      <div className="relative flex-1">
-                        <img
-                          src={collection.thumbnailUrl || classImage}
-                          alt={collection.name}
-                          className="w-full h-full object-cover"
-                        />
-                        {collection.isFree && (
-                          <div className="absolute top-2 left-2">
-                            <Badge className="bg-green-500/90 text-white">
-                              Bepul
-                            </Badge>
-                          </div>
-                        )}
-                        {!collection.isFree && (
-                          <div className="absolute top-2 left-2">
-                            <Badge className="bg-primary/90 text-white">
-                              {collection.price} kredit
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-3 bg-card">
-                        <h3 className="font-semibold text-sm mb-1 truncate">
+                    <div className="relative h-full">
+                      <img
+                        src={collection.thumbnailUrl || classImage}
+                        alt={collection.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <h3 className="text-white font-semibold text-xs truncate leading-tight">
                           {collection.name}
                         </h3>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {collection.description}
+                        <p className="text-white/70 text-[10px] truncate">
+                          {collection.isFree ? 'Bepul' : `${collection.price} kredit`}
                         </p>
                       </div>
                     </div>
