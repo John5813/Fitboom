@@ -57,7 +57,7 @@ export default function LoginPage() {
       if (data.success) {
         await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-        
+
         if (data.profileCompleted) {
           toast({
             title: "Xush kelibsiz!",
@@ -102,9 +102,15 @@ export default function LoginPage() {
     },
   });
 
+  const { data: telegramAuthData } = useQuery({
+    queryKey: ['/api/telegram/auth-url'],
+  });
+
   const handleTelegramAuth = () => {
-    window.open('https://t.me/uzfitboom_bot', '_blank');
-    setShowCodeInput(true);
+    if (telegramAuthData?.url) {
+      window.open(telegramAuthData.url, '_blank');
+      setShowCodeInput(true);
+    }
   };
 
   const handleVerifyCode = (e: React.FormEvent) => {
@@ -144,13 +150,12 @@ export default function LoginPage() {
               <Button
                 onClick={handleTelegramAuth}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                disabled={!telegramAuthUrl}
                 data-testid="button-telegram-auth"
               >
                 <Send className="mr-2 h-5 w-5" />
                 Telegram orqali kirish
               </Button>
-              
+
               <p className="text-sm text-center text-gray-600 dark:text-gray-400">
                 Telegram botda /start bosing va telefon raqamingizni ulashing
               </p>
@@ -162,7 +167,7 @@ export default function LoginPage() {
                   Telegram botdan kelgan kodni kiriting
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <label htmlFor="code" className="text-sm font-medium">
                   Kirish kodi
@@ -179,7 +184,7 @@ export default function LoginPage() {
                   maxLength={8}
                 />
               </div>
-              
+
               <Button
                 type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600"
@@ -188,7 +193,7 @@ export default function LoginPage() {
               >
                 {verifyCodeMutation.isPending ? "Tekshirilmoqda..." : "Tasdiqlash"}
               </Button>
-              
+
               <Button
                 type="button"
                 variant="ghost"

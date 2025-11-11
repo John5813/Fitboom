@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,7 @@ export default function RegisterPage() {
     }
   }, [isAuthenticated, isLoading, user, setLocation]);
 
-  const { data: telegramAuthUrl } = useQuery({
+  const { data: telegramAuthData } = useQuery({
     queryKey: ['/api/telegram/auth-url'],
   });
 
@@ -63,7 +62,7 @@ export default function RegisterPage() {
       if (data.success) {
         await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-        
+
         if (data.profileCompleted) {
           toast({
             title: "Xush kelibsiz!",
@@ -109,19 +108,19 @@ export default function RegisterPage() {
   });
 
   const handleTelegramAuth = () => {
-    if (telegramAuthUrl && typeof telegramAuthUrl === 'object' && 'url' in telegramAuthUrl) {
+    if (telegramAuthData?.url) {
       // Telegram deep link - to'g'ridan-to'g'ri botga o'tish
       const botUsername = 'uzfitboom_bot';
       const telegramDeepLink = `tg://resolve?domain=${botUsername}`;
-      
+
       // Deep link orqali ochish
       window.location.href = telegramDeepLink;
-      
+
       // Agar deep link ishlamasa, web versiyasini ochish
       setTimeout(() => {
-        window.open((telegramAuthUrl as any).url, '_blank');
+        window.open(telegramAuthData.url, '_blank');
       }, 500);
-      
+
       setShowCodeInput(true);
     }
   };
@@ -165,13 +164,13 @@ export default function RegisterPage() {
               <Button
                 onClick={handleTelegramAuth}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                disabled={!telegramAuthUrl}
+                disabled={!telegramAuthData?.url}
                 data-testid="button-telegram-auth"
               >
                 <Send className="mr-2 h-5 w-5" />
                 Telegram orqali ro'yxatdan o'tish
               </Button>
-              
+
               <p className="text-sm text-center text-gray-600 dark:text-gray-400">
                 Telegram botda /start bosing va telefon raqamingizni ulashing
               </p>
@@ -197,7 +196,7 @@ export default function RegisterPage() {
                   Telegram botdan kelgan kodni kiriting
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="code">Kirish kodi</Label>
                 <Input
@@ -212,7 +211,7 @@ export default function RegisterPage() {
                   maxLength={8}
                 />
               </div>
-              
+
               <Button
                 type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600"
@@ -221,7 +220,7 @@ export default function RegisterPage() {
               >
                 {verifyCodeMutation.isPending ? "Tekshirilmoqda..." : "Tasdiqlash"}
               </Button>
-              
+
               <Button
                 type="button"
                 variant="ghost"
