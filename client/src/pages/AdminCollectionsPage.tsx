@@ -211,6 +211,8 @@ export default function AdminCollectionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
       queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes', activeCollectionId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes', viewingCollectionId] });
       toast({
         title: "Video qo'shildi",
         description: `${videoForm.title} muvaffaqiyatli qo'shildi.`,
@@ -292,6 +294,7 @@ export default function AdminCollectionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes', viewingCollectionId] });
       toast({
         title: "Video o'chirildi",
         description: "Video muvaffaqiyatli o'chirildi.",
