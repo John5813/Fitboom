@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Gym, TimeSlot, Category } from "@shared/schema";
+import type { Gym, TimeSlot } from "@shared/schema";
+import { CATEGORIES, type Category } from "@shared/categories";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,9 +24,6 @@ export default function AdminGymsPage() {
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const [createdGym, setCreatedGym] = useState<Gym | null>(null);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
-  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryIcon, setNewCategoryIcon] = useState('');
   const { toast } = useToast();
 
   const [gymForm, setGymForm] = useState({
@@ -62,53 +60,8 @@ export default function AdminGymsPage() {
     queryFn: () => fetch(`/api/time-slots?gymId=${selectedGym?.id}`, { credentials: 'include' }).then(res => res.json()),
   });
 
-  const { data: categoriesData } = useQuery<{ categories: Category[] }>({
-    queryKey: ['/api/categories'],
-  });
-
   const gyms = gymsData?.gyms || [];
   const timeSlots = timeSlotsData?.timeSlots || [];
-  const categories = categoriesData?.categories || [];
-
-  const createCategoryMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest('/api/categories', 'POST', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      toast({
-        title: "Kategoriya qo'shildi",
-        description: `${newCategoryName} muvaffaqiyatli qo'shildi.`,
-      });
-      setIsAddCategoryDialogOpen(false);
-      setNewCategoryName('');
-      setNewCategoryIcon('');
-    },
-    onError: () => {
-      toast({
-        title: "Xatolik",
-        description: "Kategoriya qo'shishda xatolik yuz berdi.",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const handleCreateCategory = () => {
-    if (!newCategoryName) {
-      toast({
-        title: "Ma'lumot to'liq emas",
-        description: "Kategoriya nomini kiriting.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    createCategoryMutation.mutate({
-      name: newCategoryName,
-      icon: newCategoryIcon || '🏋️'
-    });
-  };
 
   const toggleCategory = (categoryName: string) => {
     const categories = gymForm.categories || [];
@@ -776,24 +729,12 @@ export default function AdminGymsPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Kategoriyalar *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAddCategoryDialogOpen(true)}
-                  data-testid="button-add-category"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Yangi kategoriya
-                </Button>
-              </div>
+              <Label>Kategoriyalar *</Label>
               <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
-                {categories.length === 0 ? (
+                {CATEGORIES.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Hozircha kategoriyalar yo'q</p>
                 ) : (
-                  categories.map((category) => (
+                  CATEGORIES.map((category) => (
                     <div key={category.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`cat-${category.id}`}
@@ -1027,64 +968,6 @@ export default function AdminGymsPage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Category Dialog */}
-      <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-        <DialogContent className="max-w-md" data-testid="dialog-add-category">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">Yangi Kategoriya Qo'shish</DialogTitle>
-            <DialogDescription>
-              Yangi kategoriya yarating
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="categoryName">Kategoriya nomi *</Label>
-              <Input
-                id="categoryName"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Misol: Yoga, Boxing, Pilates"
-                data-testid="input-category-name"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="categoryIcon">Emoji icon</Label>
-              <Input
-                id="categoryIcon"
-                value={newCategoryIcon}
-                onChange={(e) => setNewCategoryIcon(e.target.value)}
-                placeholder="🏋️"
-                data-testid="input-category-icon"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Emoji belgisi kiriting (masalan: 🏋️, 🧘, 🥊)
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={handleCreateCategory}
-                disabled={createCategoryMutation.isPending}
-                className="flex-1"
-                data-testid="button-submit-category"
-              >
-                {createCategoryMutation.isPending ? 'Yuklanmoqda...' : "Qo'shish"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddCategoryDialogOpen(false)}
-                className="flex-1"
-                data-testid="button-cancel-category"
-              >
-                Bekor qilish
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

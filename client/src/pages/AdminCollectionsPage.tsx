@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { VideoCollection, OnlineClass, Category } from "@shared/schema";
+import type { VideoCollection, OnlineClass } from "@shared/schema";
+import { CATEGORIES, type Category } from "@shared/categories";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,12 +65,6 @@ export default function AdminCollectionsPage() {
 
   const collections = collectionsData?.collections || [];
   const collectionVideos = collectionVideosData?.classes || [];
-
-  const { data: categoriesData } = useQuery<{ categories: Category[] }>({
-    queryKey: ['/api/categories'],
-  });
-
-  const categories = categoriesData?.categories || [];
 
   const toggleCategory = (categoryName: string) => {
     const cats = collectionForm.categories || [];
@@ -426,10 +421,10 @@ export default function AdminCollectionsPage() {
             <div>
               <Label>Kategoriyalar *</Label>
               <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
-                {categories.length === 0 ? (
+                {CATEGORIES.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Hozircha kategoriyalar yo'q</p>
                 ) : (
-                  categories.map((category) => (
+                  CATEGORIES.map((category) => (
                     <div key={category.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`col-cat-${category.id}`}
