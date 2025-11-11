@@ -137,7 +137,7 @@ export default function CoursesPage() {
                           <div className="flex items-center gap-1">
                             <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                             <p className="text-2xl font-bold">
-                              {collection.price.toLocaleString()} so'm
+                              {collection.price.toLocaleString()} sum
                             </p>
                           </div>
                         )}
@@ -161,7 +161,7 @@ export default function CoursesPage() {
                         data-testid={`button-purchase-${collection.id}`}
                       >
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        {purchaseMutation.isPending ? 'Yuklanmoqda...' : 'Sotib Olish'}
+                        {purchaseMutation.isPending ? 'Yuklanmoqda...' : `${collection.price} sum ga sotib olish`}
                       </Button>
                     )}
                   </CardContent>

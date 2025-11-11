@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import type { VideoCollection, OnlineClass, UserPurchase } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Play, Clock, User, Lock } from "lucide-react";
+import { ArrowLeft, Play, Clock, User, Lock, Gift } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function MyCourseDetailPage() {
@@ -92,7 +92,14 @@ export default function MyCourseDetailPage() {
                   {isPurchased ? classes.length : '?'} ta video
                 </Badge>
                 <Badge variant="outline" data-testid="badge-collection-price">
-                  {collection.price.toLocaleString()} so'm
+                  {collection.isFree ? (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <Gift className="h-3 w-3 mr-1" />
+                      Bepul
+                    </Badge>
+                  ) : (
+                    `${collection.price} sum`
+                  )}
                 </Badge>
               </div>
             </div>

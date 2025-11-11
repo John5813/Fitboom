@@ -491,7 +491,7 @@ export default function HomePage() {
                           {collection.name}
                         </h3>
                         <p className="text-white/70 text-[10px] truncate">
-                          {collection.isFree ? 'Bepul' : `${collection.price} kredit`}
+                          {collection.isFree ? 'Bepul' : `${collection.price} sum`}
                         </p>
                       </div>
                     </div>
@@ -593,7 +593,7 @@ export default function HomePage() {
                         {collection.name}
                       </h3>
                       <p className="text-white/70 text-sm truncate">
-                        {collection.isFree ? 'Bepul' : `${collection.price} kredit`}
+                        {collection.isFree ? 'Bepul' : `${collection.price} sum`}
                       </p>
                     </div>
                   </div>

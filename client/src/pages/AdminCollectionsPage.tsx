@@ -190,7 +190,7 @@ export default function AdminCollectionsPage() {
         isFree: 'false',
       });
       setSelectedThumbnail(null);
-      
+
       // Avtomatik ravishda video qo'shish dialogini ochish
       if (data.collection?.id) {
         setTimeout(() => {
@@ -432,7 +432,7 @@ export default function AdminCollectionsPage() {
 
   const handleUpdateCollection = () => {
     if (!editingCollection) return;
-    
+
     if (!collectionForm.name || (!collectionForm.category && collectionForm.categories.length === 0)) {
       toast({
         title: "Ma'lumot to'liq emas",
@@ -475,7 +475,7 @@ export default function AdminCollectionsPage() {
 
   const handleUpdateVideo = () => {
     if (!editingVideo) return;
-    
+
     if (!videoForm.title || !videoForm.videoUrl || !videoForm.duration || !videoForm.thumbnailUrl) {
       toast({
         title: "Ma'lumot to'liq emas",
@@ -560,7 +560,7 @@ export default function AdminCollectionsPage() {
                     </Badge>
                   ) : (
                     <Badge className="bg-primary/90 text-white">
-                      {collection.price} kredit
+                      {collection.price} sum
                     </Badge>
                   )}
                 </div>
@@ -657,7 +657,7 @@ export default function AdminCollectionsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Narx</p>
-                    <p className="font-semibold">{selectedCollection.price.toLocaleString()} so'm</p>
+                    <p className="font-semibold">{selectedCollection.price.toLocaleString()} sum</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Videolar soni</p>
@@ -698,7 +698,7 @@ export default function AdminCollectionsPage() {
                       Video qo'shish
                     </Button>
                   </div>
-                  
+
                   {viewingVideos.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       Bu to'plamda videolar yo'q
@@ -862,13 +862,13 @@ export default function AdminCollectionsPage() {
 
             {collectionForm.isFree === 'false' && (
               <div>
-                <Label htmlFor="price">Narx (so'm) *</Label>
+                <Label htmlFor="price">Narxi (sum)</Label>
                 <Input
                   id="price"
                   type="number"
                   value={collectionForm.price}
                   onChange={(e) => setCollectionForm({ ...collectionForm, price: e.target.value })}
-                  placeholder="150000"
+                  placeholder="Narxi (sum)"
                   data-testid="input-collection-price"
                 />
               </div>
@@ -997,13 +997,13 @@ export default function AdminCollectionsPage() {
 
               {collectionForm.isFree === 'false' && (
                 <div>
-                  <Label htmlFor="edit-price">Narx (kredit) *</Label>
+                  <Label htmlFor="edit-price">Narxi (sum)</Label>
                   <Input
                     id="edit-price"
                     type="number"
                     value={collectionForm.price}
                     onChange={(e) => setCollectionForm({ ...collectionForm, price: e.target.value })}
-                    placeholder="10"
+                    placeholder="Narxi (sum)"
                   />
                 </div>
               )}
