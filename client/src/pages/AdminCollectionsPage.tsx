@@ -440,66 +440,98 @@ export default function AdminCollectionsPage() {
         </Button>
       </div>
 
-      <Card className="p-6">
-        {isLoading ? (
-          <div className="text-center py-8">Yuklanmoqda...</div>
-        ) : collections.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8">Yuklanmoqda...</div>
+      ) : collections.length === 0 ? (
+        <Card className="p-6">
           <div className="text-center py-8 text-muted-foreground">
             To'plamlar topilmadi
           </div>
-        ) : (
-          <ScrollArea className="h-[60vh] lg:h-[65vh]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16 sticky top-0 bg-card z-10">№</TableHead>
-                  <TableHead className="sticky top-0 bg-card z-10">To'plam Nomi</TableHead>
-                  <TableHead className="sticky top-0 bg-card z-10">Videolar</TableHead>
-                  <TableHead className="sticky top-0 bg-card z-10">Narx</TableHead>
-                  <TableHead className="w-32 sticky top-0 bg-card z-10">Harakatlar</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {collections.map((collection, index) => (
-                  <TableRow key={collection.id} data-testid={`row-collection-${collection.id}`}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-semibold" data-testid={`text-collection-name-${collection.id}`}>
-                      {collection.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{(collection as any).videoCount || 0} ta</Badge>
-                    </TableCell>
-                    <TableCell>{collection.price.toLocaleString()} so'm</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setViewingCollectionId(collection.id);
-                            setSelectedCollection(collection);
-                          }}
-                          data-testid={`button-view-${collection.id}`}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openAddVideoDialog(collection.id)}
-                          data-testid={`button-add-video-${collection.id}`}
-                        >
-                          <Video className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {collections.map((collection) => (
+            <Card key={collection.id} className="overflow-hidden hover-elevate cursor-pointer" data-testid={`card-collection-${collection.id}`}>
+              <div 
+                className="relative h-48 cursor-pointer"
+                onClick={() => {
+                  setViewingCollectionId(collection.id);
+                  setSelectedCollection(collection);
+                }}
+              >
+                {collection.thumbnailUrl ? (
+                  <img 
+                    src={collection.thumbnailUrl} 
+                    alt={collection.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <Video className="h-16 w-16 text-primary/40" />
+                  </div>
+                )}
+                <div className="absolute top-2 right-2">
+                  {collection.isFree ? (
+                    <Badge className="bg-green-500/90 text-white">
+                      Bepul
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-primary/90 text-white">
+                      {collection.price} kredit
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="p-4">
+                <h3 className="font-semibold text-lg mb-2 truncate" data-testid={`text-collection-name-${collection.id}`}>
+                  {collection.name}
+                </h3>
+                {collection.description && (
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {collection.description}
+                  </p>
+                )}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Video className="h-4 w-4" />
+                    <span>{(collection as any).videoCount || 0} ta video</span>
+                  </div>
+                  {collection.categories && collection.categories.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {collection.categories[0]}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setViewingCollectionId(collection.id);
+                      setSelectedCollection(collection);
+                    }}
+                    data-testid={`button-view-${collection.id}`}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ko'rish
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openAddVideoDialog(collection.id)}
+                    data-testid={`button-add-video-${collection.id}`}
+                  >
+                    <Video className="h-4 w-4 mr-1" />
+                    Video
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Collection Detail Dialog */}
       <Dialog open={!!selectedCollection} onOpenChange={(open) => {
