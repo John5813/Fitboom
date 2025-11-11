@@ -110,7 +110,18 @@ export default function RegisterPage() {
 
   const handleTelegramAuth = () => {
     if (telegramAuthUrl && typeof telegramAuthUrl === 'object' && 'url' in telegramAuthUrl) {
-      window.open((telegramAuthUrl as any).url, '_blank');
+      // Telegram deep link - to'g'ridan-to'g'ri botga o'tish
+      const botUsername = 'uzfitboom_bot';
+      const telegramDeepLink = `tg://resolve?domain=${botUsername}`;
+      
+      // Deep link orqali ochish
+      window.location.href = telegramDeepLink;
+      
+      // Agar deep link ishlamasa, web versiyasini ochish
+      setTimeout(() => {
+        window.open((telegramAuthUrl as any).url, '_blank');
+      }, 500);
+      
       setShowCodeInput(true);
     }
   };
