@@ -510,43 +510,31 @@ export default function HomePage() {
             {classesLoading || purchasesLoading ? (
               <p className="text-muted-foreground">Yuklanmoqda...</p>
             ) : onlineClasses.length > 0 ? (
-              <div className="flex flex-col gap-4">
-                {onlineClasses.map((collection) => {
+              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+                {onlineClasses.slice(0, 8).map((collection) => {
                   const isPurchased = purchasedCollectionIds.has(collection.id);
                   return (
                     <Card
                       key={collection.id}
-                      className="flex items-center p-4 gap-4 hover:shadow-lg transition-shadow"
-                      data-testid={`card-collection-table-${collection.id}`}
+                      className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
+                      onClick={() => isPurchased ? setLocation(`/my-courses/${collection.id}`) : handlePurchaseCollection(collection.id)}
+                      data-testid={`card-collection-square-${collection.id}`}
                     >
-                      <img
-                        src={collection.thumbnailUrl || classImage}
-                        alt={collection.name}
-                        className="w-24 h-16 object-cover rounded-md flex-shrink-0"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg truncate">
-                          {collection.name}
-                        </h3>
-                        <p className="text-muted-foreground text-sm truncate">
-                          {collection.description || "Bu kurs haqida batafsil ma'lumot berilmagan."}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-center gap-2">
-                        <p className="font-bold text-lg">
-                          {isPurchased ? 'Sotib olingan' : `${collection.price} so'm`}
-                        </p>
-                        {isPurchased ? (
-                          <Button variant="outline" size="sm" onClick={() => setLocation(`/my-courses/${collection.id}`)}>
-                            <Video className="h-4 w-4 mr-2" />
-                            Ko'rish
-                          </Button>
-                        ) : (
-                          <Button onClick={() => handlePurchaseCollection(collection.id)} disabled={purchaseCollectionMutation.isPending}>
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            {purchaseCollectionMutation.isPending ? 'Sotib olinmoqda...' : 'Sotib olish'}
-                          </Button>
-                        )}
+                      <div className="relative h-full">
+                        <img
+                          src={collection.thumbnailUrl || classImage}
+                          alt={collection.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-2">
+                          <h3 className="text-white font-semibold text-xs truncate leading-tight">
+                            {collection.name}
+                          </h3>
+                          <p className="text-white/70 text-[10px] truncate">
+                            {isPurchased ? 'Sotib olingan' : `${collection.price} so'm`}
+                          </p>
+                        </div>
                       </div>
                     </Card>
                   );
@@ -555,12 +543,6 @@ export default function HomePage() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-muted-foreground text-sm">Hozircha video kurslar mavjud emas. Tez orada yangi kurslar qo'shiladi!</p>
-                <Link href="/courses">
-                  <Button className="mt-4" data-testid="button-explore-courses">
-                    <Video className="h-4 w-4 mr-2" />
-                    Kurslarni Ko'rish
-                  </Button>
-                </Link>
               </div>
             )}
           </div>
