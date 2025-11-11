@@ -104,7 +104,7 @@ export default function RegisterPage() {
   });
 
   const handleTelegramAuth = () => {
-    window.open('https://t.me/uzfitboom_bot', '_blank');
+    window.open('https://t.me/uzfitboom_bot?start=register', '_blank');
     setShowCodeInput(true);
   };
 

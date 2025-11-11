@@ -103,7 +103,7 @@ export default function LoginPage() {
   });
 
   const handleTelegramAuth = () => {
-    window.open('https://t.me/uzfitboom_bot', '_blank');
+    window.open('https://t.me/uzfitboom_bot?start=auth', '_blank');
     setShowCodeInput(true);
   };
 
