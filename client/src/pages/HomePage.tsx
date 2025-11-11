@@ -679,12 +679,8 @@ export default function HomePage() {
 
       <BottomNav
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => setActiveTab(tab as 'home' | 'gyms' | 'classes' | 'bookings' | 'scanner')}
         onScanQR={() => {
-          // When starting scan from BottomNav, we don't have a specific booking yet.
-          // The user will select a booking first from the 'bookings' tab.
-          // For now, just open the scanner, but it will prompt for booking selection.
-          // A better UX would be to navigate to 'bookings' tab first if no booking is selected.
           setIsScannerOpen(true);
         }}
       />
