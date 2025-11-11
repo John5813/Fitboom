@@ -568,37 +568,27 @@ export default function HomePage() {
       {/* Classes Tab */}
       {activeTab === 'classes' && (
         <div className="p-4 space-y-6">
-          <h1 className="font-display font-bold text-2xl">Online Darslar</h1>
+          <h1 className="font-display font-bold text-2xl">Video Kurslar</h1>
 
           {classesLoading ? (
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           ) : onlineClasses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {onlineClasses.map((classItem) => (
-              <OnlineClassCard
-                key={classItem.id}
-                {...classItem}
-                isLocked={credits === 0}
-                onClick={(id) => {
-                  if (credits > 0) {
-                    toast({
-                      title: "Dars boshlanmoqda",
-                      description: classItem.title,
-                    });
-                  } else {
-                    toast({
-                      title: "Kredit kerak",
-                      description: "Online darslarni ko'rish uchun kredit sotib oling.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              />
-              ))}
+            <div className="space-y-4">
+              <Link href="/courses">
+                <Button variant="outline" className="w-full">
+                  Barcha kurslarni ko'rish
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Hozircha online darslar mavjud emas. Tez orada yangi darslar qo'shiladi!</p>
+              <p className="text-muted-foreground">Hozircha video kurslar mavjud emas. Tez orada yangi kurslar qo'shiladi!</p>
+              <Link href="/courses">
+                <Button className="mt-4" data-testid="button-explore-courses">
+                  <Video className="h-4 w-4 mr-2" />
+                  Kurslarni Ko'rish
+                </Button>
+              </Link>
             </div>
           )}
         </div>
