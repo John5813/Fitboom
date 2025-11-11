@@ -621,38 +621,62 @@ export default function AdminCollectionsPage() {
                       Bu to'plamda videolar yo'q
                     </p>
                   ) : (
-                    <div className="space-y-2">
-                      {viewingVideos.map((video) => (
-                        <div
-                          key={video.id}
-                          className="flex items-center gap-3 p-3 bg-muted rounded-lg"
-                          data-testid={`video-item-${video.id}`}
-                        >
-                          {video.thumbnailUrl && (
-                            <img
-                              src={video.thumbnailUrl}
-                              alt={video.title}
-                              className="w-20 h-14 object-cover rounded"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{video.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {video.duration} daqiqa
-                              {video.instructor && ` • ${video.instructor}`}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteVideo(video.id)}
-                            data-testid={`button-delete-video-${video.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                    <ScrollArea className="h-[400px]">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-background z-10">
+                          <TableRow>
+                            <TableHead className="w-16">№</TableHead>
+                            <TableHead className="w-24">Rasm</TableHead>
+                            <TableHead>Nomi</TableHead>
+                            <TableHead className="w-28">Davomiyligi</TableHead>
+                            <TableHead className="w-32">Harakatlar</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {viewingVideos.map((video, index) => (
+                            <TableRow key={video.id} data-testid={`video-item-${video.id}`}>
+                              <TableCell className="font-medium">{index + 1}</TableCell>
+                              <TableCell>
+                                {video.thumbnailUrl ? (
+                                  <img
+                                    src={video.thumbnailUrl}
+                                    alt={video.title}
+                                    className="w-16 h-12 object-cover rounded"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-12 bg-muted rounded flex items-center justify-center">
+                                    <Video className="h-6 w-6 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium text-sm">{video.title}</p>
+                                  {video.instructor && (
+                                    <p className="text-xs text-muted-foreground">{video.instructor}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {video.duration} daqiqa
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteVideo(video.id)}
+                                    data-testid={`button-delete-video-${video.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
                   )}
                 </div>
               </div>
