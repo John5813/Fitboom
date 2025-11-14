@@ -106,7 +106,6 @@ export const completeProfileSchema = z.object({
   name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
   age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
   gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
-  chatId: z.number(), // Added chatId here as required field for completion
 });
 export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
 export const insertVideoCollectionSchema = createInsertSchema(videoCollections).omit({ id: true, createdAt: true });
