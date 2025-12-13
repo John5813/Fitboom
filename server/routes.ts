@@ -1063,8 +1063,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Partnership messages routes (admin only)
-  app.get('/api/admin/partnership-messages', requireAdmin, async (req, res) => {
+  // Partnership messages routes (requires authentication only)
+  app.get('/api/admin/partnership-messages', requireAuth, async (req, res) => {
     try {
       const messages = await storage.getPartnershipMessages();
       res.json({ messages });
@@ -1090,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/partnership-messages/:id', requireAdmin, async (req, res) => {
+  app.put('/api/admin/partnership-messages/:id', requireAuth, async (req, res) => {
     try {
       const { status } = req.body;
       const message = await storage.updatePartnershipMessageStatus(req.params.id, status);
@@ -1105,7 +1105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/partnership-messages/:id', requireAdmin, async (req, res) => {
+  app.delete('/api/admin/partnership-messages/:id', requireAuth, async (req, res) => {
     try {
       const success = await storage.deletePartnershipMessage(req.params.id);
       
