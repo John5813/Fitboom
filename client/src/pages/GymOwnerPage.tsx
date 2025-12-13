@@ -63,6 +63,7 @@ export default function GymOwnerPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/gym-owner", gymId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/gyms"] });
       toast({
         title: "Muvaffaqiyatli",
         description: "Zal ma'lumotlari yangilandi",
