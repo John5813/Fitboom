@@ -885,6 +885,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // QR kod tekshirish va tasdiqlash
+  // Credit value: 1 kredit = 30,000 so'm (gym earns this per credit used)
+  const CREDIT_VALUE_UZS = 30000;
+
   app.post('/api/verify-qr', requireAuth, async (req, res) => {
     try {
       const { qrCode, gymId } = req.body;
@@ -935,6 +938,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.completeBooking(booking.id);
 
       const gym = await storage.getGym(gymId);
+      const user = await storage.getUser(req.user!.id);
+
+      // Record gym visit and update earnings
+      if (gym && user) {
+        const creditsUsed = gym.credits;
+        const amountEarned = creditsUsed * CREDIT_VALUE_UZS;
+
+        // Create gym visit record
+        await storage.createGymVisit({
+          gymId: gymId,
+          visitorName: user.name || user.phone || 'Mehmon',
+          creditsUsed: creditsUsed,
+          amountEarned: amountEarned,
+        });
+
+        // Update gym earnings and debt
+        await storage.updateGymEarnings(gymId, amountEarned);
+
+        console.log(`Visit recorded: ${user.name || user.phone} at ${gym.name}, earned ${amountEarned} so'm`);
+      }
 
       res.json({
         success: true,
