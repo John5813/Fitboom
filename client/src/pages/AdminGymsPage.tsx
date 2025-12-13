@@ -475,54 +475,43 @@ export default function AdminGymsPage() {
             Hozircha zallar yo'q
           </div>
         ) : (
-          <ScrollArea className="h-[60vh] lg:h-[65vh]">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16 sticky top-0 bg-card z-10">№</TableHead>
-                  <TableHead className="sticky top-0 bg-card z-10">Zal Nomi</TableHead>
-                  <TableHead className="sticky top-0 bg-card z-10">Daromad</TableHead>
-                  <TableHead className="sticky top-0 bg-card z-10">Qarz</TableHead>
-                  <TableHead className="w-24 sticky top-0 bg-card z-10">Harakatlar</TableHead>
+                  <TableHead className="w-10">№</TableHead>
+                  <TableHead>Zal</TableHead>
+                  <TableHead className="text-right">Daromad</TableHead>
+                  <TableHead className="text-right">Qarz</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {gyms.map((gym, index) => (
-                  <TableRow key={gym.id} data-testid={`row-gym-${gym.id}`}>
+                  <TableRow 
+                    key={gym.id} 
+                    data-testid={`row-gym-${gym.id}`}
+                    className="cursor-pointer hover-elevate"
+                    onClick={() => setSelectedGym(gym)}
+                  >
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
                       {gym.name}
                     </TableCell>
-                    <TableCell data-testid={`text-gym-earnings-${gym.id}`}>
-                      <Badge variant="secondary" className="text-xs">
-                        <DollarSign className="h-3 w-3 mr-1" />
+                    <TableCell className="text-right" data-testid={`text-gym-earnings-${gym.id}`}>
+                      <span className="text-xs text-green-600 dark:text-green-400">
                         {formatCurrency(gym.totalEarnings || 0)}
-                      </Badge>
+                      </span>
                     </TableCell>
-                    <TableCell data-testid={`text-gym-debt-${gym.id}`}>
-                      {(gym.currentDebt || 0) > 0 ? (
-                        <Badge variant="destructive" className="text-xs">
-                          {formatCurrency(gym.currentDebt || 0)}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">0 so'm</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedGym(gym)}
-                        data-testid={`button-view-${gym.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="text-right" data-testid={`text-gym-debt-${gym.id}`}>
+                      <span className={`text-xs ${(gym.currentDebt || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                        {formatCurrency(gym.currentDebt || 0)}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         )}
       </Card>
 
