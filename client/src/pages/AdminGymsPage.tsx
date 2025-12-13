@@ -537,12 +537,12 @@ export default function AdminGymsPage() {
           
           {selectedGym && (
             <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
-              <div className="space-y-4"></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Kategoriyalar</p>
-                  <p className="font-semibold">{selectedGym.categories?.join(', ') || 'Yo\'q'}</p>
-                </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Kategoriyalar</p>
+                    <p className="font-semibold">{selectedGym.categories?.join(', ') || 'Yo\'q'}</p>
+                  </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Kredit</p>
                   <Badge variant="secondary" className="font-semibold px-3 py-1">
@@ -592,7 +592,7 @@ export default function AdminGymsPage() {
               )}
 
               {selectedGym.imageUrl && (
-                <div>
+                <div className="mt-4">
                   <p className="text-sm text-muted-foreground mb-2">Rasm</p>
                   <img 
                     src={selectedGym.imageUrl} 
