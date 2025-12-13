@@ -418,12 +418,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 relative">
-      <div 
-        className="fixed inset-0 bg-cover bg-center opacity-80 pointer-events-none"
-        style={{ backgroundImage: 'url(/background-earth.jpg)' }}
-      />
-      <div className="relative z-10">
+    <div className="min-h-screen bg-background pb-20">
       {/* Home Tab */}
       {activeTab === 'home' && (
         <div className="p-4 space-y-6">
@@ -762,8 +757,6 @@ export default function HomePage() {
         onScan={handleQRScan}
         gymId={selectedBooking?.gymId} // Pass gymId to QRScanner
       />
-      </div>
-
       {/* Time Slot Selection Dialog */}
       <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
         <DialogContent className="max-w-md" data-testid="dialog-select-time-slot">

@@ -129,12 +129,7 @@ export default function SettingsPage() {
   const isPartnerFormValid = hallName.trim() && phone.trim();
 
   return (
-    <div className="min-h-screen bg-background p-4 relative">
-      <div 
-        className="fixed inset-0 bg-cover bg-center opacity-80 pointer-events-none"
-        style={{ backgroundImage: 'url(/background-earth.jpg)' }}
-      />
-      <div className="relative z-10">
+    <div className="min-h-screen bg-background p-4">
       <div className="flex items-center gap-4 mb-6">
         <Button
           variant="ghost"
@@ -294,7 +289,6 @@ export default function SettingsPage() {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
     </div>
   );
 }

@@ -89,11 +89,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 relative">
-      <div 
-        className="fixed inset-0 bg-cover bg-center opacity-80 pointer-events-none -z-10"
-        style={{ backgroundImage: 'url(/background-earth.jpg)' }}
-      />
+    <div className="container mx-auto p-3 sm:p-6">
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>

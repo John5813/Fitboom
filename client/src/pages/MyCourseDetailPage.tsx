@@ -65,12 +65,7 @@ export default function MyCourseDetailPage() {
   const visibleClasses = isPurchased ? classes : [];
 
   return (
-    <div className="min-h-screen bg-background relative">
-      <div 
-        className="fixed inset-0 bg-cover bg-center opacity-80 pointer-events-none"
-        style={{ backgroundImage: 'url(/background-earth.jpg)' }}
-      />
-      <div className="relative z-10">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 pb-24">
         <Button
           variant="ghost"
@@ -201,7 +196,6 @@ export default function MyCourseDetailPage() {
             </div>
           )}
         </div>
-      </div>
       </div>
     </div>
   );
