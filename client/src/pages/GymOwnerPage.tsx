@@ -325,7 +325,7 @@ export default function GymOwnerPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.map((payment) => (
+                    {[...payments].sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()).map((payment) => (
                       <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatDate(payment.paymentDate)}
