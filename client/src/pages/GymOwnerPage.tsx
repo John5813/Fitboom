@@ -404,6 +404,9 @@ export default function GymOwnerPage() {
                     data-testid={`visitor-card-${visit.id}`}
                   >
                     <Avatar>
+                      {visit.visitorProfileImage && (
+                        <img src={visit.visitorProfileImage} alt={visit.visitorName} className="h-full w-full object-cover" />
+                      )}
                       <AvatarFallback>{visit.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -427,6 +430,9 @@ export default function GymOwnerPage() {
           {selectedVisitor && (
             <div className="flex flex-col items-center gap-4 py-4">
               <Avatar className="h-20 w-20">
+                {selectedVisitor.visitorProfileImage && (
+                  <img src={selectedVisitor.visitorProfileImage} alt={selectedVisitor.visitorName} className="h-full w-full object-cover" />
+                )}
                 <AvatarFallback className="text-2xl">{selectedVisitor.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="text-center">

@@ -58,6 +58,7 @@ export const gymVisits = pgTable("gym_visits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   gymId: varchar("gym_id").notNull(),
   visitorName: text("visitor_name").notNull(),
+  visitorProfileImage: text("visitor_profile_image"),
   visitDate: timestamp("visit_date").notNull().defaultNow(),
   creditsUsed: integer("credits_used").notNull(),
   amountEarned: integer("amount_earned").notNull(),

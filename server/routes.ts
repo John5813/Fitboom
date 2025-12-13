@@ -967,6 +967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createGymVisit({
           gymId: gym.id,
           visitorName: user.name || user.phone || 'Mehmon',
+          visitorProfileImage: user.profileImageUrl || null,
           creditsUsed: creditsUsed,
           amountEarned: amountEarned,
         });
