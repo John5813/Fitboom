@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Shield, ShoppingCart } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, ShoppingCart } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -422,22 +422,29 @@ export default function HomePage() {
       {/* Home Tab */}
       {activeTab === 'home' && (
         <div className="p-4 space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
               <h1 className="font-display font-bold text-3xl mb-2">FitBoom</h1>
               <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
             </div>
-            {/* Test Admin tugmasi */}
-            <Button
-              className="w-full"
-              onClick={() => {
-                setLocation('/admin');
-              }}
-              data-testid="button-admin"
-            >
-              <Shield className="w-4 h-4 mr-2" />
-              Admin Panel
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLocation('/settings')}
+                data-testid="button-settings"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLocation('/profile')}
+                data-testid="button-profile"
+              >
+                <User className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           <CreditBalance

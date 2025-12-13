@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -44,6 +44,13 @@ export interface IStorage {
   updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined>;
   deleteTimeSlot(id: string): Promise<boolean>;
   deleteTimeSlotsForGym(gymId: string): Promise<void>;
+  getAdminSetting(key: string): Promise<AdminSetting | undefined>;
+  setAdminSetting(key: string, value: string): Promise<AdminSetting>;
+  getPartnershipMessages(): Promise<PartnershipMessage[]>;
+  getPartnershipMessage(id: string): Promise<PartnershipMessage | undefined>;
+  createPartnershipMessage(message: InsertPartnershipMessage): Promise<PartnershipMessage>;
+  updatePartnershipMessageStatus(id: string, status: string): Promise<PartnershipMessage | undefined>;
+  deletePartnershipMessage(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -313,6 +320,60 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTimeSlotsForGym(gymId: string): Promise<void> {
     await db.delete(timeSlots).where(eq(timeSlots.gymId, gymId));
+  }
+
+  async getAdminSetting(key: string): Promise<AdminSetting | undefined> {
+    const [setting] = await db.select().from(adminSettings).where(eq(adminSettings.settingKey, key));
+    return setting || undefined;
+  }
+
+  async setAdminSetting(key: string, value: string): Promise<AdminSetting> {
+    const existing = await this.getAdminSetting(key);
+    if (existing) {
+      const [updated] = await db
+        .update(adminSettings)
+        .set({ settingValue: value, updatedAt: new Date() })
+        .where(eq(adminSettings.settingKey, key))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(adminSettings)
+        .values({ settingKey: key, settingValue: value })
+        .returning();
+      return created;
+    }
+  }
+
+  async getPartnershipMessages(): Promise<PartnershipMessage[]> {
+    return await db.select().from(partnershipMessages);
+  }
+
+  async getPartnershipMessage(id: string): Promise<PartnershipMessage | undefined> {
+    const [message] = await db.select().from(partnershipMessages).where(eq(partnershipMessages.id, id));
+    return message || undefined;
+  }
+
+  async createPartnershipMessage(message: InsertPartnershipMessage): Promise<PartnershipMessage> {
+    const [created] = await db
+      .insert(partnershipMessages)
+      .values(message)
+      .returning();
+    return created;
+  }
+
+  async updatePartnershipMessageStatus(id: string, status: string): Promise<PartnershipMessage | undefined> {
+    const [updated] = await db
+      .update(partnershipMessages)
+      .set({ status })
+      .where(eq(partnershipMessages.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePartnershipMessage(id: string): Promise<boolean> {
+    const result = await db.delete(partnershipMessages).where(eq(partnershipMessages.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

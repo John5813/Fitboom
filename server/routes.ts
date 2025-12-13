@@ -834,7 +834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Collection ID talab qilinadi" });
       }
 
-      const collection = await storage.getCollection(collectionId);
+      const collection = await storage.getVideoCollection(collectionId);
       if (!collection) {
         return res.status(404).json({ message: "To'plam topilmadi" });
       }
@@ -989,6 +989,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Admin login verification with password (bcrypt hashed)
+  app.post('/api/admin/verify-password', async (req, res) => {
+    try {
+      const { password } = req.body;
+      
+      if (!password) {
+        return res.status(400).json({ message: "Parol kiritilmagan" });
+      }
+      
+      const adminPasswordSetting = await storage.getAdminSetting('admin_password_hash');
+      
+      if (!adminPasswordSetting) {
+        // First time setup - hash the default password and store it
+        const defaultPassword = 'Javlon58_13.';
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+        await storage.setAdminSetting('admin_password_hash', hashedPassword);
+        
+        if (password === defaultPassword) {
+          res.json({ success: true, message: "Kirish muvaffaqiyatli" });
+        } else {
+          res.status(401).json({ success: false, message: "Parol noto'g'ri" });
+        }
+        return;
+      }
+      
+      const isValid = await bcrypt.compare(password, adminPasswordSetting.settingValue);
+      
+      if (isValid) {
+        res.json({ success: true, message: "Kirish muvaffaqiyatli" });
+      } else {
+        res.status(401).json({ success: false, message: "Parol noto'g'ri" });
+      }
+    } catch (error: any) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  // Change admin password (admin only - requires requireAdmin)
+  app.post('/api/admin/change-password', requireAdmin, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Joriy va yangi parol kiritilishi kerak" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak" });
+      }
+      
+      const adminPasswordSetting = await storage.getAdminSetting('admin_password_hash');
+      
+      if (!adminPasswordSetting) {
+        return res.status(400).json({ message: "Admin paroli sozlanmagan" });
+      }
+      
+      const isValid = await bcrypt.compare(currentPassword, adminPasswordSetting.settingValue);
+      
+      if (!isValid) {
+        return res.status(401).json({ message: "Joriy parol noto'g'ri" });
+      }
+      
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      await storage.setAdminSetting('admin_password_hash', hashedNewPassword);
+      
+      res.json({ success: true, message: "Parol muvaffaqiyatli o'zgartirildi" });
+    } catch (error: any) {
+      console.error("Password change error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  // Partnership messages routes (admin only)
+  app.get('/api/admin/partnership-messages', requireAdmin, async (req, res) => {
+    try {
+      const messages = await storage.getPartnershipMessages();
+      res.json({ messages });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/partnership-request', async (req, res) => {
+    try {
+      const { hallName, phone } = req.body;
+      
+      if (!hallName || !phone) {
+        return res.status(400).json({ message: "Zal nomi va telefon raqami kiritilishi kerak" });
+      }
+      
+      const message = await storage.createPartnershipMessage({ hallName, phone });
+      
+      res.json({ success: true, message: "So'rov muvaffaqiyatli yuborildi", data: message });
+    } catch (error: any) {
+      console.error("Partnership request error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  app.put('/api/admin/partnership-messages/:id', requireAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const message = await storage.updatePartnershipMessageStatus(req.params.id, status);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Xabar topilmadi" });
+      }
+      
+      res.json({ success: true, message });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/partnership-messages/:id', requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deletePartnershipMessage(req.params.id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Xabar topilmadi" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update user profile (name, image)
+  app.put('/api/user/profile', requireAuth, async (req, res) => {
+    try {
+      const { name, profileImageUrl } = req.body;
+      
+      const updateData: any = {};
+      if (name) updateData.name = name;
+      if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
+      
+      const updatedUser = await storage.updateUser(req.user!.id, updateData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error: any) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

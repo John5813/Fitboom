@@ -11,9 +11,25 @@ export const users = pgTable("users", {
   name: text("name"),
   age: integer("age"),
   gender: text("gender"),
+  profileImageUrl: text("profile_image_url"),
   credits: integer("credits").notNull().default(0),
   isAdmin: boolean("is_admin").notNull().default(false),
   profileCompleted: boolean("profile_completed").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const adminSettings = pgTable("admin_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: text("setting_key").notNull().unique(),
+  settingValue: text("setting_value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const partnershipMessages = pgTable("partnership_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hallName: text("hall_name").notNull(),
+  phone: text("phone").notNull(),
+  status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -113,6 +129,8 @@ export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ 
 export const insertUserPurchaseSchema = createInsertSchema(userPurchases).omit({ id: true, purchaseDate: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
 export const insertTimeSlotSchema = createInsertSchema(timeSlots).omit({ id: true });
+export const insertAdminSettingSchema = createInsertSchema(adminSettings).omit({ id: true, updatedAt: true });
+export const insertPartnershipMessageSchema = createInsertSchema(partnershipMessages).omit({ id: true, status: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -128,3 +146,7 @@ export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type TimeSlot = typeof timeSlots.$inferSelect;
+export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
+export type AdminSetting = typeof adminSettings.$inferSelect;
+export type InsertPartnershipMessage = z.infer<typeof insertPartnershipMessageSchema>;
+export type PartnershipMessage = typeof partnershipMessages.$inferSelect;
