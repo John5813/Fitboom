@@ -1,6 +1,6 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 // SSL sertifikat muammosini hal qilish uchun
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -51,6 +51,13 @@ export interface IStorage {
   createPartnershipMessage(message: InsertPartnershipMessage): Promise<PartnershipMessage>;
   updatePartnershipMessageStatus(id: string, status: string): Promise<PartnershipMessage | undefined>;
   deletePartnershipMessage(id: string): Promise<boolean>;
+  getGymByAccessCode(accessCode: string): Promise<Gym | undefined>;
+  getGymVisits(gymId: string): Promise<GymVisit[]>;
+  createGymVisit(visit: InsertGymVisit): Promise<GymVisit>;
+  getGymPayments(gymId: string): Promise<GymPayment[]>;
+  createGymPayment(payment: InsertGymPayment): Promise<GymPayment>;
+  updateGymEarnings(gymId: string, amountEarned: number): Promise<Gym | undefined>;
+  reduceGymDebt(gymId: string, paymentAmount: number): Promise<Gym | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -374,6 +381,58 @@ export class DatabaseStorage implements IStorage {
   async deletePartnershipMessage(id: string): Promise<boolean> {
     const result = await db.delete(partnershipMessages).where(eq(partnershipMessages.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getGymByAccessCode(accessCode: string): Promise<Gym | undefined> {
+    const [gym] = await db.select().from(gyms).where(eq(gyms.ownerAccessCode, accessCode));
+    return gym || undefined;
+  }
+
+  async getGymVisits(gymId: string): Promise<GymVisit[]> {
+    return await db.select().from(gymVisits).where(eq(gymVisits.gymId, gymId));
+  }
+
+  async createGymVisit(visit: InsertGymVisit): Promise<GymVisit> {
+    const [created] = await db
+      .insert(gymVisits)
+      .values(visit)
+      .returning();
+    return created;
+  }
+
+  async getGymPayments(gymId: string): Promise<GymPayment[]> {
+    return await db.select().from(gymPayments).where(eq(gymPayments.gymId, gymId));
+  }
+
+  async createGymPayment(payment: InsertGymPayment): Promise<GymPayment> {
+    const [created] = await db
+      .insert(gymPayments)
+      .values(payment)
+      .returning();
+    return created;
+  }
+
+  async updateGymEarnings(gymId: string, amountEarned: number): Promise<Gym | undefined> {
+    const [updated] = await db
+      .update(gyms)
+      .set({ 
+        totalEarnings: sql`COALESCE(${gyms.totalEarnings}, 0) + ${amountEarned}`,
+        currentDebt: sql`COALESCE(${gyms.currentDebt}, 0) + ${amountEarned}`
+      })
+      .where(eq(gyms.id, gymId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async reduceGymDebt(gymId: string, paymentAmount: number): Promise<Gym | undefined> {
+    const [updated] = await db
+      .update(gyms)
+      .set({ 
+        currentDebt: sql`GREATEST(0, COALESCE(${gyms.currentDebt}, 0) - ${paymentAmount})`
+      })
+      .where(eq(gyms.id, gymId))
+      .returning();
+    return updated || undefined;
   }
 }
 

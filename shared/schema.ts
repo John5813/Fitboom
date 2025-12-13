@@ -48,7 +48,27 @@ export const gyms = pgTable("gyms", {
   qrCode: text("qr_code"),
   latitude: text("latitude"),
   longitude: text("longitude"),
+  ownerAccessCode: text("owner_access_code").unique(),
+  totalEarnings: integer("total_earnings").notNull().default(0),
+  currentDebt: integer("current_debt").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const gymVisits = pgTable("gym_visits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gymId: varchar("gym_id").notNull(),
+  visitorName: text("visitor_name").notNull(),
+  visitDate: timestamp("visit_date").notNull().defaultNow(),
+  creditsUsed: integer("credits_used").notNull(),
+  amountEarned: integer("amount_earned").notNull(),
+});
+
+export const gymPayments = pgTable("gym_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gymId: varchar("gym_id").notNull(),
+  amount: integer("amount").notNull(),
+  paymentDate: timestamp("payment_date").notNull().defaultNow(),
+  notes: text("notes"),
 });
 
 export const videoCollections = pgTable("video_collections", {
@@ -123,7 +143,7 @@ export const completeProfileSchema = z.object({
   age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
   gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
 });
-export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true });
+export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true, totalEarnings: true, currentDebt: true });
 export const insertVideoCollectionSchema = createInsertSchema(videoCollections).omit({ id: true, createdAt: true });
 export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ id: true });
 export const insertUserPurchaseSchema = createInsertSchema(userPurchases).omit({ id: true, purchaseDate: true });
@@ -131,6 +151,8 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true,
 export const insertTimeSlotSchema = createInsertSchema(timeSlots).omit({ id: true });
 export const insertAdminSettingSchema = createInsertSchema(adminSettings).omit({ id: true, updatedAt: true });
 export const insertPartnershipMessageSchema = createInsertSchema(partnershipMessages).omit({ id: true, status: true, createdAt: true });
+export const insertGymVisitSchema = createInsertSchema(gymVisits).omit({ id: true, visitDate: true });
+export const insertGymPaymentSchema = createInsertSchema(gymPayments).omit({ id: true, paymentDate: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -150,3 +172,7 @@ export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertPartnershipMessage = z.infer<typeof insertPartnershipMessageSchema>;
 export type PartnershipMessage = typeof partnershipMessages.$inferSelect;
+export type InsertGymVisit = z.infer<typeof insertGymVisitSchema>;
+export type GymVisit = typeof gymVisits.$inferSelect;
+export type InsertGymPayment = z.infer<typeof insertGymPaymentSchema>;
+export type GymPayment = typeof gymPayments.$inferSelect;
