@@ -183,8 +183,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/user", async (req, res) => {
     if (req.isAuthenticated()) {
-      // To'liq foydalanuvchi ma'lumotlarini olish
-      const fullUser = await storage.getUser(req.user!.id);
+      // Kredit muddatini tekshirish va agar muddati o'tgan bo'lsa nolga tushirish
+      const fullUser = await storage.checkAndResetExpiredCredits(req.user!.id);
       if (fullUser) {
         return res.json({ user: fullUser });
       }
@@ -404,14 +404,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newCredits = user.credits + credits;
-      await storage.updateUserCredits(req.user!.id, newCredits);
+      
+      // 30 kunlik muddat belgilash
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      
+      await storage.updateUserCreditsWithExpiry(req.user!.id, newCredits, expiryDate);
 
-      console.log(`✅ Kredit qo'shildi: ${credits} kredit foydalanuvchi ${req.user!.id} ga. Yangi balans: ${newCredits}`);
+      console.log(`✅ Kredit qo'shildi: ${credits} kredit foydalanuvchi ${req.user!.id} ga. Yangi balans: ${newCredits}. Muddat: ${expiryDate.toISOString()}`);
 
       res.json({
         success: true,
-        message: "Kredit muvaffaqiyatli qo'shildi",
-        credits: newCredits
+        message: "Kredit muvaffaqiyatli qo'shildi. 30 kun ichida ishlatishingiz kerak.",
+        credits: newCredits,
+        expiryDate: expiryDate.toISOString()
       });
     } catch (error: any) {
       console.error('Kredit qo\'shish xatosi:', error);
@@ -484,13 +490,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Zal topilmadi" });
       }
 
-      const user = await storage.getUser(req.user!.id);
+      // Avval kredit muddatini tekshirish va agar muddati o'tgan bo'lsa nolga tushirish
+      const user = await storage.checkAndResetExpiredCredits(req.user!.id);
       if (!user) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
       }
 
       if (user.credits < gym.credits) {
-        return res.status(400).json({ message: "Kredit yetarli emas" });
+        return res.status(400).json({ message: "Kredit yetarli emas yoki muddati o'tgan" });
       }
 
       const newCredits = user.credits - gym.credits;

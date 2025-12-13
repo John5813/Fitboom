@@ -19,9 +19,9 @@ interface PurchaseCreditsDialogProps {
 }
 
 const packages: CreditPackage[] = [
-  { credits: 6, price: 5 },
-  { credits: 13, price: 10, isPopular: true },
-  { credits: 24, price: 18 },
+  { credits: 6, price: 65000 },
+  { credits: 13, price: 130000, isPopular: true },
+  { credits: 24, price: 234000 },
 ];
 
 export default function PurchaseCreditsDialog({
@@ -84,7 +84,10 @@ export default function PurchaseCreditsDialog({
                 <div>
                   <p className="font-display font-bold text-2xl">{pkg.credits} kredit</p>
                   <p className="text-muted-foreground text-sm">
-                    ${pkg.price}
+                    {pkg.price.toLocaleString()} so'm
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    30 kun amal qiladi
                   </p>
                 </div>
                 <Button 

@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   gender: text("gender"),
   profileImageUrl: text("profile_image_url"),
   credits: integer("credits").notNull().default(0),
+  creditExpiryDate: timestamp("credit_expiry_date"),
   isAdmin: boolean("is_admin").notNull().default(false),
   profileCompleted: boolean("profile_completed").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

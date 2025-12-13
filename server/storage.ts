@@ -11,6 +11,8 @@ export interface IStorage {
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserCredits(id: string, credits: number): Promise<User | undefined>;
+  updateUserCreditsWithExpiry(id: string, credits: number, expiryDate: Date): Promise<User | undefined>;
+  checkAndResetExpiredCredits(id: string): Promise<User | undefined>;
   updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined>;
   completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined>;
   getGyms(): Promise<Gym[]>;
@@ -91,6 +93,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user || undefined;
+  }
+
+  async updateUserCreditsWithExpiry(id: string, credits: number, expiryDate: Date): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ credits, creditExpiryDate: expiryDate })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async checkAndResetExpiredCredits(id: string): Promise<User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+
+    if (user.creditExpiryDate && new Date() > new Date(user.creditExpiryDate) && user.credits > 0) {
+      const [updatedUser] = await db
+        .update(users)
+        .set({ credits: 0, creditExpiryDate: null })
+        .where(eq(users.id, id))
+        .returning();
+      return updatedUser || undefined;
+    }
+    return user;
   }
 
   async updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined> {
