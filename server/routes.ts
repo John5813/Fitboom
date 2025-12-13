@@ -216,9 +216,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
 
+      // Generate unique 6-character access code for gym owner
+      const generateAccessCode = (): string => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+
+      let ownerAccessCode = generateAccessCode();
+      // Ensure uniqueness - try up to 10 times
+      for (let i = 0; i < 10; i++) {
+        const existing = await storage.getGymByAccessCode(ownerAccessCode);
+        if (!existing) break;
+        ownerAccessCode = generateAccessCode();
+      }
+
       const gym = await storage.createGym({
         ...gymData,
-        qrCode: qrCodeData
+        qrCode: qrCodeData,
+        ownerAccessCode
       });
       res.json({ gym });
     } catch (error: any) {
@@ -1029,6 +1048,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error: any) {
       console.error("Admin login error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  // Gym owner access code verification
+  app.post('/api/gym-owner/verify-code', async (req, res) => {
+    try {
+      const { accessCode } = req.body;
+      
+      if (!accessCode) {
+        return res.status(400).json({ message: "Kirish kodi kiritilmagan" });
+      }
+      
+      const gym = await storage.getGymByAccessCode(accessCode.toUpperCase());
+      
+      if (!gym) {
+        return res.status(401).json({ success: false, message: "Kirish kodi noto'g'ri" });
+      }
+      
+      res.json({ success: true, gym: { id: gym.id, name: gym.name }, message: "Kirish muvaffaqiyatli" });
+    } catch (error: any) {
+      console.error("Gym owner login error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  // Get gym owner data (gym details, visitors, earnings)
+  app.get('/api/gym-owner/:gymId', async (req, res) => {
+    try {
+      const gym = await storage.getGym(req.params.gymId);
+      if (!gym) {
+        return res.status(404).json({ message: "Zal topilmadi" });
+      }
+      
+      const visits = await storage.getGymVisits(req.params.gymId);
+      const payments = await storage.getGymPayments(req.params.gymId);
+      
+      res.json({ 
+        gym: {
+          id: gym.id,
+          name: gym.name,
+          imageUrl: gym.imageUrl,
+          address: gym.address,
+          totalEarnings: gym.totalEarnings || 0,
+          currentDebt: gym.currentDebt || 0
+        },
+        visits,
+        payments
+      });
+    } catch (error: any) {
+      console.error("Gym owner data error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
+  // Update gym owner's gym (only name and imageUrl allowed)
+  app.put('/api/gym-owner/:gymId', async (req, res) => {
+    try {
+      const { name, imageUrl, accessCode } = req.body;
+      
+      // Verify access code first
+      if (!accessCode) {
+        return res.status(401).json({ message: "Kirish kodi talab qilinadi" });
+      }
+      
+      const gym = await storage.getGymByAccessCode(accessCode.toUpperCase());
+      if (!gym || gym.id !== req.params.gymId) {
+        return res.status(403).json({ message: "Sizda bu zalni tahrirlash huquqi yo'q" });
+      }
+      
+      const updateData: { name?: string; imageUrl?: string } = {};
+      if (name) updateData.name = name;
+      if (imageUrl) updateData.imageUrl = imageUrl;
+      
+      const updatedGym = await storage.updateGym(req.params.gymId, updateData);
+      res.json({ gym: updatedGym });
+    } catch (error: any) {
+      console.error("Gym owner update error:", error);
       res.status(500).json({ message: "Server xatosi" });
     }
   });

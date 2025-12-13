@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Shield, Handshake, Send } from "lucide-react";
+import { ArrowLeft, Shield, Handshake, Send, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 
@@ -13,8 +13,10 @@ export default function SettingsPage() {
   const { toast } = useToast();
   
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isGymOwnerLoginOpen, setIsGymOwnerLoginOpen] = useState(false);
   const [isPartnerDialogOpen, setIsPartnerDialogOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
+  const [gymOwnerCode, setGymOwnerCode] = useState("");
   const [hallName, setHallName] = useState("");
   const [phone, setPhone] = useState("");
 
@@ -41,6 +43,35 @@ export default function SettingsPage() {
       toast({
         title: "Xatolik",
         description: error.message || "Parol noto'g'ri",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verifyGymOwnerMutation = useMutation({
+    mutationFn: async (accessCode: string) => {
+      const response = await fetch('/api/gym-owner/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setIsGymOwnerLoginOpen(false);
+      localStorage.setItem('gymOwnerCode', gymOwnerCode.toUpperCase());
+      localStorage.setItem('gymOwnerId', data.gym.id);
+      setGymOwnerCode("");
+      setLocation('/gym-owner');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Kirish kodi noto'g'ri",
         variant: "destructive",
       });
     },
@@ -83,6 +114,12 @@ export default function SettingsPage() {
     }
   };
 
+  const handleGymOwnerLogin = () => {
+    if (gymOwnerCode.trim()) {
+      verifyGymOwnerMutation.mutate(gymOwnerCode.trim());
+    }
+  };
+
   const handlePartnerRequest = () => {
     if (hallName.trim() && phone.trim()) {
       partnerRequestMutation.mutate({ hallName: hallName.trim(), phone: phone.trim() });
@@ -118,6 +155,22 @@ export default function SettingsPage() {
             <div>
               <h3 className="font-semibold">Admin sifatida kirish</h3>
               <p className="text-sm text-muted-foreground">Boshqaruv paneliga kirish</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover-elevate"
+          onClick={() => setIsGymOwnerLoginOpen(true)}
+          data-testid="card-gym-owner-login"
+        >
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="p-3 rounded-full bg-blue-500/10">
+              <Building2 className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Zal egasi sifatida kirish</h3>
+              <p className="text-sm text-muted-foreground">Zalingizni boshqaring</p>
             </div>
           </CardContent>
         </Card>
@@ -163,6 +216,35 @@ export default function SettingsPage() {
               data-testid="button-admin-login-submit"
             >
               {verifyAdminMutation.isPending ? "Tekshirilmoqda..." : "Kirish"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isGymOwnerLoginOpen} onOpenChange={setIsGymOwnerLoginOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Zal egasi kirish</DialogTitle>
+            <DialogDescription>
+              Zalingizni boshqarish uchun kirish kodini kiriting
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <Input
+              value={gymOwnerCode}
+              onChange={(e) => setGymOwnerCode(e.target.value.toUpperCase())}
+              placeholder="Kirish kodini kiriting (masalan: ABC123)"
+              onKeyDown={(e) => e.key === 'Enter' && handleGymOwnerLogin()}
+              maxLength={6}
+              data-testid="input-gym-owner-code"
+            />
+            <Button
+              onClick={handleGymOwnerLogin}
+              disabled={verifyGymOwnerMutation.isPending || !gymOwnerCode.trim()}
+              className="w-full"
+              data-testid="button-gym-owner-login-submit"
+            >
+              {verifyGymOwnerMutation.isPending ? "Tekshirilmoqda..." : "Kirish"}
             </Button>
           </div>
         </DialogContent>
