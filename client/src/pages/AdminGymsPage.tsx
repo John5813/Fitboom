@@ -543,65 +543,64 @@ export default function AdminGymsPage() {
                     <p className="text-sm text-muted-foreground">Kategoriyalar</p>
                     <p className="font-semibold">{selectedGym.categories?.join(', ') || 'Yo\'q'}</p>
                   </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Kredit</p>
-                  <Badge variant="secondary" className="font-semibold px-3 py-1">
-                    {selectedGym.credits} kredit
-                  </Badge>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Kredit</p>
+                    <Badge variant="secondary" className="font-semibold px-3 py-1">
+                      {selectedGym.credits} kredit
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ish vaqti</p>
+                    <p className="font-semibold">{selectedGym.hours}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Masofa</p>
+                    <p className="font-semibold">{selectedGym.distance}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ish vaqti</p>
-                  <p className="font-semibold">{selectedGym.hours}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Masofa</p>
-                  <p className="font-semibold">{selectedGym.distance}</p>
-                </div>
-              </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Manzil</p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (selectedGym.latitude && selectedGym.longitude) {
-                      window.open(`https://www.google.com/maps?q=${selectedGym.latitude},${selectedGym.longitude}`, '_blank');
-                    } else if (selectedGym.address) {
-                      window.open(selectedGym.address, '_blank');
-                    }
-                  }}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Haritada ko'rish
-                </Button>
-              </div>
-
-              {selectedGym.description && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Tavsif</p>
-                  <p className="text-sm">{selectedGym.description}</p>
+                  <p className="text-sm text-muted-foreground mb-2">Manzil</p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      if (selectedGym.latitude && selectedGym.longitude) {
+                        window.open(`https://www.google.com/maps?q=${selectedGym.latitude},${selectedGym.longitude}`, '_blank');
+                      } else if (selectedGym.address) {
+                        window.open(selectedGym.address, '_blank');
+                      }
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Haritada ko'rish
+                  </Button>
                 </div>
-              )}
 
-              {selectedGym.facilities && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Imkoniyatlar</p>
-                  <p className="text-sm">{selectedGym.facilities}</p>
-                </div>
-              </div>
-              </div>
+                {selectedGym.description && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tavsif</p>
+                    <p className="text-sm">{selectedGym.description}</p>
+                  </div>
+                )}
 
-              {selectedGym.imageUrl && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Rasm</p>
-                  <img 
-                    src={selectedGym.imageUrl} 
-                    alt={selectedGym.name}
-                    className="rounded-lg w-full h-48 object-cover"
-                  />
-                </div>
-              )}
+                {selectedGym.facilities && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Imkoniyatlar</p>
+                    <p className="text-sm">{selectedGym.facilities}</p>
+                  </div>
+                )}
+
+                {selectedGym.imageUrl && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Rasm</p>
+                    <img 
+                      src={selectedGym.imageUrl} 
+                      alt={selectedGym.name}
+                      className="rounded-lg w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
 
               {selectedGym.qrCode && (
                 <div>
