@@ -424,7 +424,8 @@ export default function HomePage() {
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
       <div className="relative z-10">
-      {/* Home Tab */}</old_str>
+      {/* Home Tab */}
+      {activeTab === 'home' && (</old_str>
       {/* Home Tab */}
       {activeTab === 'home' && (
         <div className="p-4 space-y-6">
@@ -766,6 +767,9 @@ export default function HomePage() {
       </div>
 
       {/* Time Slot Selection Dialog */}</old_str>
+      </div>
+
+      {/* Time Slot Selection Dialog */}
       <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
         <DialogContent className="max-w-md" data-testid="dialog-select-time-slot">
           <DialogHeader>
