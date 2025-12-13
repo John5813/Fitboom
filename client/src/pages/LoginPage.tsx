@@ -128,9 +128,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center relative p-4 overflow-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(/attached_assets/814914041712414214qaranliqenerji_1765638360245.jpg)` }}
+        style={{ backgroundImage: `url(/login-bg.jpg)` }}
       />
-      <div className="absolute inset-0 bg-black/20" />
+      <div className="absolute inset-0 bg-black/30" />
       <Card className="w-full max-w-md relative z-10 backdrop-blur-sm bg-white/95 dark:bg-gray-900/95" data-testid="card-login">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
