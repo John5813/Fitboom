@@ -527,6 +527,15 @@ export default function AdminGymsPage() {
           {selectedGym && (
             <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
               <div className="space-y-4">
+                {(selectedGym as any).ownerAccessCode && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Zal egasi paroli:</p>
+                    <p className="text-xl font-bold font-mono text-center" data-testid="text-gym-owner-code">
+                      {(selectedGym as any).ownerAccessCode}
+                    </p>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Kategoriyalar</p>
@@ -1047,25 +1056,23 @@ export default function AdminGymsPage() {
           
           {createdGym && createdGym.qrCode && (
             <div className="space-y-4">
-              <div className="flex justify-center bg-white p-6 rounded-lg">
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Zal egasi paroli:</p>
+                <p className="text-2xl font-bold font-mono text-center" data-testid="text-owner-access-code">
+                  {(createdGym as any).ownerAccessCode || 'Kod yo\'q'}
+                </p>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Bu parolni zal egasiga bering. U bu parol orqali o'z sahifasiga kiradi.
+                </p>
+              </div>
+
+              <div className="flex justify-center bg-white p-4 rounded-lg">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(createdGym.qrCode)}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(createdGym.qrCode)}`}
                   alt="QR Code"
-                  className="rounded-lg border-4 border-primary/20"
+                  className="rounded-lg"
                   data-testid="img-qr-code"
                 />
-              </div>
-              
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground text-center">
-                  Bu QR kodni sport zalda joylashtiring. Foydalanuvchilar uni skanerlash orqali kirishi mumkin.
-                </p>
-                
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-xs font-mono text-center break-all">
-                    {createdGym.qrCode}
-                  </p>
-                </div>
               </div>
 
               <div className="flex gap-3">
