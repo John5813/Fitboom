@@ -907,22 +907,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // GymId mos kelishini tekshirish
-      if (qrData.gymId !== gymId) {
-        return res.status(400).json({
-          message: "Bu QR kod ushbu zal uchun emas",
+      // Zalni topish - QR koddagi gymId bo'yicha
+      const scannedGymId = qrData.gymId;
+      const gym = await storage.getGym(scannedGymId);
+      
+      if (!gym) {
+        return res.status(404).json({
+          message: "Zal topilmadi",
           success: false
         });
       }
 
-      // Bronni topish
+      // Foydalanuvchining bu zal uchun faol bronini topish
       const bookings = await storage.getBookings(req.user!.id);
-      const booking = bookings.find(b => b.qrCode === qrCode);
-
+      const booking = bookings.find(b => b.gymId === scannedGymId && !b.isCompleted);
 
       if (!booking) {
         return res.status(404).json({
-          message: "Bron topilmadi yoki allaqachon ishlatilgan",
+          message: "Bu zal uchun faol bron topilmadi",
           success: false
         });
       }
@@ -937,24 +939,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Bronni tasdiqlash
       await storage.completeBooking(booking.id);
 
-      const gym = await storage.getGym(gymId);
       const user = await storage.getUser(req.user!.id);
 
       // Record gym visit and update earnings
-      if (gym && user) {
+      if (user) {
         const creditsUsed = gym.credits;
         const amountEarned = creditsUsed * CREDIT_VALUE_UZS;
 
         // Create gym visit record
         await storage.createGymVisit({
-          gymId: gymId,
+          gymId: scannedGymId,
           visitorName: user.name || user.phone || 'Mehmon',
           creditsUsed: creditsUsed,
           amountEarned: amountEarned,
         });
 
         // Update gym earnings and debt
-        await storage.updateGymEarnings(gymId, amountEarned);
+        await storage.updateGymEarnings(scannedGymId, amountEarned);
 
         console.log(`Visit recorded: ${user.name || user.phone} at ${gym.name}, earned ${amountEarned} so'm`);
       }
