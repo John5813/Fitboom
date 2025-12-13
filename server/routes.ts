@@ -1153,6 +1153,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Record gym payment from admin (reduces gym debt)
+  app.post('/api/gym-payments', requireAdmin, async (req, res) => {
+    try {
+      const { gymId, amount, notes } = req.body;
+      
+      if (!gymId || !amount) {
+        return res.status(400).json({ message: "Zal ID va to'lov miqdori majburiy" });
+      }
+      
+      const paymentAmount = parseInt(amount);
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        return res.status(400).json({ message: "To'lov miqdori musbat son bo'lishi kerak" });
+      }
+      
+      const gym = await storage.getGym(gymId);
+      if (!gym) {
+        return res.status(404).json({ message: "Zal topilmadi" });
+      }
+      
+      // Create payment record
+      const payment = await storage.createGymPayment({
+        gymId,
+        amount: paymentAmount,
+        notes: notes || ''
+      });
+      
+      // Reduce gym's debt
+      await storage.reduceGymDebt(gymId, paymentAmount);
+      
+      const updatedGym = await storage.getGym(gymId);
+      
+      res.json({ 
+        success: true, 
+        payment,
+        gym: {
+          id: updatedGym?.id,
+          currentDebt: updatedGym?.currentDebt || 0,
+          totalEarnings: updatedGym?.totalEarnings || 0
+        }
+      });
+    } catch (error: any) {
+      console.error("Gym payment error:", error);
+      res.status(500).json({ message: "Server xatosi" });
+    }
+  });
+
   // Change admin password (requires authentication only)
   app.post('/api/admin/change-password', requireAuth, async (req, res) => {
     try {

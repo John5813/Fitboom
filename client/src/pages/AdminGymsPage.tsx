@@ -11,12 +11,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
+import type { GymPayment } from "@shared/schema";
+
+interface GymOwnerData {
+  gym: {
+    id: string;
+    name: string;
+    imageUrl?: string;
+    address?: string;
+    totalEarnings: number;
+    currentDebt: number;
+  };
+  visits: Array<{
+    id: string;
+    visitorName: string;
+    visitDate: string;
+    creditsUsed: number;
+    amountEarned: number;
+  }>;
+  payments: GymPayment[];
+}
 
 export default function AdminGymsPage() {
   const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
@@ -24,6 +44,9 @@ export default function AdminGymsPage() {
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const [createdGym, setCreatedGym] = useState<Gym | null>(null);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
   const { toast } = useToast();
 
   const [gymForm, setGymForm] = useState({
@@ -60,8 +83,59 @@ export default function AdminGymsPage() {
     queryFn: () => fetch(`/api/time-slots?gymId=${selectedGym?.id}`, { credentials: 'include' }).then(res => res.json()),
   });
 
+  const { data: gymOwnerData } = useQuery<GymOwnerData>({
+    queryKey: ['/api/gym-owner', selectedGym?.id],
+    enabled: !!selectedGym?.id,
+    queryFn: () => fetch(`/api/gym-owner/${selectedGym?.id}`, { credentials: 'include' }).then(res => res.json()),
+  });
+
   const gyms = gymsData?.gyms || [];
   const timeSlots = timeSlotsData?.timeSlots || [];
+
+  const createPaymentMutation = useMutation({
+    mutationFn: async (data: { gymId: string; amount: number; notes: string }) => {
+      const response = await apiRequest('/api/gym-payments', 'POST', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/gym-owner', selectedGym?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+      toast({
+        title: "To'lov qo'shildi",
+        description: "To'lov muvaffaqiyatli qayd qilindi.",
+      });
+      setIsPaymentDialogOpen(false);
+      setPaymentAmount('');
+      setPaymentNotes('');
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "To'lovni qayd qilishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleRecordPayment = () => {
+    if (!paymentAmount || !selectedGym) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "To'lov miqdorini kiriting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    createPaymentMutation.mutate({
+      gymId: selectedGym.id,
+      amount: parseInt(paymentAmount),
+      notes: paymentNotes
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
+  };
 
   const toggleCategory = (categoryName: string) => {
     const categories = gymForm.categories || [];
@@ -407,6 +481,8 @@ export default function AdminGymsPage() {
                 <TableRow>
                   <TableHead className="w-16 sticky top-0 bg-card z-10">№</TableHead>
                   <TableHead className="sticky top-0 bg-card z-10">Zal Nomi</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Daromad</TableHead>
+                  <TableHead className="sticky top-0 bg-card z-10">Qarz</TableHead>
                   <TableHead className="w-24 sticky top-0 bg-card z-10">Harakatlar</TableHead>
                 </TableRow>
               </TableHeader>
@@ -416,6 +492,21 @@ export default function AdminGymsPage() {
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
                       {gym.name}
+                    </TableCell>
+                    <TableCell data-testid={`text-gym-earnings-${gym.id}`}>
+                      <Badge variant="secondary" className="text-xs">
+                        <DollarSign className="h-3 w-3 mr-1" />
+                        {formatCurrency(gym.totalEarnings || 0)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell data-testid={`text-gym-debt-${gym.id}`}>
+                      {(gym.currentDebt || 0) > 0 ? (
+                        <Badge variant="destructive" className="text-xs">
+                          {formatCurrency(gym.currentDebt || 0)}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">0 so'm</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button
@@ -548,6 +639,47 @@ export default function AdminGymsPage() {
                   </div>
                 </div>
               )}
+
+              <div className="pt-4 border-t">
+                <h3 className="text-lg font-semibold mb-4">Moliyaviy Ma'lumotlar</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Jami Daromad</p>
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400" data-testid="text-total-earnings">
+                      {formatCurrency(gymOwnerData?.gym?.totalEarnings || selectedGym.totalEarnings || 0)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Joriy Qarz</p>
+                    <p className="text-xl font-bold text-red-600 dark:text-red-400" data-testid="text-current-debt">
+                      {formatCurrency(gymOwnerData?.gym?.currentDebt || selectedGym.currentDebt || 0)}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setIsPaymentDialogOpen(true)}
+                  className="w-full mb-4"
+                  variant="outline"
+                  data-testid="button-record-payment"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  To'lov Qayd Qilish
+                </Button>
+
+                {gymOwnerData?.payments && gymOwnerData.payments.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm text-muted-foreground mb-2">So'nggi To'lovlar</p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {gymOwnerData.payments.slice(0, 5).map((payment) => (
+                        <div key={payment.id} className="flex justify-between items-center p-2 bg-muted/50 rounded text-sm">
+                          <span>{new Date(payment.paymentDate).toLocaleDateString('uz-UZ')}</span>
+                          <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-4">
@@ -968,6 +1100,73 @@ export default function AdminGymsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-record-payment">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">To'lov Qayd Qilish</DialogTitle>
+            <DialogDescription>
+              {selectedGym?.name} uchun to'lov ma'lumotlarini kiriting
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Joriy Qarz</p>
+              <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                {formatCurrency(gymOwnerData?.gym?.currentDebt || selectedGym?.currentDebt || 0)}
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="paymentAmount">To'lov Miqdori (so'm) *</Label>
+              <Input
+                id="paymentAmount"
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Misol: 500000"
+                data-testid="input-payment-amount"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="paymentNotes">Izoh</Label>
+              <Input
+                id="paymentNotes"
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder="Ixtiyoriy izoh..."
+                data-testid="input-payment-notes"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleRecordPayment}
+                disabled={createPaymentMutation.isPending}
+                className="flex-1"
+                data-testid="button-submit-payment"
+              >
+                {createPaymentMutation.isPending ? 'Yuklanmoqda...' : "To'lov Qayd Qilish"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsPaymentDialogOpen(false);
+                  setPaymentAmount('');
+                  setPaymentNotes('');
+                }}
+                className="flex-1"
+                data-testid="button-cancel-payment"
+              >
+                Bekor qilish
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
