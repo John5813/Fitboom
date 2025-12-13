@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Pencil, Camera, User } from "lucide-react";
+import { ArrowLeft, Pencil, Camera, User, History, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import type { Booking, Gym } from "@shared/schema";
 
 export default function ProfilePage() {
   const [, setLocation] = useLocation();
@@ -19,6 +20,19 @@ export default function ProfilePage() {
   const [editName, setEditName] = useState(user?.name || "");
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: bookingsData } = useQuery<{ bookings: Booking[] }>({
+    queryKey: ['/api/bookings'],
+    enabled: !!user,
+  });
+
+  const { data: gymsData } = useQuery<{ gyms: Gym[] }>({
+    queryKey: ['/api/gyms'],
+  });
+
+  const bookings = bookingsData?.bookings || [];
+  const gyms = gymsData?.gyms || [];
+  const completedBookings = bookings.filter(b => b.isCompleted);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { name?: string; profileImageUrl?: string }) => {
@@ -200,6 +214,47 @@ export default function ProfilePage() {
           <p className="text-3xl font-bold text-primary" data-testid="text-credits">
             {user?.credits || 0} kredit
           </p>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-md mx-auto mt-4">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Bronlar tarixi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {completedBookings.length > 0 ? (
+            <div className="space-y-3">
+              {completedBookings.map((booking) => {
+                const gym = gyms.find(g => g.id === booking.gymId);
+                return (
+                  <div
+                    key={booking.id}
+                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50"
+                    data-testid={`booking-history-${booking.id}`}
+                  >
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{gym?.name || "Noma'lum zal"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(booking.date).toLocaleDateString('uz-UZ', { 
+                          day: 'numeric', 
+                          month: 'short',
+                          year: 'numeric'
+                        })} - {booking.time}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">
+              Hozircha tarix yo'q
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

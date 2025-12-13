@@ -175,6 +175,9 @@ export default function HomePage() {
   });
 
   const bookings = bookingsData?.bookings || [];
+  
+  // Filter active bookings (not completed)
+  const activeBookings = bookings.filter(b => !b.isCompleted);
 
   const filteredGyms = gymsWithDistance.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategory);
@@ -687,9 +690,9 @@ export default function HomePage() {
         <div className="p-4 space-y-6">
           <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
 
-          {bookings.length > 0 ? (
+          {activeBookings.length > 0 ? (
             <div className="space-y-3">
-              {bookings.map((booking) => {
+              {activeBookings.map((booking) => {
                 const gym = gyms.find(g => g.id === booking.gymId);
                 return (
                   <BookingCard
@@ -709,7 +712,7 @@ export default function HomePage() {
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">Hozircha bronlar yo'q</p>
+            <p className="text-muted-foreground text-center py-8">Hozircha faol bronlar yo'q</p>
           )}
         </div>
       )}
