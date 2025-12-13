@@ -181,8 +181,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
     if (req.isAuthenticated()) {
+      // To'liq foydalanuvchi ma'lumotlarini olish
+      const fullUser = await storage.getUser(req.user!.id);
+      if (fullUser) {
+        return res.json({ user: fullUser });
+      }
       return res.json({ user: req.user });
     }
     res.status(401).json({ message: "Tizimga kirilmagan" });

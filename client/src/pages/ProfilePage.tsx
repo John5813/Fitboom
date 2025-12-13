@@ -108,9 +108,12 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={(user as any)?.profileImageUrl} />
-                <AvatarFallback className="text-2xl">
-                  <User className="w-12 h-12" />
+                <AvatarImage 
+                  src={(user as any)?.profileImageUrl || undefined} 
+                  alt={user?.name || "Profile"}
+                />
+                <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-12 h-12" />}
                 </AvatarFallback>
               </Avatar>
               <input
@@ -132,13 +135,25 @@ export default function ProfilePage() {
               </Button>
             </div>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <h2 className="text-xl font-semibold" data-testid="text-user-name">
                 {user?.name || "Foydalanuvchi"}
               </h2>
-              <p className="text-muted-foreground text-sm" data-testid="text-user-phone">
-                {user?.phone || "Telefon raqam yo'q"}
-              </p>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-sm" data-testid="text-user-phone">
+                  📱 {user?.phone || "Telefon raqam yo'q"}
+                </p>
+                {(user as any)?.gender && (
+                  <p className="text-muted-foreground text-sm" data-testid="text-user-gender">
+                    {(user as any).gender === "Erkak" ? "👨 Erkak" : "👩 Ayol"}
+                  </p>
+                )}
+                {(user as any)?.age && (
+                  <p className="text-muted-foreground text-sm" data-testid="text-user-age">
+                    🎂 {(user as any).age} yosh
+                  </p>
+                )}
+              </div>
             </div>
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
