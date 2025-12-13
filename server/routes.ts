@@ -907,9 +907,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Zalni topish - QR koddagi gymId bo'yicha
-      const scannedGymId = qrData.gymId;
-      const gym = await storage.getGym(scannedGymId);
+      // Zalni topish - QR kod bo'yicha
+      const allGyms = await storage.getGyms();
+      const gym = allGyms.find(g => g.qrCode === qrCode);
       
       if (!gym) {
         return res.status(404).json({
@@ -920,7 +920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Foydalanuvchining bu zal uchun faol bronini topish
       const bookings = await storage.getBookings(req.user!.id);
-      const booking = bookings.find(b => b.gymId === scannedGymId && !b.isCompleted);
+      const booking = bookings.find(b => b.gymId === gym.id && !b.isCompleted);
 
       if (!booking) {
         return res.status(404).json({
@@ -948,14 +948,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create gym visit record
         await storage.createGymVisit({
-          gymId: scannedGymId,
+          gymId: gym.id,
           visitorName: user.name || user.phone || 'Mehmon',
           creditsUsed: creditsUsed,
           amountEarned: amountEarned,
         });
 
         // Update gym earnings and debt
-        await storage.updateGymEarnings(scannedGymId, amountEarned);
+        await storage.updateGymEarnings(gym.id, amountEarned);
 
         console.log(`Visit recorded: ${user.name || user.phone} at ${gym.name}, earned ${amountEarned} so'm`);
       }
