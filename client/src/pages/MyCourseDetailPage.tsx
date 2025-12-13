@@ -71,7 +71,6 @@ export default function MyCourseDetailPage() {
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
       <div className="relative z-10">
-      <div className="container mx-auto p-6 pb-24"></old_str>
       <div className="container mx-auto p-6 pb-24">
         <Button
           variant="ghost"
@@ -191,8 +190,8 @@ export default function MyCourseDetailPage() {
                             <span className="truncate max-w-[120px]">{video.instructor}</span>
                           </div>
                         )}
-                        {video.category && (
-                          <Badge variant="outline" className="text-xs h-5 px-1.5">{video.category}</Badge>
+                        {video.categories && video.categories.length > 0 && (
+                          <Badge variant="outline" className="text-xs h-5 px-1.5">{video.categories[0]}</Badge>
                         )}
                       </div>
                     </div>

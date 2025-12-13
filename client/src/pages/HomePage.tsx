@@ -425,8 +425,6 @@ export default function HomePage() {
       />
       <div className="relative z-10">
       {/* Home Tab */}
-      {activeTab === 'home' && (</old_str>
-      {/* Home Tab */}
       {activeTab === 'home' && (
         <div className="p-4 space-y-6">
           <div className="flex items-center justify-between gap-2">
@@ -764,9 +762,6 @@ export default function HomePage() {
         onScan={handleQRScan}
         gymId={selectedBooking?.gymId} // Pass gymId to QRScanner
       />
-      </div>
-
-      {/* Time Slot Selection Dialog */}</old_str>
       </div>
 
       {/* Time Slot Selection Dialog */}
