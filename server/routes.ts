@@ -1073,6 +1073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.setAdminSetting('admin_password_hash', hashedPassword);
         
         if (password === defaultPassword) {
+          (req.session as any).adminVerified = true;
           res.json({ success: true, message: "Kirish muvaffaqiyatli" });
         } else {
           res.status(401).json({ success: false, message: "Parol noto'g'ri" });
@@ -1083,6 +1084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isValid = await bcrypt.compare(password, adminPasswordSetting.settingValue);
       
       if (isValid) {
+        (req.session as any).adminVerified = true;
         res.json({ success: true, message: "Kirish muvaffaqiyatli" });
       } else {
         res.status(401).json({ success: false, message: "Parol noto'g'ri" });
@@ -1172,7 +1174,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Record gym payment from admin (reduces gym debt)
-  app.post('/api/gym-payments', requireAdmin, async (req, res) => {
+  app.post('/api/gym-payments', async (req, res) => {
+    // Check if admin is verified via password
+    if (!(req.session as any).adminVerified && !(req.user as any)?.isAdmin) {
+      return res.status(403).json({ message: "Admin huquqi talab qilinadi" });
+    }
     try {
       const { gymId, amount, notes } = req.body;
       

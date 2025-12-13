@@ -641,13 +641,7 @@ export default function AdminGymsPage() {
 
               <div className="pt-4 border-t">
                 <h3 className="text-lg font-semibold mb-4">Moliyaviy Ma'lumotlar</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">Jami Daromad</p>
-                    <p className="text-xl font-bold text-green-600 dark:text-green-400" data-testid="text-total-earnings">
-                      {formatCurrency(gymOwnerData?.gym?.totalEarnings || selectedGym.totalEarnings || 0)}
-                    </p>
-                  </div>
+                <div className="mb-4">
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground mb-1">Joriy Qarz</p>
                     <p className="text-xl font-bold text-red-600 dark:text-red-400" data-testid="text-current-debt">

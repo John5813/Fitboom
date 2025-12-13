@@ -241,31 +241,17 @@ export default function GymOwnerPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Card data-testid="card-earnings">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <span className="text-sm text-muted-foreground">Jami daromad</span>
-              </div>
-              <p className="text-xl font-bold text-green-600" data-testid="text-total-earnings">
-                {formatCurrency(gym.totalEarnings)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-debt">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="h-5 w-5 text-orange-500" />
-                <span className="text-sm text-muted-foreground">Joriy qarz</span>
-              </div>
-              <p className="text-xl font-bold text-orange-500" data-testid="text-current-debt">
-                {formatCurrency(gym.currentDebt)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card data-testid="card-earnings">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <span className="text-sm text-muted-foreground">Jami daromad</span>
+            </div>
+            <p className="text-xl font-bold text-green-600" data-testid="text-total-earnings">
+              {formatCurrency(gym.totalEarnings)}
+            </p>
+          </CardContent>
+        </Card>
 
         <Card data-testid="card-visitors">
           <CardHeader className="pb-2">
