@@ -67,7 +67,7 @@ export default function MyCourseDetailPage() {
   return (
     <div className="min-h-screen bg-background relative">
       <div 
-        className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
+        className="fixed inset-0 bg-cover bg-center opacity-15 pointer-events-none"
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
       <div className="relative z-10">

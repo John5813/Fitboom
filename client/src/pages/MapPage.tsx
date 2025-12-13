@@ -91,7 +91,7 @@ export default function MapPage() {
   return (
     <div className="container mx-auto p-3 sm:p-6 relative">
       <div 
-        className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none -z-10"
+        className="fixed inset-0 bg-cover bg-center opacity-15 pointer-events-none -z-10"
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
       <div className="mb-4 sm:mb-6">
@@ -142,9 +142,9 @@ export default function MapPage() {
               // Parse coordinates with proper trimming
               const lat = parseFloat(gym.latitude!.toString().trim());
               const lng = parseFloat(gym.longitude!.toString().trim());
-              
+
               console.log(`Gym: ${gym.name}, Lat: ${lat}, Lng: ${lng}`); // Debug log
-              
+
               // Custom icon with gym name
               const customIcon = L.divIcon({
                 className: 'custom-marker',
@@ -170,7 +170,7 @@ export default function MapPage() {
                 iconSize: [25, 41],
                 iconAnchor: [12, 41],
               });
-              
+
               return (
                 <Marker key={gym.id} position={[lat, lng]} icon={customIcon}>
                   <Popup>
