@@ -907,9 +907,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Zalni topish - QR kod bo'yicha
+      // Zalni topish - QR koddagi gymId bo'yicha
       const allGyms = await storage.getGyms();
-      const gym = allGyms.find(g => g.qrCode === qrCode);
+      const gym = allGyms.find(g => {
+        if (!g.qrCode) return false;
+        try {
+          const storedQrData = JSON.parse(g.qrCode);
+          return storedQrData.gymId === qrData.gymId;
+        } catch {
+          return false;
+        }
+      });
       
       if (!gym) {
         return res.status(404).json({
