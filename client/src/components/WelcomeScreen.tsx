@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dumbbell, MapPin, Video, CreditCard } from "lucide-react";
-import heroImage from "@assets/generated_images/Hero_gym_interior_scene_687053fc.png";
+import heroImage from "@assets/814914041712414214qaranliqenerji_1765638608962.jpg";
 
 interface WelcomeScreenProps {
   onStart: () => void;

@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import gymImage from "@assets/generated_images/Standard_gym_facility_interior_f255ae25.png";
+import gymImage from "@assets/814914041712414214qaranliqenerji_1765638608962.jpg";
 import poolImage from "@assets/generated_images/Swimming_pool_facility_9aea752a.png";
 import yogaImage from "@assets/generated_images/Yoga_studio_space_83aaaeab.png";
 import classImage from "@assets/generated_images/Online_fitness_class_instructor_ef28ee4a.png";

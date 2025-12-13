@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dumbbell, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import loginBgImage from "@assets/814914041712414214qaranliqenerji_1765638608962.jpg";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -128,7 +129,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center relative p-4 overflow-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(/login-bg.jpg)` }}
+        style={{ backgroundImage: `url(${loginBgImage})` }}
       />
       <div className="absolute inset-0 bg-black/30" />
       <Card className="w-full max-w-md relative z-10 backdrop-blur-sm bg-white/95 dark:bg-gray-900/95" data-testid="card-login">
