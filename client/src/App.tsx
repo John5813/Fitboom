@@ -19,6 +19,7 @@ import MyCourseDetailPage from "@/pages/MyCourseDetailPage";
 import VideoPlayerPage from "@/pages/VideoPlayerPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import MapPage from "@/pages/MapPage";
+import GymOwnerPage from "@/pages/GymOwnerPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -80,6 +81,11 @@ function Router() {
       <Route path="/watch/:id">
         <ProtectedRoute>
           <VideoPlayerPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/gym-owner">
+        <ProtectedRoute>
+          <GymOwnerPage />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />
