@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2 } from "lucide-react";
+import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { GymVisit, GymPayment } from "@shared/schema";
@@ -33,6 +34,8 @@ export default function GymOwnerPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", imageUrl: "" });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showVisitors, setShowVisitors] = useState(false);
+  const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
 
   const gymId = localStorage.getItem("gymOwnerId");
   const accessCode = localStorage.getItem("gymOwnerCode");
@@ -257,50 +260,18 @@ export default function GymOwnerPage() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-visitors">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Tashriflar ({visits.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {visits.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Hali tashriflar yo'q
-              </div>
-            ) : (
-              <ScrollArea className="h-64">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mehmon</TableHead>
-                      <TableHead>Sana</TableHead>
-                      <TableHead className="text-right">Kredit</TableHead>
-                      <TableHead className="text-right">Summa</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visits.map((visit) => (
-                      <TableRow key={visit.id} data-testid={`row-visit-${visit.id}`}>
-                        <TableCell className="font-medium">{visit.visitorName}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(visit.visitDate)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="secondary">{visit.creditsUsed}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-green-600">
-                          +{formatCurrency(visit.amountEarned)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
+        <Button
+          variant="outline"
+          className="w-full justify-between"
+          onClick={() => setShowVisitors(true)}
+          data-testid="button-view-visitors"
+        >
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <span>Tashriflarni ko'rish</span>
+          </div>
+          <Badge variant="secondary">{visits.length}</Badge>
+        </Button>
 
         <Card data-testid="card-payments">
           <CardHeader className="pb-2">
@@ -407,6 +378,79 @@ export default function GymOwnerPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showVisitors} onOpenChange={setShowVisitors}>
+        <DialogContent className="max-w-md max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Tashriflar ({visits.length})
+            </DialogTitle>
+          </DialogHeader>
+          {visits.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              Hali tashriflar yo'q
+            </div>
+          ) : (
+            <ScrollArea className="h-[50vh]">
+              <div className="space-y-2 pr-4">
+                {[...visits].sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()).map((visit) => (
+                  <div
+                    key={visit.id}
+                    className="flex items-center gap-3 p-3 rounded-md border cursor-pointer hover-elevate"
+                    onClick={() => setSelectedVisitor(visit)}
+                    data-testid={`visitor-card-${visit.id}`}
+                  >
+                    <Avatar>
+                      <AvatarFallback>{visit.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{visit.visitorName}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(visit.visitDate)}</p>
+                    </div>
+                    <Badge variant="secondary">{visit.creditsUsed} kr</Badge>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedVisitor} onOpenChange={() => setSelectedVisitor(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mehmon profili</DialogTitle>
+          </DialogHeader>
+          {selectedVisitor && (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <Avatar className="h-20 w-20">
+                <AvatarFallback className="text-2xl">{selectedVisitor.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="text-center">
+                <h3 className="text-xl font-bold">{selectedVisitor.visitorName}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Tashrif: {formatDate(selectedVisitor.visitDate)}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 w-full mt-2">
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Kredit</p>
+                    <p className="text-lg font-bold">{selectedVisitor.creditsUsed}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Summa</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(selectedVisitor.amountEarned)}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
