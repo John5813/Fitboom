@@ -88,121 +88,132 @@ export default function VideoPlayerPage() {
 
   if (!video) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto p-6">
-          <div className="text-center py-8">Video topilmadi</div>
+      <div className="min-h-screen bg-background relative">
+        <div
+          className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
+          style={{ backgroundImage: 'url(/background-earth.jpg)' }}
+        />
+        <div className="relative z-10">
+          <div className="container mx-auto p-6">
+            <div className="text-center py-8">Video topilmadi</div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 pb-24">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBack}
-          className="mb-6"
-          data-testid="button-back-collection"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Orqaga
-        </Button>
+    <div className="min-h-screen bg-background relative">
+      <div
+        className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
+        style={{ backgroundImage: 'url(/background-earth.jpg)' }}
+      />
+      <div className="relative z-10">
+        <div className="container mx-auto p-6 pb-24">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="mb-6"
+            data-testid="button-back-collection"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Orqaga
+          </Button>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Video Player */}
-          <div className="lg:col-span-2">
-            <Card className="overflow-hidden">
-              <div className="aspect-video bg-black">
-                {isDirectVideo(video.videoUrl) ? (
-                  // To'g'ridan-to'g'ri video fayllar uchun HTML5 video player
-                  <video
-                    src={video.videoUrl}
-                    controls
-                    className="w-full h-full"
-                    data-testid="video-player"
-                  >
-                    Brauzeringiz video playbackni qo'llab-quvvatlamaydi.
-                  </video>
-                ) : isYouTube(video.videoUrl) || isVimeo(video.videoUrl) ? (
-                  // YouTube/Vimeo uchun iframe
-                  <iframe
-                    src={getEmbedUrl(video.videoUrl)}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    data-testid="iframe-video-player"
-                  />
-                ) : (
-                  // Boshqa provayderlar uchun iframe (Google Drive, Loom, va h.k.)
-                  <iframe
-                    src={video.videoUrl}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    data-testid="iframe-video-player"
-                  />
-                )}
-              </div>
-            </Card>
-
-            <div className="mt-6">
-              <h1 className="text-2xl font-display font-bold mb-3" data-testid="text-video-title">
-                {video.title}
-              </h1>
-
-              <div className="flex items-center gap-4 mb-4">
-                {video.duration && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>{video.duration} daqiqa</span>
-                  </div>
-                )}
-                {video.instructor && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="w-4 h-4" />
-                    <span>{video.instructor}</span>
-                  </div>
-                )}
-                {video.category && (
-                  <Badge variant="outline">{video.category}</Badge>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Collection Info */}
-          <div className="lg:col-span-1">
-            {collection && (
-              <Card className="p-6">
-                <h3 className="font-semibold mb-4">To'plam haqida</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">To'plam nomi</p>
-                    <p className="font-semibold">{collection.name}</p>
-                  </div>
-                  {collection.description && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tavsif</p>
-                      <p className="text-sm">{collection.description}</p>
-                    </div>
-                  )}
-                  {collection.thumbnailUrl && (
-                    <div>
-                      <img
-                        src={collection.thumbnailUrl}
-                        alt={collection.name}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                    </div>
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Video Player */}
+            <div className="lg:col-span-2">
+              <Card className="overflow-hidden">
+                <div className="aspect-video bg-black">
+                  {isDirectVideo(video.videoUrl) ? (
+                    // To'g'ridan-to'g'ri video fayllar uchun HTML5 video player
+                    <video
+                      src={video.videoUrl}
+                      controls
+                      className="w-full h-full"
+                      data-testid="video-player"
+                    >
+                      Brauzeringiz video playbackni qo'llab-quvvatlamaydi.
+                    </video>
+                  ) : isYouTube(video.videoUrl) || isVimeo(video.videoUrl) ? (
+                    // YouTube/Vimeo uchun iframe
+                    <iframe
+                      src={getEmbedUrl(video.videoUrl)}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      data-testid="iframe-video-player"
+                    />
+                  ) : (
+                    // Boshqa provayderlar uchun iframe (Google Drive, Loom, va h.k.)
+                    <iframe
+                      src={video.videoUrl}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      data-testid="iframe-video-player"
+                    />
                   )}
                 </div>
               </Card>
-            )}
+
+              <div className="mt-6">
+                <h1 className="text-2xl font-display font-bold mb-3" data-testid="text-video-title">
+                  {video.title}
+                </h1>
+
+                <div className="flex items-center gap-4 mb-4">
+                  {video.duration && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>{video.duration} daqiqa</span>
+                    </div>
+                  )}
+                  {video.instructor && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="w-4 h-4" />
+                      <span>{video.instructor}</span>
+                    </div>
+                  )}
+                  {video.category && (
+                    <Badge variant="outline">{video.category}</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Collection Info */}
+            <div className="lg:col-span-1">
+              {collection && (
+                <Card className="p-6">
+                  <h3 className="font-semibold mb-4">To'plam haqida</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">To'plam nomi</p>
+                      <p className="font-semibold">{collection.name}</p>
+                    </div>
+                    {collection.description && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tavsif</p>
+                        <p className="text-sm">{collection.description}</p>
+                      </div>
+                    )}
+                    {collection.thumbnailUrl && (
+                      <div>
+                        <img
+                          src={collection.thumbnailUrl}
+                          alt={collection.name}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

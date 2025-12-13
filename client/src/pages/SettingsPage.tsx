@@ -134,7 +134,8 @@ export default function SettingsPage() {
         className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
-      <div className="relative z-10"></old_str>
+      <div className="relative z-10">
+      <div className="flex items-center gap-4 mb-6"></old_str>
       <div className="flex items-center gap-4 mb-6">
         <Button
           variant="ghost"

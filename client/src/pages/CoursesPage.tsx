@@ -65,7 +65,12 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      <div 
+        className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
+        style={{ backgroundImage: 'url(/background-earth.jpg)' }}
+      />
+      <div className="relative z-10">
       <div className="container mx-auto p-6 pb-24">
         <div className="mb-6">
           <h1 className="text-3xl font-display font-bold">Video Kurslar</h1>
@@ -170,6 +175,7 @@ export default function CoursesPage() {
             })}
           </div>
         )}
+      </div>
       </div>
       </div>
     </div>

@@ -70,7 +70,8 @@ export default function MyCourseDetailPage() {
         className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
-      <div className="relative z-10"></old_str>
+      <div className="relative z-10">
+      <div className="container mx-auto p-6 pb-24"></old_str>
       <div className="container mx-auto p-6 pb-24">
         <Button
           variant="ghost"

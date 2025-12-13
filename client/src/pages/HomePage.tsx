@@ -423,7 +423,8 @@ export default function HomePage() {
         className="fixed inset-0 bg-cover bg-center opacity-5 pointer-events-none"
         style={{ backgroundImage: 'url(/background-earth.jpg)' }}
       />
-      <div className="relative z-10"></old_str>
+      <div className="relative z-10">
+      {/* Home Tab */}</old_str>
       {/* Home Tab */}
       {activeTab === 'home' && (
         <div className="p-4 space-y-6">
