@@ -207,15 +207,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const gymData = insertGymSchema.parse(req.body);
 
-      // QR kod uchun JSON ma'lumot yaratish
-      const gymId = `gym-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const qrCodeData = JSON.stringify({
-        gymId: gymId,
-        type: 'gym',
-        name: gymData.name,
-        timestamp: new Date().toISOString()
-      });
-
       // Generate unique 6-character access code for gym owner
       const generateAccessCode = (): string => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -234,12 +225,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerAccessCode = generateAccessCode();
       }
 
+      // Create placeholder QR code - will be updated after gym is created with its ID
+      const placeholderQR = JSON.stringify({
+        type: 'gym',
+        name: gymData.name,
+        timestamp: new Date().toISOString()
+      });
+
       const gym = await storage.createGym({
         ...gymData,
-        qrCode: qrCodeData,
+        qrCode: placeholderQR,
         ownerAccessCode
       });
-      res.json({ gym });
+
+      // Now update with actual QR code containing the gym ID
+      const actualQR = JSON.stringify({
+        gymId: gym.id,
+        type: 'gym',
+        name: gym.name,
+        timestamp: new Date().toISOString()
+      });
+      
+      await storage.updateGym(gym.id, { qrCode: actualQR });
+      
+      res.json({ gym: { ...gym, qrCode: actualQR } });
     } catch (error: any) {
       console.error("Error creating gym:", error);
       res.status(400).json({ error: error.message || "Invalid gym data" });
