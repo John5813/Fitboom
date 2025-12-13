@@ -1028,8 +1028,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Change admin password (admin only - requires requireAdmin)
-  app.post('/api/admin/change-password', requireAdmin, async (req, res) => {
+  // Change admin password (requires authentication only)
+  app.post('/api/admin/change-password', requireAuth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
       
