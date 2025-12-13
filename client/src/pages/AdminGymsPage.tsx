@@ -639,6 +639,7 @@ export default function AdminGymsPage() {
                   </div>
                 </div>
               )}
+              </div>
 
               <div className="pt-4 border-t">
                 <h3 className="text-lg font-semibold mb-4">Moliyaviy Ma'lumotlar</h3>
