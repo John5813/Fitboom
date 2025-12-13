@@ -589,10 +589,11 @@ export default function AdminGymsPage() {
                   <p className="text-sm text-muted-foreground">Imkoniyatlar</p>
                   <p className="text-sm">{selectedGym.facilities}</p>
                 </div>
-              )}
+              </div>
+              </div>
 
               {selectedGym.imageUrl && (
-                <div className="mt-4">
+                <div>
                   <p className="text-sm text-muted-foreground mb-2">Rasm</p>
                   <img 
                     src={selectedGym.imageUrl} 
