@@ -48,7 +48,7 @@ export default function VideoPlayerPage() {
       const videoId = url.split('youtu.be/')[1].split('?')[0];
       return `https://www.youtube.com/embed/${videoId}`;
     }
-    
+
     // Vimeo URL konvertatsiyasi
     if (url.includes('vimeo.com/')) {
       // Agar allaqachon embed URL bo'lsa, o'zgartirmaslik
@@ -151,7 +151,7 @@ export default function VideoPlayerPage() {
               <h1 className="text-2xl font-display font-bold mb-3" data-testid="text-video-title">
                 {video.title}
               </h1>
-              
+
               <div className="flex items-center gap-4 mb-4">
                 {video.duration && (
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -202,6 +202,7 @@ export default function VideoPlayerPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
