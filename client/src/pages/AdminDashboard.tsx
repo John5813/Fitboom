@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Video, MessageSquare, Key, Trash2, Check, X } from "lucide-react";
+import { ArrowLeft, Building2, Video, MessageSquare, Key, Trash2, Check, X, Users } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -203,6 +203,31 @@ export default function AdminDashboard() {
               <Button className="w-full" data-testid="button-change-password">
                 Parolni o'zgartirish
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Users Management */}
+          <Card className="hover-elevate cursor-pointer" data-testid="card-users">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle>Foydalanuvchilar</CardTitle>
+                  <CardDescription>Barcha foydalanuvchilar</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Foydalanuvchilarni ko'rish va kredit muddatini kuzatish
+              </p>
+              <Link href="/admin/users">
+                <Button className="w-full" data-testid="button-manage-users">
+                  Foydalanuvchilar Ro'yxati
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

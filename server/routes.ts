@@ -1074,6 +1074,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - barcha foydalanuvchilarni ko'rish
+  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json({ users });
+    } catch (error: any) {
+      console.error("Foydalanuvchilarni olishda xatolik:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // Admin login verification with password (bcrypt hashed)
   app.post('/api/admin/verify-password', async (req, res) => {

@@ -60,6 +60,7 @@ export interface IStorage {
   createGymPayment(payment: InsertGymPayment): Promise<GymPayment>;
   updateGymEarnings(gymId: string, amountEarned: number): Promise<Gym | undefined>;
   reduceGymDebt(gymId: string, paymentAmount: number): Promise<Gym | undefined>;
+  getAllUsers(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -459,6 +460,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gyms.id, gymId))
       .returning();
     return updated || undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 }
 
