@@ -1,7 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Clock, AlertTriangle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,8 @@ interface PurchaseCreditsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onPurchase?: (credits: number, price: number) => void;
+  creditExpiryDate?: string | null;
+  currentCredits?: number;
 }
 
 const packages: CreditPackage[] = [
@@ -27,9 +29,23 @@ const packages: CreditPackage[] = [
 export default function PurchaseCreditsDialog({
   isOpen,
   onClose,
-  onPurchase
+  onPurchase,
+  creditExpiryDate,
+  currentCredits = 0
 }: PurchaseCreditsDialogProps) {
   const { toast } = useToast();
+
+  const getRemainingDays = () => {
+    if (!creditExpiryDate) return null;
+    const expiry = new Date(creditExpiryDate);
+    const now = new Date();
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const remainingDays = getRemainingDays();
+  const hasActiveSubscription = remainingDays !== null && remainingDays > 0;
 
   const purchaseCreditsMutation = useMutation({
     mutationFn: async (credits: number) => {
@@ -62,8 +78,27 @@ export default function PurchaseCreditsDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Kredit sotib olish</DialogTitle>
+          <DialogDescription>
+            {hasActiveSubscription ? (
+              <span className="flex items-center gap-1 text-sm">
+                <Clock className="w-4 h-4" />
+                Joriy obuna: {remainingDays} kun qoldi
+              </span>
+            ) : (
+              <span className="text-sm">Yangi 30 kunlik obuna boshlang</span>
+            )}
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-4">
+
+        {hasActiveSubscription && (
+          <div className="bg-muted/50 rounded-md p-3 text-sm">
+            <p className="text-muted-foreground">
+              Sizda hozirda {currentCredits} kredit bor. Yangi kreditlar mavjud {remainingDays} kun ichida ishlatilishi kerak.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3 py-2">
           {packages.map((pkg) => (
             <Card
               key={pkg.credits}
@@ -80,14 +115,16 @@ export default function PurchaseCreditsDialog({
                   </span>
                 </div>
               )}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="font-display font-bold text-2xl">{pkg.credits} kredit</p>
                   <p className="text-muted-foreground text-sm">
                     {pkg.price.toLocaleString()} so'm
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    30 kun amal qiladi
+                    {hasActiveSubscription 
+                      ? `Mavjud muddatga qo'shiladi` 
+                      : '30 kun amal qiladi'}
                   </p>
                 </div>
                 <Button 

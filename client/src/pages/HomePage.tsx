@@ -750,6 +750,8 @@ export default function HomePage() {
         isOpen={isPurchaseDialogOpen}
         onClose={() => setIsPurchaseDialogOpen(false)}
         onPurchase={handlePurchase}
+        creditExpiryDate={user?.creditExpiryDate}
+        currentCredits={credits}
       />
 
       <QRScanner
