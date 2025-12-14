@@ -47,6 +47,7 @@ export default function AdminGymsPage() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [lastPaymentInfo, setLastPaymentInfo] = useState<{ amount: number; gymName: string } | null>(null);
   const { toast } = useToast();
 
   const [gymForm, setGymForm] = useState({
@@ -100,6 +101,10 @@ export default function AdminGymsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/gym-owner', selectedGym?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+      setLastPaymentInfo({
+        amount: parseInt(paymentAmount),
+        gymName: selectedGym?.name || ''
+      });
       toast({
         title: "To'lov qo'shildi",
         description: "To'lov muvaffaqiyatli qayd qilindi.",
@@ -107,6 +112,7 @@ export default function AdminGymsPage() {
       setIsPaymentDialogOpen(false);
       setPaymentAmount('');
       setPaymentNotes('');
+      setTimeout(() => setLastPaymentInfo(null), 5000);
     },
     onError: () => {
       toast({
@@ -448,6 +454,13 @@ export default function AdminGymsPage() {
 
   return (
     <div className="container mx-auto p-6">
+      {lastPaymentInfo && (
+        <div className="mb-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg">
+          <p className="text-green-800 dark:text-green-200 font-medium">
+            {lastPaymentInfo.gymName} uchun {new Intl.NumberFormat('uz-UZ').format(lastPaymentInfo.amount)} so'm to'lov qayd qilindi!
+          </p>
+        </div>
+      )}
       <div className="mb-6 flex items-start justify-between">
         <div className="flex items-center gap-4">
           <Link href="/admin">
@@ -663,7 +676,10 @@ export default function AdminGymsPage() {
                   <div className="mb-4">
                     <p className="text-sm text-muted-foreground mb-2">So'nggi To'lovlar</p>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {gymOwnerData.payments.slice(0, 5).map((payment) => (
+                      {[...gymOwnerData.payments]
+                        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+                        .slice(0, 5)
+                        .map((payment) => (
                         <div key={payment.id} className="flex justify-between items-center p-2 bg-muted/50 rounded text-sm">
                           <span>{new Date(payment.paymentDate).toLocaleDateString('uz-UZ')}</span>
                           <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
