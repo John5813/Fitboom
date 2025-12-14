@@ -453,6 +453,7 @@ export default function HomePage() {
           <CreditBalance
             credits={credits}
             onPurchase={() => setIsPurchaseDialogOpen(true)}
+            creditExpiryDate={user?.creditExpiryDate}
           />
 
           <div>

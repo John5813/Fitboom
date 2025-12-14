@@ -405,9 +405,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newCredits = user.credits + credits;
       
-      // 30 kunlik muddat belgilash
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30);
+      // Faqat agar mavjud aktiv muddat yo'q bo'lsa, yangi 30 kunlik muddat belgilash
+      // Agar muddat hali o'tmagan bo'lsa, yangi kreditlar eski muddatga qo'shiladi
+      let expiryDate: Date;
+      const now = new Date();
+      
+      if (user.creditExpiryDate && new Date(user.creditExpiryDate) > now) {
+        // Mavjud aktiv muddat bor - saqlab qolish
+        expiryDate = new Date(user.creditExpiryDate);
+        console.log(`📌 Mavjud muddat saqlanmoqda: ${expiryDate.toISOString()}`);
+      } else {
+        // Yangi 30 kunlik muddat belgilash
+        expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        console.log(`🆕 Yangi 30 kunlik muddat: ${expiryDate.toISOString()}`);
+      }
       
       await storage.updateUserCreditsWithExpiry(req.user!.id, newCredits, expiryDate);
 

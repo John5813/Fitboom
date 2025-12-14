@@ -13,6 +13,7 @@ interface User {
   credits: number;
   isAdmin: boolean;
   profileCompleted: boolean;
+  creditExpiryDate?: string | null;
 }
 
 interface AuthContextType {

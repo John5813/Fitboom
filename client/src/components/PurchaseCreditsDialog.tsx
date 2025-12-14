@@ -19,9 +19,9 @@ interface PurchaseCreditsDialogProps {
 }
 
 const packages: CreditPackage[] = [
-  { credits: 6, price: 65000 },
-  { credits: 13, price: 130000, isPopular: true },
-  { credits: 24, price: 234000 },
+  { credits: 6, price: 180000 },
+  { credits: 13, price: 350000, isPopular: true },
+  { credits: 24, price: 650000 },
 ];
 
 export default function PurchaseCreditsDialog({
