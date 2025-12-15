@@ -119,7 +119,7 @@ export function requireAuth(req: any, res: any, next: any) {
 }
 
 export function requireAdmin(req: any, res: any, next: any) {
-  if (req.isAuthenticated() && req.user?.isAdmin) {
+  if (req.isAuthenticated() && (req.user?.isAdmin || req.session?.adminVerified)) {
     return next();
   }
   res.status(403).json({ message: "Admin huquqi talab qilinadi" });

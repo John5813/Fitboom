@@ -21,11 +21,15 @@ interface UserData {
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: usersData, isLoading } = useQuery<{ users: UserData[] }>({
+  const { data: usersData, isLoading, error, isError } = useQuery<{ users: UserData[] }>({
     queryKey: ['/api/admin/users'],
   });
 
   const users = usersData?.users || [];
+
+  if (isError) {
+    console.error("Admin users fetch error:", error);
+  }
 
   const filteredUsers = users.filter(user => {
     const searchLower = searchQuery.toLowerCase();
@@ -92,7 +96,12 @@ export default function AdminUsersPage() {
           </CardContent>
         </Card>
 
-        {isLoading ? (
+        {isError ? (
+          <div className="text-center py-12">
+            <p className="text-destructive mb-2">Xatolik yuz berdi</p>
+            <p className="text-sm text-muted-foreground">{error?.message || "Ma'lumotlarni yuklashda xatolik"}</p>
+          </div>
+        ) : isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Yuklanmoqda...</p>
           </div>
