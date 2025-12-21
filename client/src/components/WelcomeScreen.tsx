@@ -82,11 +82,56 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
                 <KeyRound className="w-8 h-8 text-white" />
               </div>
-              <div>
-                <h3 className="font-bold text-xl mb-2">🔑 Kalit Tizimi</h3>
-                <p className="text-muted-foreground">
+              <div className="flex-1">
+                <h3 className="font-bold text-xl mb-3">🔑 Kalit Tizimi</h3>
+                <p className="text-muted-foreground mb-4">
                   Bir marta kalit sotib olib, turli sport zallariga kiring. 6, 13 yoki 24 kalit paketlari mavjud. Barcha kalitlar 30 kun amal qiladi.
                 </p>
+                
+                {/* Key tiers explanation */}
+                <div className="space-y-3 bg-card border rounded-lg p-4">
+                  <h4 className="font-semibold text-sm mb-2">Kalit talablari:</h4>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <span className="text-green-600 dark:text-green-400 font-bold text-sm">1</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Oddiy sport zallari</p>
+                      <p className="text-xs text-muted-foreground">Gym, fitness markazlari</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">2</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">O'rta daraja sport zallari</p>
+                      <p className="text-xs text-muted-foreground">Yoga, boks, pilates studiyalari</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <span className="text-purple-600 dark:text-purple-400 font-bold text-sm">3</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Premium sport markazlari</p>
+                      <p className="text-xs text-muted-foreground">Suzish havzalari, sauna, massaj xizmatlari</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">4+</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Elite va maxsus tadbirlar</p>
+                      <p className="text-xs text-muted-foreground">Ot sporti, golf, maxsus sport tadbirlari</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
