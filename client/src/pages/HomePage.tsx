@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Settings, User, ShoppingCart } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, ShoppingCart, KeyRound } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";

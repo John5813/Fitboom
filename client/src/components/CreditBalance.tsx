@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Zap, Plus, Clock, AlertTriangle } from "lucide-react";
+import { KeyRound, ShoppingCart, Clock, AlertTriangle } from "lucide-react";
 
 interface CreditBalanceProps {
   credits: number;
@@ -35,7 +35,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
               ) : isExpiringSoon ? (
                 <AlertTriangle className="w-6 h-6 text-yellow-500" />
               ) : (
-                <Zap className="w-6 h-6 text-primary" />
+                <KeyRound className="w-6 h-6 text-primary" />
               )}
             </div>
             <div>
@@ -47,10 +47,10 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
                 }`}>
                   <Clock className="w-3 h-3" />
                   <p className="text-xs font-medium" data-testid="text-remaining-days">
-                    {isExpired 
-                      ? "Muddat tugadi! Kalit yangilang" 
-                      : isExpiringSoon 
-                        ? `Diqqat: ${remainingDays} kun qoldi!` 
+                    {isExpired
+                      ? "Muddat tugadi! Kalit yangilang"
+                      : isExpiringSoon
+                        ? `Diqqat: ${remainingDays} kun qoldi!`
                         : `${remainingDays} kun qoldi`}
                   </p>
                 </div>

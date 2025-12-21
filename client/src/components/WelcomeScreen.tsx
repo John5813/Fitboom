@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Dumbbell, MapPin, Video, CreditCard, Clock, Users, QrCode, Shield, Star, TrendingUp } from "lucide-react";
+import { Dumbbell, MapPin, Video, KeyRound, Clock, Users, QrCode, Shield, Star, TrendingUp } from "lucide-react";
 import heroImage from "@assets/814914041712414214qaranliqenerji_1765638608962.jpg";
 
 interface WelcomeScreenProps {
@@ -32,7 +32,9 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               <p className="text-white text-sm">Koʻplab sport zallari</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
-              <CreditCard className="w-8 h-8 text-primary mx-auto mb-2" />
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-2">
+                <KeyRound className="w-6 h-6 text-white" />
+              </div>
               <p className="text-white text-sm">Kalit tizimi</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
@@ -78,11 +80,11 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           <div className="space-y-12">
             {/* Credit System */}
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <CreditCard className="w-8 h-8 text-primary" />
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                <KeyRound className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-xl mb-2">💳 Kalit Tizimi</h3>
+                <h3 className="font-bold text-xl mb-2">🔑 Kalit Tizimi</h3>
                 <p className="text-muted-foreground">
                   Bir marta kalit sotib olib, turli sport zallariga kiring. 6, 13 yoki 24 kalit paketlari mavjud. Barcha kalitlar 30 kun amal qiladi.
                 </p>

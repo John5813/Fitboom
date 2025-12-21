@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Clock, AlertTriangle } from "lucide-react";
+import { Check, Clock, AlertTriangle, KeyRound } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -117,17 +117,20 @@ export default function PurchaseCreditsDialog({
               )}
               <div className="flex items-center justify-between gap-2">
                 <div>
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                    <KeyRound className="w-8 h-8 text-white" />
+                  </div>
                   <p className="font-display font-bold text-2xl">{pkg.credits} kalit</p>
                   <p className="text-muted-foreground text-sm">
                     {pkg.price.toLocaleString()} so'm
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {hasActiveSubscription 
-                      ? `Mavjud muddatga qo'shiladi` 
+                    {hasActiveSubscription
+                      ? `Mavjud muddatga qo'shiladi`
                       : '30 kun amal qiladi'}
                   </p>
                 </div>
-                <Button 
+                <Button
                   size="sm"
                   onClick={() => handlePurchase(pkg.credits)}
                   disabled={purchaseCreditsMutation.isPending}
