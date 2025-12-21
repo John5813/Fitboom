@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { KeyRound, Clock, AlertTriangle, Plus } from "lucide-react";
+import { KeyRound, AlertTriangle, Clock, Plus } from "lucide-react";
 
 interface CreditBalanceProps {
   credits: number;
