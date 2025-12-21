@@ -208,7 +208,7 @@ export default function ProfilePage() {
 
       <Card className="max-w-md mx-auto mt-4">
         <CardHeader>
-          <CardTitle className="text-lg">Kalit balansi</CardTitle>
+          <CardTitle className="text-lg">Kalitlar soni</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-bold text-primary" data-testid="text-credits">

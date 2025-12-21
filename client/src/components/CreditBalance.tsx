@@ -39,7 +39,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
               )}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Kalit balansi</p>
+              <p className="text-sm text-muted-foreground">Kalitlar soni</p>
               <p className="font-display font-bold text-2xl" data-testid="credit-balance">{credits}</p>
               {remainingDays !== null && credits > 0 && (
                 <div className={`flex items-center gap-1 mt-1 ${
