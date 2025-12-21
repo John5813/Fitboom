@@ -196,7 +196,7 @@ export default function AdminPage() {
     if (!/^\d+$/.test(creditsStr)) {
       toast({
         title: "Xatolik",
-        description: "Kredit faqat butun son bo'lishi kerak.",
+        description: "Kalit faqat butun son bo'lishi kerak.",
         variant: "destructive"
       });
       return;
@@ -205,7 +205,7 @@ export default function AdminPage() {
     if (creditsValue < 0) {
       toast({
         title: "Xatolik",
-        description: "Kredit manfiy bo'lishi mumkin emas.",
+        description: "Kalit manfiy bo'lishi mumkin emas.",
         variant: "destructive"
       });
       return;
@@ -427,7 +427,7 @@ export default function AdminPage() {
                     data-testid="input-gym-name"
                   />
                 </div>
-                
+
                 <div>
                   <Label>Kategoriyalar (bir nechta tanlash mumkin)</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -460,9 +460,9 @@ export default function AdminPage() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div>
-                  <Label htmlFor="gym-price">Narx (kredit)</Label>
+                  <Label htmlFor="gym-price">Narx (kalit)</Label>
                   <Input
                     id="gym-price"
                     type="number"
@@ -472,7 +472,7 @@ export default function AdminPage() {
                     data-testid="input-gym-credits"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="gym-rating">Reyting</Label>
                   <Select 
@@ -491,7 +491,7 @@ export default function AdminPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="gym-hours">Ish vaqti</Label>
                   <Input
@@ -652,7 +652,10 @@ export default function AdminPage() {
                                 }).join(', ') || 'Yo\'q'}
                               </span>
                             </p>
-                            <p>Narx: {gym.credits} kredit</p>
+                            <p>
+                              <span className="text-muted-foreground text-xs">Kalit:</span>{' '}
+                              <span className="font-medium">{gym.credits} kalit</span>
+                            </p>
                             <p className="truncate">Manzil: {gym.address}</p>
                           </div>
 
@@ -894,7 +897,7 @@ export default function AdminPage() {
                     data-testid="input-category-name"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="category-icon">Icon (emoji)</Label>
                   <Input

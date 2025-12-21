@@ -33,7 +33,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
               <CreditCard className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-white text-sm">Kredit tizimi</p>
+              <p className="text-white text-sm">Kalit tizimi</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
               <Video className="w-8 h-8 text-primary mx-auto mb-2" />
@@ -82,9 +82,9 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
                 <CreditCard className="w-8 h-8 text-primary" />
               </div>
               <div>
-                <h3 className="font-bold text-xl mb-2">💳 Kredit Tizimi</h3>
+                <h3 className="font-bold text-xl mb-2">💳 Kalit Tizimi</h3>
                 <p className="text-muted-foreground">
-                  Bir marta kredit sotib olib, turli sport zallariga kiring. 6, 13 yoki 24 kredit paketlari mavjud. Barcha kreditlar 30 kun amal qiladi.
+                  Bir marta kalit sotib olib, turli sport zallariga kiring. 6, 13 yoki 24 kalit paketlari mavjud. Barcha kalitlar 30 kun amal qiladi.
                 </p>
               </div>
             </div>
@@ -97,7 +97,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               <div>
                 <h3 className="font-bold text-xl mb-2">🏋️ Sport Zallari</h3>
                 <p className="text-muted-foreground">
-                  Shaharning turli sport zallarini ko'ring va qidiring. Gym, Yoga, Boks, Suzish, Pilates va boshqa kategoriyalar. Haritada eng yaqin zallarni topib, kredit bilan bron qiling.
+                  Shaharning turli sport zallarini ko'ring va qidiring. Gym, Yoga, Boks, Suzish, Pilates va boshqa kategoriyalar. Haritada eng yaqin zallarni topib, kalit bilan bron qiling.
                 </p>
               </div>
             </div>
@@ -136,7 +136,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               <div>
                 <h3 className="font-bold text-xl mb-2">👤 Profil Boshqaruvi</h3>
                 <p className="text-muted-foreground">
-                  Telegram orqali qulay ro'yxatdan o'tish. Bronlar tarixi va kredit balansi hamda muddat kuzatuvi.
+                  Telegram orqali qulay ro'yxatdan o'tish. Bronlar tarixi va kalit balansi hamda muddat kuzatuvi.
                 </p>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
                 </div>
                 <h4 className="font-semibold mb-2">Tejamkorlik</h4>
                 <p className="text-sm text-muted-foreground">
-                  Bir kredit bilan ko'plab sport zallariga kirish
+                  Bir kalit bilan ko'plab sport zallariga kirish
                 </p>
               </div>
               <div className="text-center">
@@ -207,7 +207,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
                   2
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-1">Kredit sotib oling</h4>
+                  <h4 className="font-semibold mb-1">Kalit sotib oling</h4>
                   <p className="text-muted-foreground text-sm">O'zingizga mos paketni tanlang va to'lang</p>
                 </div>
               </div>

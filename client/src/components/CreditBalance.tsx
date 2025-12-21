@@ -39,7 +39,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
               )}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Kredit balansi</p>
+              <p className="text-sm text-muted-foreground">Kalit balansi</p>
               <p className="font-display font-bold text-2xl" data-testid="credit-balance">{credits}</p>
               {remainingDays !== null && credits > 0 && (
                 <div className={`flex items-center gap-1 mt-1 ${
@@ -48,7 +48,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
                   <Clock className="w-3 h-3" />
                   <p className="text-xs font-medium" data-testid="text-remaining-days">
                     {isExpired 
-                      ? "Muddat tugadi! Kredit yangilang" 
+                      ? "Muddat tugadi! Kalit yangilang" 
                       : isExpiringSoon 
                         ? `Diqqat: ${remainingDays} kun qoldi!` 
                         : `${remainingDays} kun qoldi`}
@@ -57,7 +57,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
               )}
               {isExpired && credits > 0 && (
                 <p className="text-xs text-destructive mt-1">
-                  Kreditlaringiz muddati o'tgan
+                  Kalitlaringiz muddati o'tgan
                 </p>
               )}
             </div>

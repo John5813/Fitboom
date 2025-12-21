@@ -208,11 +208,11 @@ export default function ProfilePage() {
 
       <Card className="max-w-md mx-auto mt-4">
         <CardHeader>
-          <CardTitle className="text-lg">Kredit balansi</CardTitle>
+          <CardTitle className="text-lg">Kalit balansi</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-bold text-primary" data-testid="text-credits">
-            {user?.credits || 0} kredit
+            {user?.credits || 0} kalit
           </p>
         </CardContent>
       </Card>

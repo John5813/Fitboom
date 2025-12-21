@@ -208,7 +208,7 @@ export default function HomePage() {
 
       toast({
         title: "Muvaffaqiyatli bron qilindi!",
-        description: `${data.creditsUsed} kredit ishlatildi.`,
+        description: `${data.creditsUsed} kalit ishlatildi.`,
       });
       setSelectedGymForBooking(null);
       setSelectedTimeSlot(null);
@@ -239,7 +239,7 @@ export default function HomePage() {
 
       toast({
         title: "Bron bekor qilindi",
-        description: "Kreditingiz qaytarildi.",
+        description: "Kalitingiz qaytarildi.",
       });
     },
     onError: () => {
@@ -299,14 +299,14 @@ export default function HomePage() {
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Muvaffaqiyatli!",
-        description: `${data.credits} kredit sotib olindi. Jami: ${data.totalCredits} kredit`,
+        description: `${data.credits} kalit sotib olindi. Jami: ${data.totalCredits} kalit`,
       });
       setIsPurchaseDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
         title: "Xatolik",
-        description: error.message || "Kredit sotib olishda xatolik yuz berdi.",
+        description: error.message || "Kalit sotib olishda xatolik yuz berdi.",
         variant: "destructive",
       });
     },

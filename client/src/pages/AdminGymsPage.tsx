@@ -271,7 +271,7 @@ export default function AdminGymsPage() {
 
   const handleLocationLinkChange = (link: string) => {
     setGymForm({ ...gymForm, locationLink: link, address: link });
-    
+
     const coords = extractCoordinatesFromLink(link);
     if (coords) {
       setGymForm(prev => ({
@@ -393,7 +393,7 @@ export default function AdminGymsPage() {
       const data = await response.json();
       setGymForm({ ...gymForm, imageUrl: data.imageUrl });
       setSelectedImage(file);
-      
+
       toast({
         title: "Rasm yuklandi",
         description: "Rasm muvaffaqiyatli yuklandi",
@@ -420,14 +420,14 @@ export default function AdminGymsPage() {
   const handleDownloadQRCode = async (qrCode: string, gymName: string) => {
     try {
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrCode)}`;
-      
+
       // Fetch the image as a blob
       const response = await fetch(qrCodeUrl);
       const blob = await response.blob();
-      
+
       // Create blob URL
       const blobUrl = URL.createObjectURL(blob);
-      
+
       // Create and trigger download
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -435,10 +435,10 @@ export default function AdminGymsPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up blob URL
       setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-      
+
       toast({
         title: "Yuklab olindi",
         description: "QR kod muvaffaqiyatli yuklab olindi.",
@@ -536,7 +536,7 @@ export default function AdminGymsPage() {
               {selectedGym?.name}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedGym && (
             <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
               <div className="space-y-4">
@@ -548,7 +548,7 @@ export default function AdminGymsPage() {
                     </p>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Kategoriyalar</p>
@@ -713,7 +713,7 @@ export default function AdminGymsPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 {timeSlots.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     Vaqt slotlari yo'q
@@ -766,7 +766,7 @@ export default function AdminGymsPage() {
               {selectedGym?.name} uchun yangi vaqt sloti yarating
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="dayOfWeek">Kun *</Label>
@@ -856,7 +856,7 @@ export default function AdminGymsPage() {
               Yangi sport zal ma'lumotlarini kiriting
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">Zal nomi *</Label>
@@ -913,7 +913,7 @@ export default function AdminGymsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="credits">Kredit *</Label>
+                <Label htmlFor="credits">Kalit *</Label>
                 <Input
                   id="credits"
                   type="number"
@@ -1063,7 +1063,7 @@ export default function AdminGymsPage() {
               {createdGym?.name} uchun QR kod muvaffaqiyatli yaratildi
             </DialogDescription>
           </DialogHeader>
-          
+
           {createdGym && createdGym.qrCode && (
             <div className="space-y-4">
               <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
@@ -1119,7 +1119,7 @@ export default function AdminGymsPage() {
               {selectedGym?.name} uchun to'lov ma'lumotlarini kiriting
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">Joriy Qarz</p>

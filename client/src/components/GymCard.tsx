@@ -46,7 +46,7 @@ export default function GymCard({
           className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5"
           data-testid={`badge-credits-${id}`}
         >
-          {credits} ⭐
+          {credits} kalit
         </Badge>
       </div>
       <CardContent className="p-3 sm:p-4">

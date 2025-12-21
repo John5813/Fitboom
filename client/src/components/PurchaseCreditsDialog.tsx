@@ -56,14 +56,14 @@ export default function PurchaseCreditsDialog({
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Muvaffaqiyatli!",
-        description: `${credits} kredit hisobingizga qo'shildi`,
+        description: `${credits} kalit hisobingizga qo'shildi`,
       });
       onClose();
     },
     onError: (error: any) => {
       toast({
         title: "Xatolik",
-        description: error.message || "Kredit qo'shishda xatolik yuz berdi",
+        description: error.message || "Kalit qo'shishda xatolik yuz berdi",
         variant: "destructive",
       });
     },
@@ -77,7 +77,7 @@ export default function PurchaseCreditsDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl">Kredit sotib olish</DialogTitle>
+          <DialogTitle className="font-display text-2xl">Kalit sotib olish</DialogTitle>
           <DialogDescription>
             {hasActiveSubscription ? (
               <span className="flex items-center gap-1 text-sm">
@@ -93,7 +93,7 @@ export default function PurchaseCreditsDialog({
         {hasActiveSubscription && (
           <div className="bg-muted/50 rounded-md p-3 text-sm">
             <p className="text-muted-foreground">
-              Sizda hozirda {currentCredits} kredit bor. Yangi kreditlar mavjud {remainingDays} kun ichida ishlatilishi kerak.
+              Sizda hozirda {currentCredits} kalit bor. Yangi kalitlar mavjud {remainingDays} kun ichida ishlatilishi kerak.
             </p>
           </div>
         )}
@@ -117,7 +117,7 @@ export default function PurchaseCreditsDialog({
               )}
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="font-display font-bold text-2xl">{pkg.credits} kredit</p>
+                  <p className="font-display font-bold text-2xl">{pkg.credits} kalit</p>
                   <p className="text-muted-foreground text-sm">
                     {pkg.price.toLocaleString()} so'm
                   </p>
