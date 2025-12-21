@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Dumbbell, MapPin, Video, KeyRound, Clock, Users, QrCode, Shield, Star, TrendingUp } from "lucide-react";
 import heroImage from "@assets/814914041712414214qaranliqenerji_1765638608962.jpg";
@@ -17,7 +16,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           style={{ backgroundImage: `url(${heroImage})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black/80" />
-        
+
         <div className="relative z-10 text-center px-6 max-w-2xl">
           <h1 className="font-display font-bold text-4xl md:text-5xl text-white mb-4">
             FitBoom ga xush kelibsiz
@@ -25,7 +24,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           <p className="text-white/90 text-lg mb-8">
             Bir kredit tizimi orqali shaharning eng yaxshi sport zallariga kirish imkoniyati
           </p>
-          
+
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
               <Dumbbell className="w-8 h-8 text-primary mx-auto mb-2" />
@@ -46,7 +45,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               <p className="text-white text-sm">Qulay joylashuv</p>
             </div>
           </div>
-          
+
           <Button 
             onClick={onStart}
             size="lg"
