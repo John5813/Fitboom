@@ -23,24 +23,25 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
   const isExpired = remainingDays !== null && remainingDays <= 0;
 
   return (
-    <Card className="glass-card">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              isExpired ? 'bg-destructive/10' : isExpiringSoon ? 'bg-yellow-500/10' : 'bg-primary/10 dark:bg-primary/20'
-            }`}>
-              {isExpired ? (
-                <AlertTriangle className="w-6 h-6 text-destructive" />
-              ) : isExpiringSoon ? (
-                <AlertTriangle className="w-6 h-6 text-yellow-500" />
-              ) : (
-                <KeyRound className="w-6 h-6 text-primary" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Kalitlar soni</p>
-              <p className="font-display font-bold text-2xl" data-testid="credit-balance">{credits}</p>
+    <Card className="glass-card border-2 border-transparent bg-gradient-to-r from-yellow-400 via-green-400 to-green-500 p-[2px]">
+      <div className="bg-background rounded-[calc(0.5rem-2px)]">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isExpired ? 'bg-destructive/10' : isExpiringSoon ? 'bg-yellow-500/10' : 'bg-gradient-to-br from-yellow-400 to-green-500 bg-opacity-10'
+              }`}>
+                {isExpired ? (
+                  <AlertTriangle className="w-6 h-6 text-destructive" />
+                ) : isExpiringSoon ? (
+                  <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                ) : (
+                  <KeyRound className="w-6 h-6 text-yellow-600" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Kalitlar soni</p>
+                <p className="font-display font-bold text-2xl bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent" data-testid="credit-balance">{credits}</p>
               {remainingDays !== null && credits > 0 && (
                 <div className={`flex items-center gap-1 mt-1 ${
                   isExpired ? 'text-destructive' : isExpiringSoon ? 'text-yellow-600 dark:text-yellow-500' : ''
@@ -63,11 +64,12 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
             </div>
           </div>
           <Button onClick={onPurchase} variant={isExpired || isExpiringSoon ? "default" : "outline"} size="sm" className="hover-elevate active-elevate-2">
-            <Plus className="w-4 h-4 mr-2" />
+            <KeyRound className="w-4 h-4 mr-2" />
             {isExpired ? "Yangilash" : "To'ldirish"}
           </Button>
         </div>
-      </CardContent>
+        </CardContent>
+      </div>
     </Card>
   );
 }
