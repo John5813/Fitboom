@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Settings, User, ShoppingCart, KeyRound, QrCode } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, ShoppingCart, KeyRound, QrCode, Check } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -32,6 +32,7 @@ interface TimeSlot {
   endTime: string;
   dayOfWeek: string;
   availableSpots: number;
+  capacity: number;
 }
 
 // Function to calculate distance between two lat/lng points
@@ -1072,90 +1073,151 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Time Slot Selection Dialog */}
+      {/* Time Slot Selection Dialog - Modern */}
       <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
         <DialogContent className="max-w-md" data-testid="dialog-select-time-slot">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Vaqtni tanlang</DialogTitle>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Vaqtni tanlang
+            </DialogTitle>
             <DialogDescription>
-              {selectedGymForBooking?.name} uchun vaqt slotini tanlang
+              {selectedGymForBooking?.name}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Location Button */}
             {selectedGymForBooking && (selectedGymForBooking.latitude && selectedGymForBooking.longitude || selectedGymForBooking.address) && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Manzil</p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (selectedGymForBooking.latitude && selectedGymForBooking.longitude) {
-                      window.open(`https://www.google.com/maps?q=${selectedGymForBooking.latitude},${selectedGymForBooking.longitude}`, '_blank');
-                    } else if (selectedGymForBooking.address) {
-                      window.open(selectedGymForBooking.address, '_blank');
-                    }
-                  }}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Haritada ko'rish
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedGymForBooking.latitude && selectedGymForBooking.longitude) {
+                    window.open(`https://www.google.com/maps?q=${selectedGymForBooking.latitude},${selectedGymForBooking.longitude}`, '_blank');
+                  } else if (selectedGymForBooking.address) {
+                    window.open(selectedGymForBooking.address, '_blank');
+                  }
+                }}
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Haritada ko'rish
+              </Button>
             )}
+
+            {/* Time Slots Grid */}
             {timeSlotsData?.timeSlots && timeSlotsData.timeSlots.length > 0 ? (
-              <div className="space-y-2">
-                {timeSlotsData.timeSlots
-                  .filter(slot => slot.availableSpots > 0)
-                  .map((slot) => (
-                    <Card
-                      key={slot.id}
-                      className={`cursor-pointer transition-all ${
-                        selectedTimeSlot?.id === slot.id
-                          ? 'border-primary bg-primary/5'
-                          : 'hover:border-primary/50'
-                      }`}
-                      onClick={() => setSelectedTimeSlot(slot)}
-                      data-testid={`card-time-slot-${slot.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Clock className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">
-                                {slot.dayOfWeek} • {slot.startTime} - {slot.endTime}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {slot.availableSpots} joy mavjud
-                              </p>
-                            </div>
-                          </div>
-                          {selectedTimeSlot?.id === slot.id && (
-                            <Badge>Tanlandi</Badge>
-                          )}
+              (() => {
+                const availableSlots = timeSlotsData.timeSlots.filter(slot => slot.availableSpots > 0);
+                const dayOrder = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
+                const dayShort: Record<string, string> = {
+                  'Dushanba': 'Du', 'Seshanba': 'Se', 'Chorshanba': 'Ch',
+                  'Payshanba': 'Pa', 'Juma': 'Ju', 'Shanba': 'Sh', 'Yakshanba': 'Ya'
+                };
+                const groupedByDay = availableSlots.reduce((acc, slot) => {
+                  if (!acc[slot.dayOfWeek]) acc[slot.dayOfWeek] = [];
+                  acc[slot.dayOfWeek].push(slot);
+                  return acc;
+                }, {} as Record<string, TimeSlot[]>);
+                const sortedDays = Object.keys(groupedByDay).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+
+                return (
+                  <div className="space-y-3">
+                    {sortedDays.map((day) => (
+                      <div key={day} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs font-medium">
+                            {dayShort[day] || day}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">{day}</span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {groupedByDay[day].map((slot) => {
+                            const isSelected = selectedTimeSlot?.id === slot.id;
+                            const spotsPercent = (slot.availableSpots / slot.capacity) * 100;
+                            return (
+                              <button
+                                key={slot.id}
+                                type="button"
+                                className={`relative w-full p-3 rounded-lg border-2 text-left transition-all ${
+                                  isSelected
+                                    ? 'border-primary bg-primary/10 shadow-sm'
+                                    : 'border-border hover:border-primary/50 bg-card'
+                                }`}
+                                onClick={() => setSelectedTimeSlot(slot)}
+                                data-testid={`card-time-slot-${slot.id}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                    }`}>
+                                      <Clock className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-sm">
+                                        {slot.startTime} - {slot.endTime}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                          <div 
+                                            className={`h-full rounded-full ${
+                                              spotsPercent > 50 ? 'bg-green-500' : spotsPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
+                                            }`}
+                                            style={{ width: `${spotsPercent}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">
+                                          {slot.availableSpots} joy
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {isSelected && (
+                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                                      <Check className="h-4 w-4 text-primary-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
             ) : (
-              <div className="text-center py-8">
-                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">
-                  Bu zal uchun vaqt slotlari yo'q. Vaqtsiz bron qilishingiz mumkin.
+              <div className="text-center py-6 bg-muted/50 rounded-lg">
+                <Clock className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">
+                  Vaqt slotlari yo'q. Vaqtsiz bron qilishingiz mumkin.
                 </p>
               </div>
             )}
 
-            <div className="flex gap-3 pt-4">
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
               <Button
                 onClick={handleConfirmBooking}
                 disabled={bookGymMutation.isPending}
                 className="flex-1"
                 data-testid="button-confirm-booking"
               >
-                {bookGymMutation.isPending ? 'Yuklanmoqda...' : 'Tasdiqlash'}
+                {bookGymMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Yuklanmoqda...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    Tasdiqlash
+                  </span>
+                )}
               </Button>
               <Button
                 variant="outline"
@@ -1163,10 +1225,9 @@ export default function HomePage() {
                   setSelectedGymForBooking(null);
                   setSelectedTimeSlot(null);
                 }}
-                className="flex-1"
                 data-testid="button-cancel-booking"
               >
-                Bekor qilish
+                Bekor
               </Button>
             </div>
           </div>
