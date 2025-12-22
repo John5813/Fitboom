@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Settings, User, ShoppingCart, KeyRound } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, ShoppingCart, KeyRound, QrCode } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -720,21 +720,60 @@ export default function HomePage() {
 
       {/* Scanner Tab */}
       {activeTab === 'scanner' && (
-        <div className="h-screen bg-background">
-          <div className="p-4 pb-24">
-            <h1 className="font-display font-bold text-2xl mb-4">QR Kod Skaner</h1>
-            <p className="text-muted-foreground mb-6">
-              Zalga kirish uchun QR kodni skanerlang
-            </p>
-            <div className="rounded-lg overflow-hidden">
-              <QRScanner
-                isOpen={true}
-                onClose={() => setActiveTab('home')}
-                onScan={handleQRScan}
-                isDialog={false}
-              />
+        <div className="p-4 pb-24">
+          <h1 className="font-display font-bold text-2xl mb-4">QR Kod Skaner</h1>
+          
+          {activeBookings.length > 0 ? (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Qaysi bron uchun QR kodni skanerlash kerak? Bronni tanlang:
+              </p>
+              <div className="space-y-3">
+                {activeBookings.map((booking) => {
+                  const gym = gyms.find(g => g.id === booking.gymId);
+                  return (
+                    <Card 
+                      key={booking.id} 
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => handleScanQR(booking.id)}
+                      data-testid={`card-scanner-booking-${booking.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
+                            alt={gym?.name}
+                            className="w-16 h-16 rounded-md object-cover"
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-semibold">{gym?.name || "Noma'lum"}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })} • {booking.time}
+                            </p>
+                          </div>
+                          <QrCode className="w-6 h-6 text-primary" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-12">
+              <QrCode className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                Hozircha faol bronlar yo'q. Avval zalga bron qiling.
+              </p>
+              <Button 
+                className="mt-4" 
+                onClick={() => setActiveTab('gyms')}
+                data-testid="button-go-to-gyms"
+              >
+                Zallarni ko'rish
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
