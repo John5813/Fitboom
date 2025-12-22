@@ -1075,7 +1075,7 @@ export default function HomePage() {
 
       {/* Time Slot Selection Dialog - Modern */}
       <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
-        <DialogContent className="max-w-md" data-testid="dialog-select-time-slot">
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col" data-testid="dialog-select-time-slot">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
@@ -1086,7 +1086,7 @@ export default function HomePage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1 pr-2">
             {/* Location Button */}
             {selectedGymForBooking && (selectedGymForBooking.latitude && selectedGymForBooking.longitude || selectedGymForBooking.address) && (
               <Button
@@ -1123,70 +1123,94 @@ export default function HomePage() {
                 }, {} as Record<string, TimeSlot[]>);
                 const sortedDays = Object.keys(groupedByDay).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
 
+                // Calculate dates for each day of the week
+                const today = new Date();
+                const currentDayIndex = (today.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+                const getDayDate = (dayName: string) => {
+                  const targetDayIndex = dayOrder.indexOf(dayName);
+                  const daysUntilTarget = (targetDayIndex - currentDayIndex + 7) % 7 || 7;
+                  const targetDate = new Date(today);
+                  targetDate.setDate(today.getDate() + daysUntilTarget);
+                  return targetDate;
+                };
+
                 return (
                   <div className="space-y-3">
-                    {sortedDays.map((day) => (
-                      <div key={day} className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs font-medium">
-                            {dayShort[day] || day}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">{day}</span>
-                        </div>
-                        <div className="grid grid-cols-1 gap-2">
-                          {groupedByDay[day].map((slot) => {
-                            const isSelected = selectedTimeSlot?.id === slot.id;
-                            const spotsPercent = (slot.availableSpots / slot.capacity) * 100;
-                            return (
-                              <button
-                                key={slot.id}
-                                type="button"
-                                className={`relative w-full p-3 rounded-lg border-2 text-left transition-all ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/10 shadow-sm'
-                                    : 'border-border hover:border-primary/50 bg-card'
-                                }`}
-                                onClick={() => setSelectedTimeSlot(slot)}
-                                data-testid={`card-time-slot-${slot.id}`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                                    }`}>
-                                      <Clock className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                      <p className="font-semibold text-sm">
-                                        {slot.startTime} - {slot.endTime}
-                                      </p>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                                          <div 
-                                            className={`h-full rounded-full ${
-                                              spotsPercent > 50 ? 'bg-green-500' : spotsPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
-                                            }`}
-                                            style={{ width: `${spotsPercent}%` }}
-                                          />
+                    {sortedDays.map((day) => {
+                      const dayDate = getDayDate(day);
+                      const formattedDate = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+                      const displayDate = dayDate.toLocaleDateString('uz-UZ', { 
+                        day: '2-digit', 
+                        month: 'long',
+                        year: 'numeric'
+                      });
+                      
+                      return (
+                        <div key={day} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs font-medium">
+                              {dayShort[day] || day}
+                            </Badge>
+                            <span className="text-sm font-medium">{day}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">{displayDate}</span>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2">
+                            {groupedByDay[day].map((slot) => {
+                              const isSelected = selectedTimeSlot?.id === slot.id;
+                              const spotsPercent = (slot.availableSpots / slot.capacity) * 100;
+                              return (
+                                <button
+                                  key={slot.id}
+                                  type="button"
+                                  className={`relative w-full p-3 rounded-lg border-2 text-left transition-all ${
+                                    isSelected
+                                      ? 'border-primary bg-primary/10 shadow-sm'
+                                      : 'border-border hover:border-primary/50 bg-card'
+                                  }`}
+                                  onClick={() => setSelectedTimeSlot(slot)}
+                                  data-testid={`card-time-slot-${slot.id}`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                      }`}>
+                                        <Clock className="h-5 w-5" />
+                                      </div>
+                                      <div>
+                                        <p className="font-semibold text-sm">
+                                          {slot.startTime} - {slot.endTime}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                            <div 
+                                              className={`h-full rounded-full ${
+                                                spotsPercent > 50 ? 'bg-green-500' : spotsPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
+                                              }`}
+                                              style={{ width: `${spotsPercent}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-xs text-muted-foreground">
+                                            {slot.availableSpots} joy
+                                          </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                          {slot.availableSpots} joy
-                                        </span>
                                       </div>
                                     </div>
+                                    {isSelected && (
+                                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
+                                    )}
                                   </div>
-                                  {isSelected && (
-                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                                      <Check className="h-4 w-4 text-primary-foreground" />
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 );
               })()
@@ -1199,37 +1223,40 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                onClick={handleConfirmBooking}
-                disabled={bookGymMutation.isPending}
-                className="flex-1"
-                data-testid="button-confirm-booking"
-              >
-                {bookGymMutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Yuklanmoqda...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Check className="h-4 w-4" />
-                    Tasdiqlash
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedGymForBooking(null);
-                  setSelectedTimeSlot(null);
-                }}
-                data-testid="button-cancel-booking"
-              >
-                Bekor
-              </Button>
             </div>
+
+          {/* Action Buttons - Fixed at bottom */}
+          <div className="flex gap-3 pt-4 border-t mt-4">
+            <Button
+              onClick={handleConfirmBooking}
+              disabled={bookGymMutation.isPending}
+              className="flex-1"
+              data-testid="button-confirm-booking"
+            >
+              {bookGymMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Yuklanmoqda...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Tasdiqlash
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedGymForBooking(null);
+                setSelectedTimeSlot(null);
+              }}
+              data-testid="button-cancel-booking"
+            >
+              Bekor
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
