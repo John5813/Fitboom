@@ -74,6 +74,41 @@ export default function AdminGymsPage() {
     capacity: '',
   });
 
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [bulkTimeSlot, setBulkTimeSlot] = useState({
+    startTime: '09:00',
+    endTime: '22:00',
+    capacity: '20',
+  });
+
+  const WEEKDAYS = [
+    { short: 'Du', full: 'Dushanba' },
+    { short: 'Se', full: 'Seshanba' },
+    { short: 'Ch', full: 'Chorshanba' },
+    { short: 'Pa', full: 'Payshanba' },
+    { short: 'Ju', full: 'Juma' },
+    { short: 'Sh', full: 'Shanba' },
+    { short: 'Ya', full: 'Yakshanba' },
+  ];
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
+  const selectAllWeekdays = () => {
+    setSelectedDays(['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma']);
+  };
+
+  const selectAllDays = () => {
+    setSelectedDays(WEEKDAYS.map(d => d.full));
+  };
+
+  const clearDays = () => {
+    setSelectedDays([]);
+  };
+
   const { data: gymsData, isLoading } = useQuery<{ gyms: Gym[] }>({
     queryKey: ['/api/gyms'],
   });
@@ -340,6 +375,56 @@ export default function AdminGymsPage() {
       capacity: capacity,
       availableSpots: capacity,
     });
+  };
+
+  const handleBulkCreateTimeSlots = async () => {
+    if (selectedDays.length === 0) {
+      toast({
+        title: "Kun tanlanmagan",
+        description: "Kamida bitta kunni tanlang.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!bulkTimeSlot.startTime || !bulkTimeSlot.endTime || !bulkTimeSlot.capacity) {
+      toast({
+        title: "Ma'lumot to'liq emas",
+        description: "Vaqt va sig'imni kiriting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedGym) {
+      toast({
+        title: "Xatolik",
+        description: "Zal tanlanmagan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const capacity = parseInt(bulkTimeSlot.capacity);
+    
+    for (const day of selectedDays) {
+      await createTimeSlotMutation.mutateAsync({
+        gymId: selectedGym.id,
+        dayOfWeek: day,
+        startTime: bulkTimeSlot.startTime,
+        endTime: bulkTimeSlot.endTime,
+        capacity: capacity,
+        availableSpots: capacity,
+      });
+    }
+
+    toast({
+      title: "Vaqt slotlari qo'shildi",
+      description: `${selectedDays.length} kun uchun vaqt slotlari qo'shildi.`,
+    });
+
+    setSelectedDays([]);
+    setIsTimeSlotDialogOpen(false);
   };
 
   const handleDeleteTimeSlot = (id: string) => {
@@ -757,90 +842,132 @@ export default function AdminGymsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Time Slot Dialog */}
-      <Dialog open={isTimeSlotDialogOpen} onOpenChange={setIsTimeSlotDialogOpen}>
+      {/* Time Slot Dialog - Simplified */}
+      <Dialog open={isTimeSlotDialogOpen} onOpenChange={(open) => {
+        setIsTimeSlotDialogOpen(open);
+        if (!open) setSelectedDays([]);
+      }}>
         <DialogContent className="max-w-md" data-testid="dialog-create-time-slot">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Vaqt Sloti Qo'shish</DialogTitle>
             <DialogDescription>
-              {selectedGym?.name} uchun yangi vaqt sloti yarating
+              {selectedGym?.name} uchun ish vaqtlarini belgilang
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Weekday Selection */}
             <div>
-              <Label htmlFor="dayOfWeek">Kun *</Label>
-              <Select
-                value={timeSlotForm.dayOfWeek}
-                onValueChange={(value) => setTimeSlotForm({ ...timeSlotForm, dayOfWeek: value })}
-              >
-                <SelectTrigger id="dayOfWeek" data-testid="select-day-of-week">
-                  <SelectValue placeholder="Kunni tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dushanba">Dushanba</SelectItem>
-                  <SelectItem value="Seshanba">Seshanba</SelectItem>
-                  <SelectItem value="Chorshanba">Chorshanba</SelectItem>
-                  <SelectItem value="Payshanba">Payshanba</SelectItem>
-                  <SelectItem value="Juma">Juma</SelectItem>
-                  <SelectItem value="Shanba">Shanba</SelectItem>
-                  <SelectItem value="Yakshanba">Yakshanba</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="mb-3 block">Kunlarni tanlang</Label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {WEEKDAYS.map((day) => (
+                  <Button
+                    key={day.full}
+                    type="button"
+                    variant={selectedDays.includes(day.full) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleDay(day.full)}
+                    className="min-w-[48px]"
+                    data-testid={`toggle-day-${day.short}`}
+                  >
+                    {day.short}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={selectAllWeekdays}
+                  className="text-xs"
+                  data-testid="button-select-weekdays"
+                >
+                  Du-Ju
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={selectAllDays}
+                  className="text-xs"
+                  data-testid="button-select-all-days"
+                >
+                  Hammasi
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearDays}
+                  className="text-xs"
+                  data-testid="button-clear-days"
+                >
+                  Tozalash
+                </Button>
+              </div>
+              {selectedDays.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tanlangan: {selectedDays.join(', ')}
+                </p>
+              )}
             </div>
 
+            {/* Time inputs */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="startTime">Boshlanish vaqti *</Label>
+                <Label htmlFor="bulkStartTime">Ochilish vaqti</Label>
                 <Input
-                  id="startTime"
+                  id="bulkStartTime"
                   type="time"
-                  value={timeSlotForm.startTime}
-                  onChange={(e) => setTimeSlotForm({ ...timeSlotForm, startTime: e.target.value })}
-                  data-testid="input-start-time"
+                  value={bulkTimeSlot.startTime}
+                  onChange={(e) => setBulkTimeSlot({ ...bulkTimeSlot, startTime: e.target.value })}
+                  data-testid="input-bulk-start-time"
                 />
               </div>
               <div>
-                <Label htmlFor="endTime">Tugash vaqti *</Label>
+                <Label htmlFor="bulkEndTime">Yopilish vaqti</Label>
                 <Input
-                  id="endTime"
+                  id="bulkEndTime"
                   type="time"
-                  value={timeSlotForm.endTime}
-                  onChange={(e) => setTimeSlotForm({ ...timeSlotForm, endTime: e.target.value })}
-                  data-testid="input-end-time"
+                  value={bulkTimeSlot.endTime}
+                  onChange={(e) => setBulkTimeSlot({ ...bulkTimeSlot, endTime: e.target.value })}
+                  data-testid="input-bulk-end-time"
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="capacity">Sig'im (kishi) *</Label>
+              <Label htmlFor="bulkCapacity">Sig'im (kishi)</Label>
               <Input
-                id="capacity"
+                id="bulkCapacity"
                 type="number"
                 min="1"
-                value={timeSlotForm.capacity}
-                onChange={(e) => setTimeSlotForm({ ...timeSlotForm, capacity: e.target.value })}
+                value={bulkTimeSlot.capacity}
+                onChange={(e) => setBulkTimeSlot({ ...bulkTimeSlot, capacity: e.target.value })}
                 placeholder="Misol: 20"
-                data-testid="input-capacity"
+                data-testid="input-bulk-capacity"
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-2">
               <Button
-                onClick={handleCreateTimeSlot}
-                disabled={createTimeSlotMutation.isPending}
+                onClick={handleBulkCreateTimeSlots}
+                disabled={createTimeSlotMutation.isPending || selectedDays.length === 0}
                 className="flex-1"
-                data-testid="button-submit-time-slot"
+                data-testid="button-submit-time-slots"
               >
-                {createTimeSlotMutation.isPending ? 'Yuklanmoqda...' : "Qo'shish"}
+                {createTimeSlotMutation.isPending ? 'Yuklanmoqda...' : `${selectedDays.length} kun uchun qo'shish`}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setIsTimeSlotDialogOpen(false)}
-                className="flex-1"
+                onClick={() => {
+                  setIsTimeSlotDialogOpen(false);
+                  setSelectedDays([]);
+                }}
                 data-testid="button-cancel-time-slot"
               >
-                Bekor qilish
+                Bekor
               </Button>
             </div>
           </div>
