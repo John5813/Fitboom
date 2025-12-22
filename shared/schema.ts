@@ -112,6 +112,10 @@ export const bookings = pgTable("bookings", {
   time: text("time").notNull(),
   qrCode: text("qr_code").notNull(),
   isCompleted: boolean("is_completed").notNull().default(false),
+  timeSlotId: varchar("time_slot_id"),
+  scheduledStartTime: text("scheduled_start_time"),
+  scheduledEndTime: text("scheduled_end_time"),
+  status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
