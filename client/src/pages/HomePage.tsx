@@ -359,12 +359,7 @@ export default function HomePage() {
         setSuccessGymName(gymName);
         setShowSuccessAnimation(true);
         
-        // Hide animation after 4 seconds
-        setTimeout(() => {
-          setShowSuccessAnimation(false);
-          setSelectedBooking(null);
-        }, 4000);
-        
+        // Animation stays until user clicks the confirm button
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       } else {
         toast({
@@ -817,51 +812,179 @@ export default function HomePage() {
 
       {/* Success Animation Overlay */}
       {showSuccessAnimation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="text-center space-y-6 p-8">
-            {/* Unlocking Key Animation */}
-            <div className="relative w-32 h-32 mx-auto">
-              {/* Lock */}
-              <div className="absolute inset-0 flex items-center justify-center animate-pulse">
-                <div className="w-20 h-24 border-8 border-yellow-400 rounded-lg relative">
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-12 h-12 border-8 border-yellow-400 rounded-full border-b-transparent"></div>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden">
+          {/* Animated background particles */}
+          <div className="absolute inset-0 overflow-hidden">
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 opacity-20"
+                style={{
+                  width: `${Math.random() * 10 + 5}px`,
+                  height: `${Math.random() * 10 + 5}px`,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 2}s`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Glowing rings */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-80 h-80 rounded-full border border-emerald-500/20 animate-ping" style={{ animationDuration: '3s' }} />
+            <div className="absolute w-64 h-64 rounded-full border border-cyan-500/30 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+            <div className="absolute w-48 h-48 rounded-full border border-emerald-400/40 animate-ping" style={{ animationDuration: '2s', animationDelay: '1s' }} />
+          </div>
+
+          <div className="relative text-center space-y-8 p-8 max-w-md mx-auto">
+            {/* Main success icon with glow */}
+            <div className="relative mx-auto" style={{ width: '160px', height: '160px' }}>
+              {/* Outer glow ring */}
+              <div 
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 opacity-30 blur-xl"
+                style={{ animation: 'pulse 2s ease-in-out infinite' }}
+              />
               
-              {/* Key rotating and unlocking */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <KeyRound className="w-24 h-24 text-yellow-400 animate-[spin_0.5s_ease-in-out]" style={{
-                  animation: 'spin 0.5s ease-in-out, pulse 1.5s ease-in-out infinite'
+              {/* Rotating gradient border */}
+              <div 
+                className="absolute inset-2 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500"
+                style={{ 
+                  animation: 'spin 3s linear infinite',
+                  padding: '3px'
+                }}
+              >
+                <div className="w-full h-full rounded-full bg-gray-900" />
+              </div>
+
+              {/* Key icon container */}
+              <div 
+                className="absolute inset-4 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-2xl"
+                style={{ 
+                  animation: 'bounceIn 0.6s ease-out',
+                  boxShadow: '0 0 60px rgba(16, 185, 129, 0.5), 0 0 100px rgba(6, 182, 212, 0.3)'
+                }}
+              >
+                <KeyRound className="w-16 h-16 text-white drop-shadow-lg" style={{
+                  animation: 'unlockKey 0.8s ease-out forwards'
                 }} />
               </div>
 
-              {/* Success checkmark that appears after unlock */}
-              <div className="absolute inset-0 flex items-center justify-center animate-[scale-in_0.3s_ease-out_0.5s_both]">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              {/* Checkmark overlay */}
+              <div 
+                className="absolute inset-4 rounded-full flex items-center justify-center"
+                style={{ animation: 'fadeInScale 0.4s ease-out 0.8s both' }}
+              >
+                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" style={{
+                      strokeDasharray: 30,
+                      strokeDashoffset: 30,
+                      animation: 'drawCheck 0.5s ease-out 1s forwards'
+                    }} />
                   </svg>
                 </div>
               </div>
+
+              {/* Sparkles */}
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-2 h-2 bg-white rounded-full"
+                  style={{
+                    top: '50%',
+                    left: '50%',
+                    animation: `sparkle 1s ease-out ${0.5 + i * 0.1}s forwards`,
+                    transform: `rotate(${i * 45}deg) translateX(80px)`,
+                    opacity: 0
+                  }}
+                />
+              ))}
             </div>
 
-            {/* Gym Name */}
-            <h1 className="text-4xl font-display font-bold text-yellow-400 animate-[fade-in_0.5s_ease-out_0.3s_both]">
-              {successGymName}
-            </h1>
-
-            {/* Success Message */}
-            <p className="text-2xl font-semibold text-white animate-[fade-in_0.5s_ease-out_0.5s_both]">
-              MUVAFFAQIYATLI KIRDINGIZ
-            </p>
-
-            {/* Warning message for gym admin */}
-            <div className="mt-8 p-4 bg-yellow-500/20 border-2 border-yellow-400 rounded-lg animate-[fade-in_0.5s_ease-out_0.7s_both]">
-              <p className="text-yellow-200 text-sm font-medium">
-                ⚠️ Bu ekranni zal adminiga ko'rsating
+            {/* Success text with gradient */}
+            <div style={{ animation: 'slideUp 0.6s ease-out 0.3s both' }}>
+              <h1 className="text-5xl font-display font-bold bg-gradient-to-r from-emerald-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent mb-2">
+                KIRISH OCHILDI
+              </h1>
+              <p className="text-xl text-gray-300 font-medium">
+                {successGymName}
               </p>
             </div>
+
+            {/* Animated success message */}
+            <div 
+              className="flex items-center justify-center gap-2 text-emerald-400"
+              style={{ animation: 'slideUp 0.6s ease-out 0.5s both' }}
+            >
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-lg font-semibold tracking-wide">MUVAFFAQIYATLI</span>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+
+            {/* Admin verification button - stays until clicked */}
+            <Button
+              onClick={() => {
+                setShowSuccessAnimation(false);
+                setSelectedBooking(null);
+              }}
+              className="mt-8 px-8 py-6 text-lg font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white rounded-xl shadow-2xl border-2 border-amber-400/50"
+              style={{ 
+                animation: 'pulseGlow 2s ease-in-out infinite, slideUp 0.6s ease-out 0.7s both',
+                boxShadow: '0 0 30px rgba(245, 158, 11, 0.4), 0 10px 40px rgba(0,0,0,0.3)'
+              }}
+              data-testid="button-confirm-admin"
+            >
+              <span className="flex items-center gap-3">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                ZAL ADMINI TASDIQLADI
+              </span>
+            </Button>
+
+            <p className="text-amber-200/80 text-sm animate-pulse">
+              Adminning tasdiqlashini kuting va tugmani bosing
+            </p>
           </div>
+
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes float {
+              0%, 100% { transform: translateY(0) rotate(0deg); }
+              50% { transform: translateY(-20px) rotate(180deg); }
+            }
+            @keyframes bounceIn {
+              0% { transform: scale(0); opacity: 0; }
+              50% { transform: scale(1.2); }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes unlockKey {
+              0% { transform: rotate(-45deg) scale(0.8); }
+              50% { transform: rotate(15deg) scale(1.1); }
+              100% { transform: rotate(0deg) scale(1); }
+            }
+            @keyframes fadeInScale {
+              0% { transform: scale(0); opacity: 0; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes drawCheck {
+              to { stroke-dashoffset: 0; }
+            }
+            @keyframes slideUp {
+              0% { transform: translateY(30px); opacity: 0; }
+              100% { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes sparkle {
+              0% { transform: rotate(var(--rotation)) translateX(40px) scale(0); opacity: 1; }
+              100% { transform: rotate(var(--rotation)) translateX(100px) scale(1); opacity: 0; }
+            }
+            @keyframes pulseGlow {
+              0%, 100% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.4), 0 10px 40px rgba(0,0,0,0.3); }
+              50% { box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), 0 10px 50px rgba(0,0,0,0.4); }
+            }
+          `}</style>
         </div>
       )}
 
