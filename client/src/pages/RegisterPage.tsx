@@ -18,7 +18,7 @@ import { z } from "zod";
 
 const completeProfileSchema = z.object({
   name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
-  age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
+  age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(120, "Yosh 120 dan oshmasligi kerak"),
   gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
 });
 
@@ -253,7 +253,12 @@ export default function RegisterPage() {
                         {...field}
                         type="number"
                         placeholder="Yoshingizni kiriting"
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value ? parseInt(value) : 0);
+                        }}
+                        min={10}
+                        max={120}
                         data-testid="input-age"
                       />
                     </FormControl>
