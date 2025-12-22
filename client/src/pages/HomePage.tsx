@@ -57,6 +57,8 @@ export default function HomePage() {
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successGymName, setSuccessGymName] = useState<string>("");
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -350,10 +352,19 @@ export default function HomePage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        toast({
-          title: "Muvaffaqiyatli!",
-          description: result.message,
-        });
+        setIsScannerOpen(false);
+        
+        // Get gym name from result or bookings
+        const gymName = result.gym?.name || gyms.find(g => g.id === selectedBooking.gymId)?.name || "Zal";
+        setSuccessGymName(gymName);
+        setShowSuccessAnimation(true);
+        
+        // Hide animation after 4 seconds
+        setTimeout(() => {
+          setShowSuccessAnimation(false);
+          setSelectedBooking(null);
+        }, 4000);
+        
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       } else {
         toast({
@@ -361,6 +372,8 @@ export default function HomePage() {
           description: result.message,
           variant: "destructive",
         });
+        setIsScannerOpen(false);
+        setSelectedBooking(null);
       }
     } catch (error) {
       toast({
@@ -368,10 +381,9 @@ export default function HomePage() {
         description: "QR kod tekshirishda xatolik yuz berdi",
         variant: "destructive",
       });
+      setIsScannerOpen(false);
+      setSelectedBooking(null);
     }
-
-    setIsScannerOpen(false);
-    setSelectedBooking(null);
   };
 
   const categories = CATEGORIES.map(c => c.name);
@@ -802,6 +814,57 @@ export default function HomePage() {
         onScan={handleQRScan}
         gymId={selectedBooking?.gymId} // Pass gymId to QRScanner
       />
+
+      {/* Success Animation Overlay */}
+      {showSuccessAnimation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="text-center space-y-6 p-8">
+            {/* Unlocking Key Animation */}
+            <div className="relative w-32 h-32 mx-auto">
+              {/* Lock */}
+              <div className="absolute inset-0 flex items-center justify-center animate-pulse">
+                <div className="w-20 h-24 border-8 border-yellow-400 rounded-lg relative">
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-12 h-12 border-8 border-yellow-400 rounded-full border-b-transparent"></div>
+                </div>
+              </div>
+              
+              {/* Key rotating and unlocking */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <KeyRound className="w-24 h-24 text-yellow-400 animate-[spin_0.5s_ease-in-out]" style={{
+                  animation: 'spin 0.5s ease-in-out, pulse 1.5s ease-in-out infinite'
+                }} />
+              </div>
+
+              {/* Success checkmark that appears after unlock */}
+              <div className="absolute inset-0 flex items-center justify-center animate-[scale-in_0.3s_ease-out_0.5s_both]">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Gym Name */}
+            <h1 className="text-4xl font-display font-bold text-yellow-400 animate-[fade-in_0.5s_ease-out_0.3s_both]">
+              {successGymName}
+            </h1>
+
+            {/* Success Message */}
+            <p className="text-2xl font-semibold text-white animate-[fade-in_0.5s_ease-out_0.5s_both]">
+              MUVAFFAQIYATLI KIRDINGIZ
+            </p>
+
+            {/* Warning message for gym admin */}
+            <div className="mt-8 p-4 bg-yellow-500/20 border-2 border-yellow-400 rounded-lg animate-[fade-in_0.5s_ease-out_0.7s_both]">
+              <p className="text-yellow-200 text-sm font-medium">
+                ⚠️ Bu ekranni zal adminiga ko'rsating
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Time Slot Selection Dialog */}
       <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
         <DialogContent className="max-w-md" data-testid="dialog-select-time-slot">
