@@ -59,6 +59,7 @@ export default function HomePage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successGymName, setSuccessGymName] = useState<string>("");
+  const [showVisitHistory, setShowVisitHistory] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -180,6 +181,9 @@ export default function HomePage() {
   
   // Filter active bookings (not completed)
   const activeBookings = bookings.filter(b => !b.isCompleted);
+  
+  // Filter completed bookings (visit history)
+  const completedBookings = bookings.filter(b => b.isCompleted);
 
   const filteredGyms = gymsWithDistance.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategory);
@@ -696,7 +700,22 @@ export default function HomePage() {
       {/* Bookings Tab */}
       {activeTab === 'bookings' && (
         <div className="p-4 space-y-6">
-          <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowVisitHistory(true)}
+              className="flex items-center gap-2"
+              data-testid="button-visit-history"
+            >
+              <Clock className="w-4 h-4" />
+              Zallar tarixi
+              {completedBookings.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{completedBookings.length}</Badge>
+              )}
+            </Button>
+          </div>
 
           {activeBookings.length > 0 ? (
             <div className="space-y-3">
@@ -724,6 +743,60 @@ export default function HomePage() {
           )}
         </div>
       )}
+
+      {/* Visit History Dialog */}
+      <Dialog open={showVisitHistory} onOpenChange={setShowVisitHistory}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto" data-testid="dialog-visit-history">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Zallar tarixi
+            </DialogTitle>
+            <DialogDescription>
+              Siz tashrif buyurgan zallar ro'yxati
+            </DialogDescription>
+          </DialogHeader>
+
+          {completedBookings.length > 0 ? (
+            <div className="space-y-3 mt-4">
+              {completedBookings.map((booking) => {
+                const gym = gyms.find(g => g.id === booking.gymId);
+                const bookingDate = new Date(booking.date);
+                return (
+                  <div
+                    key={booking.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
+                    data-testid={`visit-history-item-${booking.id}`}
+                  >
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img
+                        src={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
+                        alt={gym?.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold truncate">{gym?.name || "Noma'lum zal"}</h4>
+                      <p className="text-sm text-muted-foreground truncate">{gym?.address || ""}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-medium">
+                        {bookingDate.toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{booking.time}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Clock className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">Hali tashrif buyurilgan zallar yo'q</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Scanner Tab */}
       {activeTab === 'scanner' && (
@@ -923,30 +996,41 @@ export default function HomePage() {
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
 
-            {/* Admin verification button - stays until clicked */}
+            {/* Show to admin message */}
+            <div 
+              className="mt-4 p-4 bg-amber-500/20 border-2 border-amber-400/50 rounded-xl"
+              style={{ animation: 'pulseGlow 2s ease-in-out infinite, slideUp 0.6s ease-out 0.7s both' }}
+            >
+              <p className="text-amber-200 text-lg font-semibold animate-pulse">
+                Zal adminiga ko'rsating
+              </p>
+            </div>
+
+            {/* Confirmation button with date/time */}
             <Button
               onClick={() => {
                 setShowSuccessAnimation(false);
                 setSelectedBooking(null);
               }}
-              className="mt-8 px-8 py-6 text-lg font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white rounded-xl shadow-2xl border-2 border-amber-400/50"
+              className="mt-6 px-8 py-6 text-lg font-bold bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-500 text-white rounded-xl shadow-2xl border-2 border-emerald-400/50"
               style={{ 
-                animation: 'pulseGlow 2s ease-in-out infinite, slideUp 0.6s ease-out 0.7s both',
-                boxShadow: '0 0 30px rgba(245, 158, 11, 0.4), 0 10px 40px rgba(0,0,0,0.3)'
+                animation: 'slideUp 0.6s ease-out 0.9s both',
+                boxShadow: '0 0 30px rgba(16, 185, 129, 0.4), 0 10px 40px rgba(0,0,0,0.3)'
               }}
               data-testid="button-confirm-admin"
             >
-              <span className="flex items-center gap-3">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                ZAL ADMINI TASDIQLADI
+              <span className="flex flex-col items-center gap-1">
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Tasdiqlangan
+                </span>
+                <span className="text-sm font-normal opacity-90">
+                  {new Date().toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </span>
             </Button>
-
-            <p className="text-amber-200/80 text-sm animate-pulse">
-              Adminning tasdiqlashini kuting va tugmani bosing
-            </p>
           </div>
 
           {/* CSS Animations */}
