@@ -61,12 +61,70 @@ export default function HomePage() {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [successGymName, setSuccessGymName] = useState<string>("");
   const [showVisitHistory, setShowVisitHistory] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdownData, setCountdownData] = useState<{
+    remainingMinutes: number;
+    scheduledTime: string;
+    scheduledDate: string;
+  } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+  const [selectedBookingDate, setSelectedBookingDate] = useState<string>('');
   const [, setLocation] = useLocation();
+
+  // Function to get next occurrence of a specific day of week
+  const getNextDayOccurrence = (dayOfWeek: string): string => {
+    const dayMap: Record<string, number> = {
+      'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3,
+      'Payshanba': 4, 'Juma': 5, 'Shanba': 6
+    };
+    const targetDay = dayMap[dayOfWeek];
+    if (targetDay === undefined) return new Date().toISOString().split('T')[0];
+    
+    const today = new Date();
+    const currentDay = today.getDay();
+    let daysUntilTarget = targetDay - currentDay;
+    if (daysUntilTarget < 0) daysUntilTarget += 7;
+    if (daysUntilTarget === 0) daysUntilTarget = 0; // Allow today
+    
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + daysUntilTarget);
+    return targetDate.toISOString().split('T')[0];
+  };
+
+  // Get available dates for selected time slot (next 4 occurrences of that weekday)
+  const getAvailableDates = (dayOfWeek: string): { date: string; label: string }[] => {
+    const dayMap: Record<string, number> = {
+      'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3,
+      'Payshanba': 4, 'Juma': 5, 'Shanba': 6
+    };
+    const targetDay = dayMap[dayOfWeek];
+    if (targetDay === undefined) return [];
+    
+    const dates: { date: string; label: string }[] = [];
+    const today = new Date();
+    const currentDay = today.getDay();
+    
+    for (let week = 0; week < 4; week++) {
+      let daysUntilTarget = targetDay - currentDay + (week * 7);
+      if (week === 0 && daysUntilTarget < 0) daysUntilTarget += 7;
+      
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + daysUntilTarget);
+      
+      const dateStr = targetDate.toISOString().split('T')[0];
+      const label = week === 0 && daysUntilTarget === 0 ? 'Bugun' : 
+                   week === 0 && daysUntilTarget === 1 ? 'Ertaga' :
+                   targetDate.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+      
+      dates.push({ date: dateStr, label });
+    }
+    
+    return dates;
+  };
 
   // Get user's current location
   useEffect(() => {
@@ -278,10 +336,19 @@ export default function HomePage() {
 
     // Agar vaqt sloti tanlangan bo'lsa, uning ma'lumotlarini qo'shamiz
     if (selectedTimeSlot) {
-      // Bugungi sanani YYYY-MM-DD formatida olamiz
-      const today = new Date().toISOString().split('T')[0];
-      bookingData.date = today;
+      if (!selectedBookingDate) {
+        toast({
+          title: "Sana tanlanmagan",
+          description: "Iltimos, bron sanasini tanlang.",
+          variant: "destructive"
+        });
+        return;
+      }
+      bookingData.date = selectedBookingDate;
       bookingData.time = selectedTimeSlot.startTime;
+      bookingData.timeSlotId = selectedTimeSlot.id;
+      bookingData.scheduledStartTime = selectedTimeSlot.startTime;
+      bookingData.scheduledEndTime = selectedTimeSlot.endTime;
     }
 
     bookGymMutation.mutate(bookingData);
@@ -356,7 +423,7 @@ export default function HomePage() {
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
+      if (result.success) {
         setIsScannerOpen(false);
         
         // Get gym name from result or bookings
@@ -366,10 +433,29 @@ export default function HomePage() {
         
         // Animation stays until user clicks the confirm button
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      } else if (result.earlyArrival) {
+        // Erta kelish - countdown ko'rsatish
+        setIsScannerOpen(false);
+        setCountdownData({
+          remainingMinutes: result.remainingMinutes,
+          scheduledTime: result.scheduledTime,
+          scheduledDate: result.scheduledDate
+        });
+        setShowCountdown(true);
+      } else if (result.missed) {
+        // Vaqtdan o'tib ketdi
+        setIsScannerOpen(false);
+        setSelectedBooking(null);
+        queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+        toast({
+          title: "Vaqt o'tib ketdi",
+          description: result.message,
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Xatolik",
-          description: result.message,
+          description: result.message || "QR kod tekshirishda xatolik",
           variant: "destructive",
         });
         setIsScannerOpen(false);
@@ -735,6 +821,9 @@ export default function HomePage() {
                     longitude={gym?.longitude || undefined}
                     onScanQR={() => handleScanQR(booking.id)}
                     onCancel={handleCancelBooking}
+                    status={booking.status || undefined}
+                    scheduledStartTime={booking.scheduledStartTime || undefined}
+                    scheduledEndTime={booking.scheduledEndTime || undefined}
                   />
                 );
               })}
@@ -883,6 +972,91 @@ export default function HomePage() {
         onScan={handleQRScan}
         gymId={selectedBooking?.gymId} // Pass gymId to QRScanner
       />
+
+      {/* Countdown Timer Overlay */}
+      {showCountdown && countdownData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden">
+          {/* Animated background */}
+          <div className="absolute inset-0 overflow-hidden">
+            {[...Array(15)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full bg-gradient-to-r from-amber-400 to-orange-400 opacity-20"
+                style={{
+                  width: `${Math.random() * 8 + 4}px`,
+                  height: `${Math.random() * 8 + 4}px`,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 2}s`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Pulsing rings */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-72 h-72 rounded-full border border-amber-500/20 animate-ping" style={{ animationDuration: '3s' }} />
+            <div className="absolute w-56 h-56 rounded-full border border-orange-500/30 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+          </div>
+
+          <div className="relative text-center space-y-6 p-8 max-w-md mx-auto">
+            {/* Timer icon */}
+            <div className="relative mx-auto" style={{ width: '140px', height: '140px' }}>
+              <div 
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 opacity-30 blur-xl"
+                style={{ animation: 'pulse 2s ease-in-out infinite' }}
+              />
+              <div 
+                className="absolute inset-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-2xl"
+              >
+                <Clock className="w-16 h-16 text-white" />
+              </div>
+            </div>
+
+            {/* Countdown display */}
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-white">Vaqtingiz hali kelmadi</h2>
+              <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
+                {Math.floor(countdownData.remainingMinutes / 60) > 0 && (
+                  <span>{Math.floor(countdownData.remainingMinutes / 60)} soat </span>
+                )}
+                <span>{countdownData.remainingMinutes % 60} min</span>
+              </div>
+              <p className="text-gray-400">
+                Belgilangan vaqt: {countdownData.scheduledTime}
+              </p>
+              <p className="text-gray-500 text-sm">
+                {new Date(countdownData.scheduledDate).toLocaleDateString('uz-UZ', { 
+                  day: 'numeric', 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </p>
+            </div>
+
+            {/* Info text */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+              <p className="text-amber-200 text-sm">
+                Vaqtingizdan 15 minut oldin va 1 soat ichida kirish mumkin.
+              </p>
+            </div>
+
+            {/* Close button */}
+            <Button
+              onClick={() => {
+                setShowCountdown(false);
+                setCountdownData(null);
+                setSelectedBooking(null);
+              }}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3"
+              data-testid="button-close-countdown"
+            >
+              Tushundim
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Success Animation Overlay */}
       {showSuccessAnimation && (
@@ -1074,7 +1248,13 @@ export default function HomePage() {
       )}
 
       {/* Time Slot Selection Dialog - Modern */}
-      <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
+      <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedGymForBooking(null);
+          setSelectedTimeSlot(null);
+          setSelectedBookingDate('');
+        }
+      }}>
         <DialogContent className="max-w-md max-h-[85vh] flex flex-col" data-testid="dialog-select-time-slot">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
@@ -1167,7 +1347,10 @@ export default function HomePage() {
                                       ? 'border-primary bg-primary/10 shadow-sm'
                                       : 'border-border hover:border-primary/50 bg-card'
                                   }`}
-                                  onClick={() => setSelectedTimeSlot(slot)}
+                                  onClick={() => {
+                                    setSelectedTimeSlot(slot);
+                                    setSelectedBookingDate(formattedDate);
+                                  }}
                                   data-testid={`card-time-slot-${slot.id}`}
                                 >
                                   <div className="flex items-center justify-between">
@@ -1252,6 +1435,7 @@ export default function HomePage() {
               onClick={() => {
                 setSelectedGymForBooking(null);
                 setSelectedTimeSlot(null);
+                setSelectedBookingDate('');
               }}
               data-testid="button-cancel-booking"
             >

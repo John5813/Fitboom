@@ -40,6 +40,7 @@ export interface IStorage {
   updateBooking(id: string, updateData: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<boolean>;
   completeBooking(id: string): Promise<void>;
+  updateBookingStatus(id: string, status: string): Promise<void>;
   getTimeSlots(gymId?: string): Promise<TimeSlot[]>;
   getTimeSlot(id: string): Promise<TimeSlot | undefined>;
   createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
@@ -315,6 +316,13 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(bookings)
       .set({ isCompleted: true })
+      .where(eq(bookings.id, id));
+  }
+
+  async updateBookingStatus(id: string, status: string): Promise<void> {
+    await db
+      .update(bookings)
+      .set({ status })
       .where(eq(bookings.id, id));
   }
 

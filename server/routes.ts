@@ -491,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Book a gym
   app.post('/api/book-gym', requireAuth, async (req, res) => {
     try {
-      const { gymId, date, time } = req.body;
+      const { gymId, date, time, timeSlotId, scheduledStartTime, scheduledEndTime } = req.body;
 
       if (!gymId) {
         return res.status(400).json({ message: "Zal ID majburiy" });
@@ -526,14 +526,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
 
-      const bookingToCreate = {
+      const bookingToCreate: any = {
         userId: req.user!.id,
         gymId: gymId,
         date: bookingDate,
         time: bookingTime,
         qrCode: qrCodeData,
-        isCompleted: false
+        isCompleted: false,
+        status: 'pending'
       };
+
+      // Agar vaqt sloti tanlangan bo'lsa, qo'shimcha ma'lumotlarni qo'shamiz
+      if (timeSlotId) {
+        bookingToCreate.timeSlotId = timeSlotId;
+        bookingToCreate.scheduledStartTime = scheduledStartTime;
+        bookingToCreate.scheduledEndTime = scheduledEndTime;
+      }
 
       const booking = await storage.createBooking(bookingToCreate);
 
@@ -991,8 +999,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Vaqt sloti bo'lsa, vaqtni tekshirish
+      if (booking.timeSlotId && booking.scheduledStartTime && booking.date) {
+        const now = new Date();
+        const bookingDate = new Date(booking.date);
+        const [startHour, startMin] = booking.scheduledStartTime.split(':').map(Number);
+        
+        // Scheduled start time in local timezone
+        const scheduledStart = new Date(bookingDate);
+        scheduledStart.setHours(startHour, startMin, 0, 0);
+        
+        // Calculate time differences in minutes
+        const diffMinutes = (now.getTime() - scheduledStart.getTime()) / (1000 * 60);
+        
+        // Agar 15 minut dan oldin kelsa, hali erta - countdown ko'rsatish
+        if (diffMinutes < -15) {
+          // Kirish mumkin bo'lguncha qolgan vaqt (15 minut oldin)
+          const remainingMinutes = Math.abs(Math.floor(diffMinutes)) - 15;
+          
+          return res.json({
+            success: false,
+            earlyArrival: true,
+            message: `Vaqtingiz hali kelmadi. ${remainingMinutes} minut qoldi.`,
+            remainingMinutes: remainingMinutes,
+            scheduledTime: booking.scheduledStartTime,
+            scheduledDate: booking.date
+          });
+        }
+        
+        // Agar 1 soatdan keyin kelsa (60+ minut o'tib ketgan), ulgirmadi
+        if (diffMinutes > 60) {
+          // Bronni "missed" holatiga o'zgartirish
+          await storage.updateBookingStatus(booking.id, 'missed');
+          
+          return res.json({
+            success: false,
+            missed: true,
+            message: "Afsuski, siz vaqtdan o'tib ketdingiz. Bron bekor qilindi.",
+            scheduledTime: booking.scheduledStartTime,
+            scheduledDate: booking.date
+          });
+        }
+      }
+
       // Bronni tasdiqlash
       await storage.completeBooking(booking.id);
+      await storage.updateBookingStatus(booking.id, 'completed');
 
       const user = await storage.getUser(req.user!.id);
 
