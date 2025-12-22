@@ -343,7 +343,7 @@ export default function HomePage() {
         credentials: 'include',
         body: JSON.stringify({
           qrCode: data,
-          gymId: selectedBooking.gymId
+          bookingId: selectedBooking.id
         }),
       });
 

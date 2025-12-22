@@ -12,7 +12,7 @@ interface QRScannerProps {
   gymId?: string;
 }
 
-export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gymId }: QRScannerProps) {
+export default function QRScanner({ isOpen, onClose, onScan, isDialog = true }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [hasScanned, setHasScanned] = useState(false);
 
@@ -23,48 +23,20 @@ export default function QRScanner({ isOpen, onClose, onScan, isDialog = true, gy
 
       console.log('QR scanned:', qrText);
 
-      if (gymId) {
-        try {
-          const scannedData = JSON.parse(qrText);
-          console.log('Parsed QR data:', scannedData);
-
-          if (scannedData.gymId === gymId) {
-            onScan(qrText);
-            if (isDialog) {
-              onClose();
-            }
-            setHasScanned(false);
-          } else {
-            setError("Bu QR kod ushbu zal uchun emas.");
-            setTimeout(() => {
-              setHasScanned(false);
-              setError(null);
-            }, 2000);
-          }
-        } catch (e) {
-          console.error('QR parse error:', e);
-          setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
-          setTimeout(() => {
-            setHasScanned(false);
-            setError(null);
-          }, 2000);
+      try {
+        JSON.parse(qrText);
+        onScan(qrText);
+        if (isDialog) {
+          onClose();
         }
-      } else {
-        try {
-          JSON.parse(qrText);
-          onScan(qrText);
-          if (isDialog) {
-            onClose();
-          }
+        setHasScanned(false);
+      } catch (e) {
+        console.error('QR parse error:', e);
+        setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
+        setTimeout(() => {
           setHasScanned(false);
-        } catch (e) {
-          console.error('QR parse error:', e);
-          setError("QR kod formati noto'g'ri. Iltimos, to'g'ri QR kodni skanerlang.");
-          setTimeout(() => {
-            setHasScanned(false);
-            setError(null);
-          }, 2000);
-        }
+          setError(null);
+        }, 2000);
       }
     }
   };

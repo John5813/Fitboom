@@ -918,10 +918,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/verify-qr', requireAuth, async (req, res) => {
     try {
-      const { qrCode, gymId } = req.body;
+      const { qrCode, bookingId } = req.body;
 
-      if (!qrCode || !gymId) {
-        return res.status(400).json({ message: "QR kod va gym ID majburiy" });
+      if (!qrCode) {
+        return res.status(400).json({ message: "QR kod majburiy" });
       }
 
       // QR kod formatini tekshirish
@@ -935,28 +935,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Zalni topish - QR koddagi gymId bo'yicha
+      // Zalni topish - avval to'g'ridan-to'g'ri ID orqali
       const allGyms = await storage.getGyms();
-      const gym = allGyms.find(g => {
-        if (!g.qrCode) return false;
-        try {
-          const storedQrData = JSON.parse(g.qrCode);
-          return storedQrData.gymId === qrData.gymId;
-        } catch {
-          return false;
-        }
-      });
+      let gym = allGyms.find(g => g.id === qrData.gymId);
+      
+      // Agar topilmasa, saqlangan QR kod orqali qidirish
+      if (!gym) {
+        gym = allGyms.find(g => {
+          if (!g.qrCode) return false;
+          try {
+            const storedQrData = JSON.parse(g.qrCode);
+            return storedQrData.gymId === qrData.gymId;
+          } catch {
+            return false;
+          }
+        });
+      }
       
       if (!gym) {
         return res.status(404).json({
-          message: "Zal topilmadi",
+          message: "Zal topilmadi. QR kod eskirgan bo'lishi mumkin.",
           success: false
         });
       }
 
-      // Foydalanuvchining bu zal uchun faol bronini topish
+      // Foydalanuvchining bronini topish
       const bookings = await storage.getBookings(req.user!.id);
-      const booking = bookings.find(b => b.gymId === gym.id && !b.isCompleted);
+      let booking;
+      
+      if (bookingId) {
+        // Agar bookingId berilgan bo'lsa, aniq shu bronni topish
+        booking = bookings.find(b => b.id === bookingId && !b.isCompleted);
+        if (booking && booking.gymId !== gym.id) {
+          return res.status(400).json({
+            message: "Bu QR kod tanlangan bron uchun emas. To'g'ri zal QR kodini skanerlang.",
+            success: false
+          });
+        }
+      } else {
+        // Agar bookingId berilmagan bo'lsa, bu zal uchun faol bronni topish
+        booking = bookings.find(b => b.gymId === gym.id && !b.isCompleted);
+      }
 
       if (!booking) {
         return res.status(404).json({
