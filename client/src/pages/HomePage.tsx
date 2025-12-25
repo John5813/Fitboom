@@ -50,7 +50,14 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'home' | 'gyms' | 'classes' | 'bookings' | 'scanner'>('home');
+  // URL hash dan boshlang'ich tabni o'qish
+  const getTabFromHash = (): 'home' | 'gyms' | 'classes' | 'bookings' | 'scanner' => {
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['home', 'gyms', 'classes', 'bookings', 'scanner'];
+    return validTabs.includes(hash) ? (hash as any) : 'home';
+  };
+
+  const [activeTab, setActiveTabState] = useState<'home' | 'gyms' | 'classes' | 'bookings' | 'scanner'>(getTabFromHash());
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -74,6 +81,29 @@ export default function HomePage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [selectedBookingDate, setSelectedBookingDate] = useState<string>('');
   const [, setLocation] = useLocation();
+
+  // Tab o'zgarganda URL hash ni yangilash
+  const setActiveTab = (tab: 'home' | 'gyms' | 'classes' | 'bookings' | 'scanner') => {
+    setActiveTabState(tab);
+    // Hash ni yangilash (browser history ga qo'shish)
+    window.history.pushState(null, '', `#${tab}`);
+  };
+
+  // Orqaga tugmasini bosganda hashchange ni eshitish
+  useEffect(() => {
+    const handleHashChange = () => {
+      const newTab = getTabFromHash();
+      setActiveTabState(newTab);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handleHashChange);
+    };
+  }, []);
 
   // Function to get next occurrence of a specific day of week
   const getNextDayOccurrence = (dayOfWeek: string): string => {
