@@ -238,11 +238,11 @@ export default function HomePage() {
 
   const bookings = bookingsData?.bookings || [];
   
-  // Filter active bookings (not completed)
-  const activeBookings = bookings.filter(b => !b.isCompleted);
+  // Filter active bookings (not completed and not missed)
+  const activeBookings = bookings.filter(b => !b.isCompleted && b.status !== 'missed');
   
-  // Filter completed bookings (visit history)
-  const completedBookings = bookings.filter(b => b.isCompleted);
+  // Filter completed bookings (visit history) - include both completed and missed
+  const completedBookings = bookings.filter(b => b.isCompleted || b.status === 'missed');
 
   const filteredGyms = gymsWithDistance.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategory);
@@ -852,28 +852,54 @@ export default function HomePage() {
               {completedBookings.map((booking) => {
                 const gym = gyms.find(g => g.id === booking.gymId);
                 const bookingDate = new Date(booking.date);
+                const isMissed = booking.status === 'missed';
                 return (
                   <div
                     key={booking.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      isMissed 
+                        ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900' 
+                        : 'bg-muted/50'
+                    }`}
                     data-testid={`visit-history-item-${booking.id}`}
                   >
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                       <img
                         src={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
                         alt={gym?.name}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${isMissed ? 'opacity-60 grayscale' : ''}`}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold truncate">{gym?.name || "Noma'lum zal"}</h4>
-                      <p className="text-sm text-muted-foreground truncate">{gym?.address || ""}</p>
+                      <div className="flex items-center gap-2">
+                        <h4 className={`font-semibold truncate ${
+                          isMissed ? 'text-red-600 dark:text-red-400' : ''
+                        }`}>
+                          {gym?.name || "Noma'lum zal"}
+                        </h4>
+                        {isMissed && (
+                          <Badge variant="destructive" className="text-xs flex-shrink-0">
+                            O'tib ketgan
+                          </Badge>
+                        )}
+                      </div>
+                      <p className={`text-sm truncate ${
+                        isMissed ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'
+                      }`}>
+                        {gym?.address || ""}
+                      </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-medium">
+                      <p className={`text-sm font-medium ${
+                        isMissed ? 'text-red-600 dark:text-red-400' : ''
+                      }`}>
                         {bookingDate.toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
-                      <p className="text-xs text-muted-foreground">{booking.time}</p>
+                      <p className={`text-xs ${
+                        isMissed ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'
+                      }`}>
+                        {booking.time}
+                      </p>
                     </div>
                   </div>
                 );

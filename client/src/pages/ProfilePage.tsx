@@ -32,7 +32,8 @@ export default function ProfilePage() {
 
   const bookings = bookingsData?.bookings || [];
   const gyms = gymsData?.gyms || [];
-  const completedBookings = bookings.filter(b => b.isCompleted);
+  // Include both completed and missed bookings in history
+  const completedBookings = bookings.filter(b => b.isCompleted || b.status === 'missed');
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { name?: string; profileImageUrl?: string }) => {
@@ -122,8 +123,8 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar className="w-24 h-24">
-                <AvatarImage 
-                  src={(user as any)?.profileImageUrl || undefined} 
+                <AvatarImage
+                  src={(user as any)?.profileImageUrl || undefined}
                   alt={user?.name || "Profile"}
                 />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white">
@@ -232,19 +233,26 @@ export default function ProfilePage() {
                 return (
                   <div
                     key={booking.id}
-                    className="flex items-center gap-3 p-3 rounded-md bg-muted/50"
+                    className={`flex items-center gap-3 p-3 rounded-md ${booking.status === 'missed' ? 'bg-red-100' : 'bg-muted/50'}`}
                     data-testid={`booking-history-${booking.id}`}
                   >
-                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    {booking.status === 'missed' ? (
+                      <CheckCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                    ) : (
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{gym?.name || "Noma'lum zal"}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(booking.date).toLocaleDateString('uz-UZ', { 
-                          day: 'numeric', 
+                        {new Date(booking.date).toLocaleDateString('uz-UZ', {
+                          day: 'numeric',
                           month: 'short',
                           year: 'numeric'
                         })} - {booking.time}
                       </p>
+                      {booking.status === 'missed' && (
+                        <p className="text-red-600 text-xs mt-1">Muddati o'tgan</p>
+                      )}
                     </div>
                   </div>
                 );
