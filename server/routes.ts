@@ -441,6 +441,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/bookings', requireAuth, async (req, res) => {
     try {
       const bookings = await storage.getBookings(req.user!.id);
+      
+      // Muddati o'tgan bronlarni avtomatik "missed" statusiga o'tkazish
+      const now = new Date();
+      for (const booking of bookings) {
+        // Faqat faol va pending statusdagi bronlarni tekshirish
+        if (!booking.isCompleted && booking.status !== 'missed' && booking.status !== 'completed') {
+          // Agar scheduledEndTime mavjud bo'lsa
+          if (booking.scheduledEndTime && booking.date) {
+            const bookingDate = new Date(booking.date);
+            const [endHour, endMin] = booking.scheduledEndTime.split(':').map(Number);
+            const endTime = new Date(bookingDate);
+            endTime.setHours(endHour, endMin, 0, 0);
+            
+            // 1 soat grace period qo'shish
+            const graceEndTime = new Date(endTime.getTime() + 60 * 60 * 1000);
+            
+            // Agar hozirgi vaqt grace period tugashidan o'tgan bo'lsa
+            if (now > graceEndTime) {
+              await storage.updateBookingStatus(booking.id, 'missed');
+              booking.status = 'missed'; // Local ma'lumotni ham yangilash
+            }
+          }
+        }
+      }
+      
       res.json({ bookings });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

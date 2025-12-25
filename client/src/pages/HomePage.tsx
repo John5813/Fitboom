@@ -883,11 +883,6 @@ export default function HomePage() {
                           </Badge>
                         )}
                       </div>
-                      <p className={`text-sm truncate ${
-                        isMissed ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'
-                      }`}>
-                        {gym?.address || ""}
-                      </p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className={`text-sm font-medium ${
