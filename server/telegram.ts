@@ -100,7 +100,7 @@ async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: a
 }
 
 export function setupTelegramWebhook(app: Express, storage: IStorage) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_BOT_USERNAME) {
+  if (!TELEGRAM_BOT_TOKEN) {
     console.warn('Telegram bot credentials not configured. Skipping webhook setup.');
     return;
   }
