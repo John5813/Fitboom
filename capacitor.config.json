@@ -1,0 +1,8 @@
+{
+  "appId": "com.fitboom.app",
+  "appName": "FitBoom",
+  "webDir": "dist/public",
+  "server": {
+    "androidScheme": "https"
+  }
+}
