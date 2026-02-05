@@ -37,6 +37,7 @@ export default function SettingsPage() {
     onSuccess: () => {
       setIsAdminLoginOpen(false);
       setAdminPassword("");
+      localStorage.setItem("lastUserRole", "admin");
       setLocation('/admin');
     },
     onError: (error: Error) => {
@@ -65,6 +66,7 @@ export default function SettingsPage() {
       setIsGymOwnerLoginOpen(false);
       localStorage.setItem('gymOwnerCode', gymOwnerCode.toUpperCase());
       localStorage.setItem('gymOwnerId', data.gym.id);
+      localStorage.setItem("lastUserRole", "gymOwner");
       setGymOwnerCode("");
       setLocation('/gym-owner');
     },

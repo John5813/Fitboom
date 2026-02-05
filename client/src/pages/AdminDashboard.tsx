@@ -93,9 +93,14 @@ export default function AdminDashboard() {
       <div className="container mx-auto p-6">
         <div className="mb-6 flex items-center gap-4">
           <Link href="/home">
-            <Button variant="ghost" size="sm" data-testid="button-back">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              data-testid="button-back"
+              onClick={() => localStorage.setItem("lastUserRole", "user")}
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Orqaga
+              Mijoz bo'limiga qaytish
             </Button>
           </Link>
           <div>

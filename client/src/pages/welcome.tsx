@@ -4,11 +4,18 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   const handleStart = () => {
     if (isAuthenticated) {
-      setLocation('/home');
+      const lastRole = localStorage.getItem("lastUserRole");
+      if (user?.isAdmin && lastRole === "admin") {
+        setLocation('/admin');
+      } else if (localStorage.getItem("gymOwnerId") && lastRole === "gymOwner") {
+        setLocation('/gym-owner');
+      } else {
+        setLocation('/home');
+      }
     } else {
       setLocation('/register');
     }

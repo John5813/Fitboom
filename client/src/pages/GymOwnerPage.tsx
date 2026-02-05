@@ -196,7 +196,15 @@ export default function GymOwnerPage() {
       <div className="sticky top-0 z-50 bg-background border-b">
         <div className="flex items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setLocation("/settings")} data-testid="button-back">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                localStorage.setItem("lastUserRole", "user");
+                setLocation("/home");
+              }} 
+              data-testid="button-back"
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-semibold truncate" data-testid="text-gym-name">

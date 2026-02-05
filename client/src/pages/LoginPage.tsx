@@ -43,7 +43,14 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user?.profileCompleted) {
-      setLocation('/home');
+      const lastRole = localStorage.getItem("lastUserRole");
+      if (user?.isAdmin && lastRole === "admin") {
+        setLocation('/admin');
+      } else if (localStorage.getItem("gymOwnerId") && lastRole === "gymOwner") {
+        setLocation('/gym-owner');
+      } else {
+        setLocation('/home');
+      }
     } else if (!isLoading && isAuthenticated && !user?.profileCompleted) {
       setShowProfileDialog(true);
     }
