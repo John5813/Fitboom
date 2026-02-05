@@ -13,6 +13,8 @@ import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import type { Gym, Booking, UserPurchase } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -76,6 +78,7 @@ export default function HomePage() {
   } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -555,10 +558,11 @@ export default function HomePage() {
         <div className="p-4 space-y-6">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h1 className="font-display font-bold text-3xl mb-2">FitBoom</h1>
-              <p className="text-muted-foreground">Sport hayotingizni boshqaring</p>
+              <h1 className="font-display font-bold text-3xl mb-2">{t('app.name')}</h1>
+              <p className="text-muted-foreground">{t('home.welcome')}</p>
             </div>
             <div className="flex gap-2">
+              <LanguageSelector />
               <Button
                 variant="ghost"
                 size="icon"
