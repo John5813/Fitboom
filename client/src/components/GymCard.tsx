@@ -2,6 +2,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, ExternalLink } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface GymCardProps {
   id: string;
@@ -30,6 +31,7 @@ export default function GymCard({
   longitude,
   onBook
 }: GymCardProps) {
+  const { t } = useLanguage();
   return (
     <Card
       className="overflow-hidden cursor-pointer hover-elevate min-w-[280px] sm:min-w-[300px] flex-shrink-0 snap-start"
@@ -46,7 +48,7 @@ export default function GymCard({
           className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5"
           data-testid={`badge-credits-${id}`}
         >
-          {credits} kalit
+          {credits} {t('profile.credits_count')}
         </Badge>
       </div>
       <CardContent className="p-3 sm:p-4">
@@ -60,7 +62,7 @@ export default function GymCard({
           <div className="flex items-center gap-1.5">
             <MapPin className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">
-              {typeof distance === 'number' ? `${distance.toFixed(1)} km` : distance || 'Masofa noma\'lum'}
+              {typeof distance === 'number' ? `${distance.toFixed(1)} km` : distance || t('profile.unknown_gym')}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -78,7 +80,7 @@ export default function GymCard({
                   window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
                 }}
               >
-                Haritada ko'rish
+                {t('map.view_on_google')}
                 <ExternalLink className="w-3 h-3 ml-1 inline" />
               </Button>
             </div>

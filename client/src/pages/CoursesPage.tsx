@@ -7,9 +7,11 @@ import { Video, Check, ShoppingCart, PlayCircle, Star, Gift } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function CoursesPage() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [, navigate] = useLocation();
 
   const { data: collectionsData, isLoading } = useQuery<{ collections: VideoCollection[] }>({
@@ -32,15 +34,15 @@ export default function CoursesPage() {
     onSuccess: (data, collectionId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-purchases'] });
       toast({
-        title: "To'plam sotib olindi",
-        description: "Video to'plam muvaffaqiyatli sotib olindi",
+        title: t('common.success'),
+        description: t('courses.purchased'),
       });
       navigate(`/my-courses/${collectionId}`);
     },
     onError: (error: any) => {
       toast({
-        title: "Xatolik",
-        description: error.message || "Sotib olishda xatolik yuz berdi.",
+        title: t('common.error'),
+        description: error.message || t('common.error'),
         variant: "destructive"
       });
     }
@@ -58,7 +60,7 @@ export default function CoursesPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto p-6">
-          <div className="text-center py-8">Yuklanmoqda...</div>
+          <div className="text-center py-8">{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -68,9 +70,9 @@ export default function CoursesPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 pb-24">
         <div className="mb-6">
-          <h1 className="text-3xl font-display font-bold">Video Kurslar</h1>
+          <h1 className="text-3xl font-display font-bold">{t('courses.title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Professional video darsliklar to'plami
+            {t('courses.desc')}
           </p>
         </div>
 
@@ -78,7 +80,7 @@ export default function CoursesPage() {
           <Card className="p-12">
             <div className="text-center text-muted-foreground">
               <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Hozircha video kurslar mavjud emas</p>
+              <p>{t('courses.no_courses')}</p>
             </div>
           </Card>
         ) : (
@@ -103,7 +105,7 @@ export default function CoursesPage() {
                         <div className="absolute top-3 right-3">
                           <Badge className="bg-green-500 text-white">
                             <Check className="h-3 w-3 mr-1" />
-                            Sotib olingan
+                            {t('courses.purchased')}
                           </Badge>
                         </div>
                       )}
@@ -115,7 +117,7 @@ export default function CoursesPage() {
                       <span>{collection.name}</span>
                     </CardTitle>
                     <CardDescription>
-                      {collection.description || "Professional video darsliklar"}
+                      {collection.description || t('courses.desc')}
                     </CardDescription>
                   </CardHeader>
 
@@ -124,14 +126,14 @@ export default function CoursesPage() {
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="flex items-center gap-1">
                           <PlayCircle className="h-3 w-3" />
-                          {(collection as any).videoCount || 0} ta video
+                          {(collection as any).videoCount || 0} {t('courses.videos')}
                         </Badge>
                       </div>
                       <div>
                         {collection.isFree ? (
                           <Badge variant="secondary" className="text-lg px-3 py-1">
                             <Gift className="h-4 w-4 mr-1" />
-                            Bepul
+                            {t('courses.free')}
                           </Badge>
                         ) : (
                           <div className="flex items-center gap-1">
@@ -151,7 +153,7 @@ export default function CoursesPage() {
                         data-testid={`button-view-${collection.id}`}
                       >
                         <Video className="h-4 w-4 mr-2" />
-                        Kursni Ko'rish
+                        {t('courses.view')}
                       </Button>
                     ) : (
                       <Button 
@@ -161,7 +163,7 @@ export default function CoursesPage() {
                         data-testid={`button-purchase-${collection.id}`}
                       >
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        {purchaseMutation.isPending ? 'Yuklanmoqda...' : `${collection.price} sum ga sotib olish`}
+                        {purchaseMutation.isPending ? t('common.loading') : `${collection.price} sum ${t('courses.buy')}`}
                       </Button>
                     )}
                   </CardContent>

@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, Pencil, Camera, User, History, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import type { Booking, Gym } from "@shared/schema";
@@ -15,6 +16,7 @@ export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState(user?.name || "");
@@ -52,14 +54,14 @@ export default function ProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       toast({
-        title: "Muvaffaqiyatli",
-        description: "Profil yangilandi",
+        title: t('common.success'),
+        description: t('profile.success_update'),
       });
       setIsEditDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Xatolik",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -115,7 +117,7 @@ export default function ProfilePage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="font-display font-bold text-2xl">Profil</h1>
+        <h1 className="font-display font-bold text-2xl">{t('profile.title')}</h1>
       </div>
 
       <Card className="max-w-md mx-auto">
@@ -152,20 +154,20 @@ export default function ProfilePage() {
 
             <div className="text-center space-y-2">
               <h2 className="text-xl font-semibold" data-testid="text-user-name">
-                {user?.name || "Foydalanuvchi"}
+                {user?.name || t('profile.user')}
               </h2>
               <div className="space-y-1">
                 <p className="text-muted-foreground text-sm" data-testid="text-user-phone">
-                  📱 {user?.phone || "Telefon raqam yo'q"}
+                  📱 {user?.phone || t('profile.no_phone')}
                 </p>
                 {(user as any)?.gender && (
                   <p className="text-muted-foreground text-sm" data-testid="text-user-gender">
-                    {(user as any).gender === "Erkak" ? "👨 Erkak" : "👩 Ayol"}
+                    {(user as any).gender === "Erkak" ? t('profile.male') : t('profile.female')}
                   </p>
                 )}
                 {(user as any)?.age && (
                   <p className="text-muted-foreground text-sm" data-testid="text-user-age">
-                    🎂 {(user as any).age} yosh
+                    🎂 {(user as any).age} {t('profile.age')}
                   </p>
                 )}
               </div>
@@ -175,20 +177,20 @@ export default function ProfilePage() {
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2" data-testid="button-edit-profile">
                   <Pencil className="h-4 w-4" />
-                  Tahrirlash
+                  {t('profile.edit')}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Profilni tahrirlash</DialogTitle>
+                  <DialogTitle>{t('profile.edit_title')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <div>
-                    <label className="text-sm font-medium">Ism</label>
+                    <label className="text-sm font-medium">{t('profile.name')}</label>
                     <Input
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Ismingizni kiriting"
+                      placeholder={t('profile.enter_name')}
                       data-testid="input-edit-name"
                     />
                   </div>
@@ -198,7 +200,7 @@ export default function ProfilePage() {
                     className="w-full"
                     data-testid="button-save-name"
                   >
-                    {updateProfileMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+                    {updateProfileMutation.isPending ? t('profile.saving') : t('profile.save')}
                   </Button>
                 </div>
               </DialogContent>
@@ -209,11 +211,11 @@ export default function ProfilePage() {
 
       <Card className="max-w-md mx-auto mt-4">
         <CardHeader>
-          <CardTitle className="text-lg">Kalitlar soni</CardTitle>
+          <CardTitle className="text-lg">{t('profile.credits_title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-bold text-primary" data-testid="text-credits">
-            {user?.credits || 0} kalit
+            {user?.credits || 0} {t('profile.credits_count')}
           </p>
         </CardContent>
       </Card>
@@ -222,7 +224,7 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <History className="h-5 w-5" />
-            Bronlar tarixi
+            {t('profile.history_title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -242,16 +244,16 @@ export default function ProfilePage() {
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{gym?.name || "Noma'lum zal"}</p>
+                      <p className="font-medium truncate">{gym?.name || t('profile.unknown_gym')}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(booking.date).toLocaleDateString('uz-UZ', {
+                        {new Date(booking.date).toLocaleDateString(language === 'en' ? 'en-US' : language === 'ru' ? 'ru-RU' : 'uz-UZ', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric'
                         })} - {booking.time}
                       </p>
                       {booking.status === 'missed' && (
-                        <p className="text-red-600 text-xs mt-1">Muddati o'tgan</p>
+                        <p className="text-red-600 text-xs mt-1">{t('profile.missed')}</p>
                       )}
                     </div>
                   </div>
@@ -260,7 +262,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">
-              Hozircha tarix yo'q
+              {t('profile.no_history')}
             </p>
           )}
         </CardContent>

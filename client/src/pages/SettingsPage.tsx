@@ -7,10 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ArrowLeft, Shield, Handshake, Send, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
   
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isGymOwnerLoginOpen, setIsGymOwnerLoginOpen] = useState(false);
@@ -42,8 +44,8 @@ export default function SettingsPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Xatolik",
-        description: error.message || "Parol noto'g'ri",
+        title: t('common.error'),
+        description: error.message || t('settings.enter_password'),
         variant: "destructive",
       });
     },
@@ -72,8 +74,8 @@ export default function SettingsPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Xatolik",
-        description: error.message || "Kirish kodi noto'g'ri",
+        title: t('common.error'),
+        description: error.message || t('settings.enter_code'),
         variant: "destructive",
       });
     },
@@ -94,8 +96,8 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       toast({
-        title: "Muvaffaqiyatli",
-        description: "So'rovingiz yuborildi. Tez orada siz bilan bog'lanamiz!",
+        title: t('common.success'),
+        description: t('settings.request_sent'),
       });
       setIsPartnerDialogOpen(false);
       setHallName("");
@@ -103,7 +105,7 @@ export default function SettingsPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Xatolik",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -141,7 +143,7 @@ export default function SettingsPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="font-display font-bold text-2xl">Sozlamalar</h1>
+        <h1 className="font-display font-bold text-2xl">{t('settings.title')}</h1>
       </div>
 
       <div className="max-w-md mx-auto space-y-4">
@@ -155,8 +157,8 @@ export default function SettingsPage() {
               <Shield className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Admin sifatida kirish</h3>
-              <p className="text-sm text-muted-foreground">Boshqaruv paneliga kirish</p>
+              <h3 className="font-semibold">{t('settings.admin')}</h3>
+              <p className="text-sm text-muted-foreground">{t('settings.admin_desc')}</p>
             </div>
           </CardContent>
         </Card>
@@ -171,8 +173,8 @@ export default function SettingsPage() {
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold">Zal egasi sifatida kirish</h3>
-              <p className="text-sm text-muted-foreground">Zalingizni boshqaring</p>
+              <h3 className="font-semibold">{t('settings.gym_owner')}</h3>
+              <p className="text-sm text-muted-foreground">{t('settings.gym_owner_desc')}</p>
             </div>
           </CardContent>
         </Card>
@@ -187,8 +189,8 @@ export default function SettingsPage() {
               <Handshake className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold">Hamkor bo'lish</h3>
-              <p className="text-sm text-muted-foreground">Zalingizni platformaga qo'shing</p>
+              <h3 className="font-semibold">{t('settings.partner')}</h3>
+              <p className="text-sm text-muted-foreground">{t('settings.partner_desc')}</p>
             </div>
           </CardContent>
         </Card>
@@ -197,9 +199,9 @@ export default function SettingsPage() {
       <Dialog open={isAdminLoginOpen} onOpenChange={setIsAdminLoginOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Admin kirish</DialogTitle>
+            <DialogTitle>{t('settings.admin_login')}</DialogTitle>
             <DialogDescription>
-              Boshqaruv paneliga kirish uchun parolni kiriting
+              {t('settings.admin_login_desc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
@@ -207,7 +209,7 @@ export default function SettingsPage() {
               type="password"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              placeholder="Parolni kiriting"
+              placeholder={t('settings.enter_password')}
               onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
               data-testid="input-admin-password"
             />
@@ -217,7 +219,7 @@ export default function SettingsPage() {
               className="w-full"
               data-testid="button-admin-login-submit"
             >
-              {verifyAdminMutation.isPending ? "Tekshirilmoqda..." : "Kirish"}
+              {verifyAdminMutation.isPending ? t('settings.checking') : t('settings.login')}
             </Button>
           </div>
         </DialogContent>
@@ -226,16 +228,16 @@ export default function SettingsPage() {
       <Dialog open={isGymOwnerLoginOpen} onOpenChange={setIsGymOwnerLoginOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Zal egasi kirish</DialogTitle>
+            <DialogTitle>{t('settings.gym_owner_login')}</DialogTitle>
             <DialogDescription>
-              Zalingizni boshqarish uchun kirish kodini kiriting
+              {t('settings.gym_owner_login_desc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <Input
               value={gymOwnerCode}
               onChange={(e) => setGymOwnerCode(e.target.value.toUpperCase())}
-              placeholder="Kirish kodini kiriting (masalan: ABC123)"
+              placeholder={t('settings.enter_code')}
               onKeyDown={(e) => e.key === 'Enter' && handleGymOwnerLogin()}
               maxLength={6}
               data-testid="input-gym-owner-code"
@@ -246,7 +248,7 @@ export default function SettingsPage() {
               className="w-full"
               data-testid="button-gym-owner-login-submit"
             >
-              {verifyGymOwnerMutation.isPending ? "Tekshirilmoqda..." : "Kirish"}
+              {verifyGymOwnerMutation.isPending ? t('settings.checking') : t('settings.login')}
             </Button>
           </div>
         </DialogContent>
@@ -255,23 +257,23 @@ export default function SettingsPage() {
       <Dialog open={isPartnerDialogOpen} onOpenChange={setIsPartnerDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hamkor bo'lish</DialogTitle>
+            <DialogTitle>{t('settings.partner')}</DialogTitle>
             <DialogDescription>
-              Zal, darslik yoki dastur ma'lumotlarini kiriting
+              {t('settings.partner_desc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div>
-              <label className="text-sm font-medium">Zal/Darslik/Dastur nomi</label>
+              <label className="text-sm font-medium">{t('settings.hall_name')}</label>
               <Input
                 value={hallName}
                 onChange={(e) => setHallName(e.target.value)}
-                placeholder="Masalan: FitGym Chilonzor"
+                placeholder={t('settings.hall_placeholder')}
                 data-testid="input-hall-name"
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Telefon raqami</label>
+              <label className="text-sm font-medium">{t('settings.phone')}</label>
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -286,7 +288,7 @@ export default function SettingsPage() {
               data-testid="button-send-partner-request"
             >
               <Send className="h-4 w-4" />
-              {partnerRequestMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
+              {partnerRequestMutation.isPending ? t('settings.sending') : t('settings.send')}
             </Button>
           </div>
         </DialogContent>

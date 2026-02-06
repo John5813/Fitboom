@@ -1,6 +1,7 @@
 import { Home, Dumbbell, Video, Calendar, QrCode, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BottomNavProps {
   activeTab: string;
@@ -9,12 +10,13 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, onTabChange, onScanQR }: BottomNavProps) {
+  const { t } = useLanguage();
   const tabs = [
-    { id: 'home', label: 'Asosiy', icon: Home },
-    { id: 'gyms', label: 'Zallar', icon: Dumbbell },
-    { id: 'classes', label: 'Darslar', icon: Video },
-    { id: 'bookings', label: 'Bronlar', icon: Calendar },
-    { id: 'scanner', label: 'Skaner', icon: QrCode },
+    { id: 'home', label: t('nav.home'), icon: Home },
+    { id: 'gyms', label: t('nav.gyms'), icon: Dumbbell },
+    { id: 'classes', label: t('nav.classes'), icon: Video },
+    { id: 'bookings', label: t('nav.bookings'), icon: Calendar },
+    { id: 'scanner', label: t('nav.scanner'), icon: QrCode },
   ];
 
   return (

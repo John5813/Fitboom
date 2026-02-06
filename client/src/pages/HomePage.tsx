@@ -590,18 +590,18 @@ export default function HomePage() {
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">Sizga eng yaqin zallar</h2>
+              <h2 className="font-display font-semibold text-xl">{t('home.near_gyms')}</h2>
               <Link href="/gyms">
                 <Button variant="ghost" size="sm" className="text-primary">
-                  Barchasini ko'rish
+                  {t('home.view_all')}
                 </Button>
               </Link>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              {userLocation ? "Masofaga qarab saralangan" : "Yaqin atrofdagi sport zallari"}
+              {userLocation ? t('home.sorted_by_distance') : t('home.nearby_gyms_desc')}
             </p>
             {gymsLoading ? (
-              <p className="text-muted-foreground">Yuklanmoqda...</p>
+              <p className="text-muted-foreground">{t('home.loading')}</p>
             ) : gymsWithDistance.length > 0 ? (
               <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
                 {gymsWithDistance.slice(0, 8).map((gym) => (
@@ -631,7 +631,7 @@ export default function HomePage() {
                           </p>
                         ) : (
                           <p className="text-white/70 text-[10px]">
-                            Masofa noma'lum
+                            {t('home.unknown_distance')}
                           </p>
                         )}
                       </div>
@@ -641,17 +641,17 @@ export default function HomePage() {
               </div>
             ) : (
               <p className="text-muted-foreground text-sm text-center py-4">
-                Hozircha zallar mavjud emas
+                {t('home.no_gyms_yet')}
               </p>
             )}
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">Video Kurslar</h2>
+              <h2 className="font-display font-semibold text-xl">{t('courses.title')}</h2>
             </div>
             {classesLoading || purchasesLoading ? (
-              <p className="text-muted-foreground">Yuklanmoqda...</p>
+              <p className="text-muted-foreground">{t('common.loading')}</p>
             ) : onlineClasses.length > 0 ? (
               <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
                 {onlineClasses.slice(0, 8).map((collection) => {
@@ -675,7 +675,7 @@ export default function HomePage() {
                             {collection.name}
                           </h3>
                           <p className="text-white/70 text-[10px] truncate">
-                            {isPurchased ? 'Sotib olingan' : `${collection.price} so'm`}
+                            {isPurchased ? t('home.purchased') : `${collection.price} so'm`}
                           </p>
                         </div>
                       </div>
@@ -685,7 +685,7 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-muted-foreground text-sm">Hozircha video kurslar mavjud emas. Tez orada yangi kurslar qo'shiladi!</p>
+                <p className="text-muted-foreground text-sm">{t('home.videos_soon')}</p>
               </div>
             )}
           </div>
@@ -696,11 +696,11 @@ export default function HomePage() {
       {activeTab === 'gyms' && (
         <div className="p-4 space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="font-display font-bold text-2xl">Sport Zallari</h1>
+            <h1 className="font-display font-bold text-2xl">{t('home.gyms_title')}</h1>
             <Link href="/map">
               <Button variant="outline" size="sm" data-testid="button-view-map">
                 <MapPin className="h-4 w-4 mr-2" />
-                Haritada Ko'rish
+                {t('map.view_on_google')}
               </Button>
             </Link>
           </div>
@@ -716,10 +716,10 @@ export default function HomePage() {
           />
 
           {gymsLoading ? (
-            <p className="text-muted-foreground">Yuklanmoqda...</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           ) : filteredGyms.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Sizning qidiruv shartingizga mos sport zal topilmadi</p>
+              <p className="text-muted-foreground">{t('home.no_gyms_filter')}</p>
             </div>
           ) : (
             <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
@@ -1314,7 +1314,7 @@ export default function HomePage() {
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              Vaqtni tanlang
+              {t('home.gym_slots_title')}
             </DialogTitle>
             <DialogDescription>
               {selectedGymForBooking?.name}
@@ -1338,7 +1338,7 @@ export default function HomePage() {
                 }}
               >
                 <MapPin className="h-4 w-4 mr-2" />
-                Haritada ko'rish
+                {t('map.title_short')}
               </Button>
             )}
 
@@ -1374,7 +1374,7 @@ export default function HomePage() {
                     {sortedDays.map((day) => {
                       const dayDate = getDayDate(day);
                       const formattedDate = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
-                      const displayDate = dayDate.toLocaleDateString('uz-UZ', { 
+                      const displayDate = dayDate.toLocaleDateString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { 
                         day: '2-digit', 
                         month: 'long',
                         year: 'numeric'
@@ -1456,7 +1456,7 @@ export default function HomePage() {
               <div className="text-center py-6 bg-muted/50 rounded-lg">
                 <Clock className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
                 <p className="text-sm text-muted-foreground">
-                  Vaqt slotlari yo'q. Vaqtsiz bron qilishingiz mumkin.
+                  {t('home.no_slots')}
                 </p>
               </div>
             )}
@@ -1474,14 +1474,14 @@ export default function HomePage() {
               {bookGymMutation.isPending ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Yuklanmoqda...
+                  {t('common.loading')}
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  Tasdiqlash
+                  {t('home.confirm')}
                 </span>
               )}
             </Button>
@@ -1494,7 +1494,7 @@ export default function HomePage() {
               }}
               data-testid="button-cancel-booking"
             >
-              Bekor
+              {t('common.cancel')}
             </Button>
           </div>
         </DialogContent>

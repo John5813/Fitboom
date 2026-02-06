@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface GymFiltersProps {
   categories: string[];
@@ -22,13 +23,14 @@ export default function GymFilters({
   maxPrice,
   onMaxPriceChange
 }: GymFiltersProps) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Qidirish..."
+            placeholder={t('common.search')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
@@ -39,12 +41,12 @@ export default function GymFilters({
         {onMaxPriceChange && (
           <div className="relative">
             <Label htmlFor="max-price" className="text-xs text-muted-foreground mb-1 block">
-              Maksimal narx (kredit)
+              {t('settings.max_price')} ({t('profile.credits_count')})
             </Label>
             <Input 
               id="max-price"
               type="number"
-              placeholder="Narx bo'yicha filtr..."
+              placeholder={t('settings.price_filter')}
               value={maxPrice || ''}
               onChange={(e) => onMaxPriceChange(e.target.value ? Number(e.target.value) : undefined)}
               className="w-full"
@@ -63,7 +65,7 @@ export default function GymFilters({
           className="whitespace-nowrap hover-elevate active-elevate-2 flex-shrink-0"
           data-testid="button-filter-all"
         >
-          Hammasi
+          {t('common.all')}
         </Button>
         {categories.map((category) => (
           <Button

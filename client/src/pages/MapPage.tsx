@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import { useLanguage } from "@/contexts/LanguageContext";
 import L from "leaflet";
 
 // Fix for default marker icons in react-leaflet
@@ -23,6 +24,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 export default function MapPage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const { t } = useLanguage();
   const [mapCenter, setMapCenter] = useState<[number, number]>([41.311151, 69.279737]); // Toshkent default
 
   const { data: gymsData, isLoading } = useQuery<{ gyms: Gym[] }>({
@@ -93,14 +95,14 @@ export default function MapPage() {
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-display font-bold">Eng Yaqin Zallar</h1>
+            <h1 className="text-3xl font-display font-bold">{t('map.title')}</h1>
             <p className="text-muted-foreground mt-2">
-              Haritada sport zallarni ko'ring va tanlang
+              {t('map.desc')}
             </p>
           </div>
           <Button onClick={handleLocateMe} data-testid="button-locate-me">
             <Navigation className="h-4 w-4 mr-2" />
-            Mening Joylashuvim
+            {t('map.locate_me')}
           </Button>
         </div>
       </div>
@@ -108,7 +110,7 @@ export default function MapPage() {
       <Card className="p-2 sm:p-4">
         {isLoading ? (
           <div className="h-[400px] sm:h-[600px] flex items-center justify-center">
-            <p className="text-muted-foreground">Yuklanmoqda...</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           </div>
         ) : (
           <MapContainer
@@ -127,7 +129,7 @@ export default function MapPage() {
               <Marker position={userLocation}>
                 <Popup>
                   <div className="text-center">
-                    <p className="font-semibold">Sizning joylashuvingiz</p>
+                    <p className="font-semibold">{t('map.your_location')}</p>
                   </div>
                 </Popup>
               </Marker>
@@ -188,11 +190,11 @@ export default function MapPage() {
                           rel="noopener noreferrer"
                           className="text-primary hover:underline"
                         >
-                          Google Maps'da ko'rish
+                          {t('map.view_on_google')}
                         </a>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">{gym.credits} kredit</span>
+                        <span className="text-sm font-semibold">{gym.credits} {t('profile.credits_count')}</span>
                         <span className="text-xs text-muted-foreground">{gym.hours}</span>
                       </div>
                     </div>
@@ -206,7 +208,7 @@ export default function MapPage() {
 
       {!isLoading && gymsWithLocation.length === 0 && (
         <div className="text-center mt-4 text-muted-foreground">
-          <p>Haritada ko'rsatish uchun koordinatali zallar yo'q</p>
+          <p>{t('home.no_gyms_on_map')}</p>
         </div>
       )}
     </div>

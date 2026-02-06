@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, QrCode, X, AlertCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BookingCardProps {
   id: string;
@@ -34,6 +35,7 @@ export default function BookingCard({
   scheduledStartTime,
   scheduledEndTime
 }: BookingCardProps) {
+  const { t } = useLanguage();
   const openMap = () => {
     if (latitude && longitude) {
       window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
@@ -76,7 +78,7 @@ export default function BookingCard({
                 data-testid={`button-qr-${id}`}
               >
                 <QrCode className="w-3 h-3 mr-1" />
-                QR Skanerlash
+                {t('nav.scanner')}
               </Button>
               {(latitude && longitude) || gymAddress ? (
                 <Button
@@ -86,7 +88,7 @@ export default function BookingCard({
                   data-testid={`button-map-${id}`}
                 >
                   <MapPin className="w-3 h-3 mr-1" />
-                  Harita
+                  {t('map.title_short')}
                 </Button>
               ) : null}
               <Button
@@ -96,7 +98,7 @@ export default function BookingCard({
                 data-testid={`button-cancel-${id}`}
               >
                 <X className="w-3 h-3 mr-1" />
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
