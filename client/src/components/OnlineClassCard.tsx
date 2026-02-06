@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Play, Lock, Clock, User } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface OnlineClassCardProps {
   id: string;
@@ -23,6 +24,7 @@ export default function OnlineClassCard({
   isLocked = false,
   onClick
 }: OnlineClassCardProps) {
+  const { t } = useLanguage();
   return (
     <Card 
       className={`overflow-hidden cursor-pointer hover-elevate ${isLocked ? 'opacity-75' : ''}`}

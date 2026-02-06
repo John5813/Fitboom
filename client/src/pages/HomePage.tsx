@@ -747,10 +747,10 @@ export default function HomePage() {
       {/* Classes Tab */}
       {activeTab === 'classes' && (
         <div className="p-4 space-y-6">
-          <h1 className="font-display font-bold text-2xl">Video Kurslar</h1>
+          <h1 className="font-display font-bold text-2xl">{t('courses.title')}</h1>
 
           {classesLoading || purchasesLoading ? (
-            <p className="text-muted-foreground">Yuklanmoqda...</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           ) : onlineClasses.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {onlineClasses.map((collection) => {
@@ -773,7 +773,7 @@ export default function HomePage() {
                           {collection.name}
                         </h3>
                         <p className="text-white/80 text-xs mt-1">
-                          {collection.isFree ? 'Bepul' : `${collection.price} sum`}
+                          {collection.isFree ? t('courses.free') : `${collection.price} sum`}
                         </p>
                       </div>
                     </div>
@@ -786,7 +786,7 @@ export default function HomePage() {
                           onClick={() => setLocation(`/my-courses/${collection.id}`)}
                         >
                           <Video className="h-3 w-3 mr-1" />
-                          Sotib olingan
+                          {t('home.purchased')}
                         </Button>
                       ) : (
                         <Button
@@ -796,7 +796,7 @@ export default function HomePage() {
                           disabled={purchaseCollectionMutation.isPending}
                         >
                           <ShoppingCart className="h-3 w-3 mr-1" />
-                          {purchaseCollectionMutation.isPending ? 'Yuklanmoqda...' : 'Sotib olish'}
+                          {purchaseCollectionMutation.isPending ? t('common.loading') : t('courses.buy')}
                         </Button>
                       )}
                     </div>
@@ -806,11 +806,11 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Hozircha video kurslar mavjud emas. Tez orada yangi kurslar qo'shiladi!</p>
+              <p className="text-muted-foreground">{t('courses.no_courses_desc')}</p>
               <Link href="/courses">
                 <Button className="mt-4" data-testid="button-explore-courses">
                   <Video className="h-4 w-4 mr-2" />
-                  Kurslarni Ko'rish
+                  {t('courses.view')}
                 </Button>
               </Link>
             </div>
@@ -822,7 +822,7 @@ export default function HomePage() {
       {activeTab === 'bookings' && (
         <div className="p-4 space-y-6">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="font-display font-bold text-2xl">Mening Bronlarim</h1>
+            <h1 className="font-display font-bold text-2xl">{t('profile.history_title')}</h1>
             <Button
               variant="outline"
               size="sm"
@@ -831,7 +831,7 @@ export default function HomePage() {
               data-testid="button-visit-history"
             >
               <Clock className="w-4 h-4" />
-              Zallar tarixi
+              {t('profile.history_title')}
               {completedBookings.length > 0 && (
                 <Badge variant="secondary" className="ml-1">{completedBookings.length}</Badge>
               )}
@@ -846,10 +846,10 @@ export default function HomePage() {
                   <BookingCard
                     key={booking.id}
                     id={booking.id}
-                    gymName={gym?.name || "Unknown"}
+                    gymName={gym?.name || t('profile.unknown_gym')}
                     gymImage={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
                     gymAddress={gym?.address || ""}
-                    date={new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
+                    date={new Date(booking.date).toLocaleDateString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' })}
                     time={booking.time}
                     latitude={gym?.latitude || undefined}
                     longitude={gym?.longitude || undefined}
@@ -863,7 +863,7 @@ export default function HomePage() {
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">Hozircha faol bronlar yo'q</p>
+            <p className="text-muted-foreground text-center py-8">{t('profile.no_history')}</p>
           )}
         </div>
       )}
@@ -946,12 +946,12 @@ export default function HomePage() {
       {/* Scanner Tab */}
       {activeTab === 'scanner' && (
         <div className="p-4 pb-24">
-          <h1 className="font-display font-bold text-2xl mb-4">QR Kod Skaner</h1>
+          <h1 className="font-display font-bold text-2xl mb-4">{t('nav.scanner')}</h1>
           
           {activeBookings.length > 0 ? (
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Qaysi bron uchun QR kodni skanerlash kerak? Bronni tanlang:
+                {t('home.scanner_desc')}
               </p>
               <div className="space-y-3">
                 {activeBookings.map((booking) => {
@@ -971,9 +971,9 @@ export default function HomePage() {
                             className="w-16 h-16 rounded-md object-cover"
                           />
                           <div className="flex-1">
-                            <h3 className="font-semibold">{gym?.name || "Noma'lum"}</h3>
+                            <h3 className="font-semibold">{gym?.name || t('profile.unknown_gym')}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(booking.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })} • {booking.time}
+                              {new Date(booking.date).toLocaleDateString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' })} • {booking.time}
                             </p>
                           </div>
                           <QrCode className="w-6 h-6 text-primary" />
@@ -988,14 +988,14 @@ export default function HomePage() {
             <div className="text-center py-12">
               <QrCode className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                Hozircha faol bronlar yo'q. Avval zalga bron qiling.
+                {t('home.no_slots')}
               </p>
               <Button 
                 className="mt-4" 
                 onClick={() => setActiveTab('gyms')}
                 data-testid="button-go-to-gyms"
               >
-                Zallarni ko'rish
+                {t('home.view_all')}
               </Button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { KeyRound, AlertTriangle, Clock, Plus } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CreditBalanceProps {
   credits: number;
@@ -9,6 +10,7 @@ interface CreditBalanceProps {
 }
 
 export default function CreditBalance({ credits, onPurchase, creditExpiryDate }: CreditBalanceProps) {
+  const { t } = useLanguage();
   const getRemainingDays = () => {
     if (!creditExpiryDate) return null;
     const expiry = new Date(creditExpiryDate);
@@ -40,7 +42,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
                 )}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Kalitlar soni</p>
+                <p className="text-sm text-muted-foreground">{t('profile.credits_title')}</p>
                 <p className="font-display font-bold text-2xl bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent" data-testid="credit-balance">{credits}</p>
               {remainingDays !== null && credits > 0 && (
                 <div className={`flex items-center gap-1 mt-1 ${
@@ -49,23 +51,18 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
                   <Clock className="w-3 h-3" />
                   <p className="text-xs font-medium" data-testid="text-remaining-days">
                     {isExpired
-                      ? "Muddat tugadi! Kalit yangilang"
+                      ? t('profile.expired_message')
                       : isExpiringSoon
-                        ? `Diqqat: ${remainingDays} kun qoldi!`
-                        : `${remainingDays} kun qoldi`}
+                        ? `${t('profile.expiring_soon')} ${remainingDays} ${t('profile.days_left')}`
+                        : `${remainingDays} ${t('profile.days_left')}`}
                   </p>
                 </div>
-              )}
-              {isExpired && credits > 0 && (
-                <p className="text-xs text-destructive mt-1">
-                  Kalitlaringiz muddati o'tgan
-                </p>
               )}
             </div>
           </div>
           <Button onClick={onPurchase} variant={isExpired || isExpiringSoon ? "default" : "outline"} size="sm" className="hover-elevate active-elevate-2">
             <KeyRound className="w-4 h-4 mr-2" />
-            {isExpired ? "Yangilash" : "To'ldirish"}
+            {isExpired ? t('profile.renew') : t('profile.topup')}
           </Button>
         </div>
         </CardContent>
