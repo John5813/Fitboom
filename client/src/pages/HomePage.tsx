@@ -78,7 +78,7 @@ export default function HomePage() {
   } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const queryClient = useQueryClient();
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -874,10 +874,10 @@ export default function HomePage() {
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Zallar tarixi
+              {t('profile.history_title')}
             </DialogTitle>
             <DialogDescription>
-              Siz tashrif buyurgan zallar ro'yxati
+              {t('profile.history_desc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -909,11 +909,11 @@ export default function HomePage() {
                         <h4 className={`font-semibold truncate ${
                           isMissed ? 'text-red-600 dark:text-red-400' : ''
                         }`}>
-                          {gym?.name || "Noma'lum zal"}
+                          {gym?.name || t('profile.unknown_gym')}
                         </h4>
                         {isMissed && (
                           <Badge variant="destructive" className="text-xs flex-shrink-0">
-                            O'tib ketgan
+                            {t('profile.missed')}
                           </Badge>
                         )}
                       </div>
@@ -922,7 +922,7 @@ export default function HomePage() {
                       <p className={`text-sm font-medium ${
                         isMissed ? 'text-red-600 dark:text-red-400' : ''
                       }`}>
-                        {bookingDate.toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {bookingDate.toLocaleDateString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
                       <p className={`text-xs ${
                         isMissed ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'
@@ -937,7 +937,7 @@ export default function HomePage() {
           ) : (
             <div className="text-center py-8">
               <Clock className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">Hali tashrif buyurilgan zallar yo'q</p>
+              <p className="text-muted-foreground">{t('profile.no_history')}</p>
             </div>
           )}
         </DialogContent>
@@ -1071,18 +1071,18 @@ export default function HomePage() {
 
             {/* Countdown display */}
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Vaqtingiz hali kelmadi</h2>
+              <h2 className="text-2xl font-bold text-white">{t('home.not_yet')}</h2>
               <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
                 {Math.floor(countdownData.remainingMinutes / 60) > 0 && (
-                  <span>{Math.floor(countdownData.remainingMinutes / 60)} soat </span>
+                  <span>{Math.floor(countdownData.remainingMinutes / 60)} {t('common.hours')} </span>
                 )}
-                <span>{countdownData.remainingMinutes % 60} min</span>
+                <span>{countdownData.remainingMinutes % 60} {t('common.minutes')}</span>
               </div>
               <p className="text-gray-400">
-                Belgilangan vaqt: {countdownData.scheduledTime}
+                {t('home.scheduled_time')}: {countdownData.scheduledTime}
               </p>
               <p className="text-gray-500 text-sm">
-                {new Date(countdownData.scheduledDate).toLocaleDateString('uz-UZ', { 
+                {new Date(countdownData.scheduledDate).toLocaleDateString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { 
                   day: 'numeric', 
                   month: 'long', 
                   year: 'numeric' 
@@ -1093,7 +1093,7 @@ export default function HomePage() {
             {/* Info text */}
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
               <p className="text-amber-200 text-sm">
-                Vaqtingizdan 15 minut oldin va 1 soat ichida kirish mumkin.
+                {t('home.arrival_window')}
               </p>
             </div>
 
@@ -1107,7 +1107,7 @@ export default function HomePage() {
               className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3"
               data-testid="button-close-countdown"
             >
-              Tushundim
+              {t('common.understand')}
             </Button>
           </div>
         </div>
@@ -1209,7 +1209,7 @@ export default function HomePage() {
             {/* Success text with gradient */}
             <div style={{ animation: 'slideUp 0.6s ease-out 0.3s both' }}>
               <h1 className="text-5xl font-display font-bold bg-gradient-to-r from-emerald-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent mb-2">
-                KIRISH OCHILDI
+                {t('home.access_granted')}
               </h1>
               <p className="text-xl text-gray-300 font-medium">
                 {successGymName}
@@ -1222,7 +1222,7 @@ export default function HomePage() {
               style={{ animation: 'slideUp 0.6s ease-out 0.5s both' }}
             >
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-lg font-semibold tracking-wide">MUVAFFAQIYATLI</span>
+              <span className="text-lg font-semibold tracking-wide">{t('home.success')}</span>
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
 
@@ -1232,7 +1232,7 @@ export default function HomePage() {
               style={{ animation: 'pulseGlow 2s ease-in-out infinite, slideUp 0.6s ease-out 0.7s both' }}
             >
               <p className="text-amber-200 text-lg font-semibold animate-pulse">
-                Zal adminiga ko'rsating
+                {t('home.show_to_admin')}
               </p>
             </div>
 
@@ -1254,10 +1254,10 @@ export default function HomePage() {
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  Tasdiqlangan
+                  {t('home.confirmed')}
                 </span>
                 <span className="text-sm font-normal opacity-90">
-                  {new Date().toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date().toLocaleDateString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date().toLocaleTimeString(language === 'uz' ? 'uz-UZ' : language === 'ru' ? 'ru-RU' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </span>
             </Button>
