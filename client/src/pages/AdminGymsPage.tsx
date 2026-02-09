@@ -253,13 +253,13 @@ export default function AdminGymsPage() {
         credits: '',
         categories: [],
         imageUrl: '',
+        images: [],
         facilities: '',
         hours: '09:00 - 22:00',
         latitude: '',
         longitude: '',
         locationLink: '',
       });
-      setSelectedImage(null);
     },
     onError: () => {
       toast({
@@ -500,7 +500,7 @@ export default function AdminGymsPage() {
   };
 
   const handleImageUpload = async (file: File) => {
-    setUploadingImage(true);
+    setUploadingImages(true);
     try {
       const formData = new FormData();
       formData.append('image', file);
@@ -517,7 +517,6 @@ export default function AdminGymsPage() {
 
       const data = await response.json();
       setGymForm({ ...gymForm, imageUrl: data.imageUrl });
-      setSelectedImage(file);
 
       toast({
         title: "Rasm yuklandi",
@@ -530,7 +529,7 @@ export default function AdminGymsPage() {
         variant: "destructive"
       });
     } finally {
-      setUploadingImage(false);
+      setUploadingImages(false);
     }
   };
 
@@ -1182,10 +1181,10 @@ export default function AdminGymsPage() {
                       handleImageUpload(file);
                     }
                   }}
-                  disabled={uploadingImage}
+                  disabled={uploadingImages}
                   data-testid="input-gym-image"
                 />
-                {uploadingImage && (
+                {uploadingImages && (
                   <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
                 )}
                 {gymForm.imageUrl && (

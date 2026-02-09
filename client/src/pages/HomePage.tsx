@@ -715,33 +715,33 @@ export default function HomePage() {
             onMaxPriceChange={setMaxPrice}
           />
 
-          {gymsLoading ? (
-            <p className="text-muted-foreground">{t('common.loading')}</p>
-          ) : filteredGyms.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">{t('home.no_gyms_filter')}</p>
-            </div>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
-              {filteredGyms.map((gym) => (
-                <GymCard
-                  key={gym.id}
-                  id={gym.id}
-                  name={gym.name}
-                  category={gym.categories?.[0] || ''}
-                  credits={gym.credits}
-                  distance={gym.distance}
-                  hours={gym.hours}
-                  imageUrl={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
-                  images={gym.images || []}
-                  address={gym.address}
-                  latitude={gym.latitude || undefined}
-                  longitude={gym.longitude || undefined}
-                  onBook={handleBookGym}
-                />
-              ))}
-            </div>
-          )}
+            {gymsLoading ? (
+              <p className="text-muted-foreground">{t('common.loading')}</p>
+            ) : filteredGyms.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">{t('home.no_gyms_filter')}</p>
+              </div>
+            ) : (
+              <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory">
+                {filteredGyms.map((gym) => (
+                  <GymCard
+                    key={gym.id}
+                    id={gym.id}
+                    name={gym.name}
+                    category={gym.categories?.[0] || ''}
+                    credits={gym.credits}
+                    distance={gym.distance}
+                    hours={gym.hours}
+                    imageUrl={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
+                    images={(gym as any).images || []}
+                    address={gym.address}
+                    latitude={gym.latitude || undefined}
+                    longitude={gym.longitude || undefined}
+                    onBook={handleBookGym}
+                  />
+                ))}
+              </div>
+            )}
         </div>
       )}
 
