@@ -261,10 +261,10 @@ export default function AdminGymsPage() {
         locationLink: '',
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Xatolik",
-        description: "Zal qo'shishda xatolik yuz berdi.",
+        description: error.message || "Zal qo'shishda xatolik yuz berdi.",
         variant: "destructive"
       });
     }
