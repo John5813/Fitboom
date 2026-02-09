@@ -11,7 +11,8 @@ import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Gym, Category } from "@shared/schema";
+import type { Gym } from "@shared/schema";
+import { CATEGORIES, type Category } from "@shared/categories";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('gyms');
@@ -232,6 +233,7 @@ export default function AdminPage() {
       credits: creditsValue,
       categories: gymForm.categories,
       imageUrl: trimmedImageUrl,
+      images: [trimmedImageUrl],
       facilities: trimmedFacilities || null,
       rating: parseInt(gymForm.rating, 10),
       hours: trimmedHours

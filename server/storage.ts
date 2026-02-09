@@ -154,7 +154,10 @@ export class DatabaseStorage implements IStorage {
   async createGym(insertGym: InsertGym): Promise<Gym> {
     const [gym] = await db
       .insert(gyms)
-      .values(insertGym)
+      .values({
+        ...insertGym,
+        images: insertGym.images || [insertGym.imageUrl]
+      })
       .returning();
     return gym;
   }

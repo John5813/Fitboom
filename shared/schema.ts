@@ -42,6 +42,7 @@ export const gyms = pgTable("gyms", {
   distance: text("distance").notNull().default("0 km"),
   hours: text("hours").notNull().default("00:00 - 24:00"),
   imageUrl: text("image_url").notNull(),
+  images: text("images").array().notNull().default(sql`ARRAY[]::text[]`),
   address: text("address").notNull(),
   description: text("description"),
   rating: integer("rating").notNull().default(5),

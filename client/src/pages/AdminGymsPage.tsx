@@ -57,6 +57,7 @@ export default function AdminGymsPage() {
     credits: '',
     categories: [] as string[],
     imageUrl: '',
+    images: [] as string[],
     facilities: '',
     hours: '09:00 - 22:00',
     latitude: '',
@@ -64,8 +65,46 @@ export default function AdminGymsPage() {
     locationLink: '',
   });
 
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("images", files[i]);
+    }
+
+    try {
+      const res = await fetch("/api/upload-images", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.imageUrls) {
+        const newImages = [...(gymForm.images || []), ...data.imageUrls];
+        setGymForm({
+          ...gymForm,
+          images: newImages,
+          imageUrl: gymForm.imageUrl || data.imageUrls[0] // Set first image as main if none exists
+        });
+        toast({
+          title: "Muvaffaqiyatli",
+          description: `${data.imageUrls.length} ta rasm yuklandi`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "Rasmlarni yuklashda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImages(false);
+    }
+  };
 
   const [timeSlotForm, setTimeSlotForm] = useState({
     dayOfWeek: '',
@@ -336,7 +375,8 @@ export default function AdminGymsPage() {
     const gymData: any = {
       ...gymForm,
       credits: parseInt(gymForm.credits),
-      categories: gymForm.categories
+      categories: gymForm.categories,
+      imageUrl: gymForm.images?.[0] || gymForm.imageUrl
     };
 
     if (gymForm.latitude && gymForm.longitude) {
@@ -687,16 +727,41 @@ export default function AdminGymsPage() {
                   </div>
                 )}
 
-                {selectedGym.imageUrl && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Rasm</p>
-                    <img 
-                      src={selectedGym.imageUrl} 
-                      alt={selectedGym.name}
-                      className="rounded-lg w-full h-48 object-cover"
-                    />
+                <div>
+                  <Label>Zal rasmlari</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {gymForm.images?.map((url, i) => (
+                      <div key={i} className="relative aspect-video rounded-md overflow-hidden border group">
+                        <img src={url} className="w-full h-full object-cover" />
+                        <button 
+                          type="button"
+                          onClick={() => setGymForm({...gymForm, images: gymForm.images.filter((_, idx) => idx !== i)})}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {i === 0 && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5">
+                            Asosiy
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <label className="border-2 border-dashed rounded-md aspect-video flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+                      <Plus className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground mt-1">Rasm qo'shish</span>
+                      <input 
+                        type="file" 
+                        multiple 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleImagesUpload}
+                        disabled={uploadingImages}
+                      />
+                    </label>
                   </div>
-                )}
+                  {uploadingImages && <p className="text-xs text-muted-foreground mt-1 animate-pulse">Yuklanmoqda...</p>}
+                </div>
 
               {selectedGym.qrCode && (
                 <div>

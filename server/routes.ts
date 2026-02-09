@@ -53,6 +53,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rasm yuklash endpoint
+  app.post("/api/upload-images", requireAuth, upload.array('images', 10), async (req, res) => {
+    try {
+      if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+        return res.status(400).json({ error: "Fayllar topilmadi" });
+      }
+
+      const files = req.files as Express.Multer.File[];
+      const imageUrls = files.map(file => `/api/images/${file.filename}`);
+
+      res.json({ imageUrls });
+    } catch (error: any) {
+      console.error("Rasm yuklash xatosi:", error);
+      res.status(500).json({ error: "Rasm yuklashda xatolik yuz berdi" });
+    }
+  });
+
+  // Eski rasm yuklash endpointini saqlab qolamiz muvofiqlik uchun
   app.post("/api/upload-image", requireAuth, upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
