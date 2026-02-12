@@ -158,6 +158,20 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true,
 export const insertTimeSlotSchema = createInsertSchema(timeSlots).omit({ id: true });
 export const insertAdminSettingSchema = createInsertSchema(adminSettings).omit({ id: true, updatedAt: true });
 export const insertPartnershipMessageSchema = createInsertSchema(partnershipMessages).omit({ id: true, status: true, createdAt: true });
+export const creditPayments = pgTable("credit_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  credits: integer("credits").notNull(),
+  price: integer("price").notNull(),
+  status: text("status").notNull().default("pending"),
+  receiptUrl: text("receipt_url"),
+  remainingAmount: integer("remaining_amount").notNull().default(0),
+  telegramMessageId: integer("telegram_message_id"),
+  adminChatId: integer("admin_chat_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertCreditPaymentSchema = createInsertSchema(creditPayments).omit({ id: true, createdAt: true });
 export const insertGymVisitSchema = createInsertSchema(gymVisits).omit({ id: true, visitDate: true });
 export const insertGymPaymentSchema = createInsertSchema(gymPayments).omit({ id: true, paymentDate: true });
 
@@ -183,3 +197,5 @@ export type InsertGymVisit = z.infer<typeof insertGymVisitSchema>;
 export type GymVisit = typeof gymVisits.$inferSelect;
 export type InsertGymPayment = z.infer<typeof insertGymPaymentSchema>;
 export type GymPayment = typeof gymPayments.$inferSelect;
+export type InsertCreditPayment = z.infer<typeof insertCreditPaymentSchema>;
+export type CreditPayment = typeof creditPayments.$inferSelect;
