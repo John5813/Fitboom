@@ -1327,43 +1327,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Vaqt sloti bo'lsa, vaqtni tekshirish
+      // Vaqt sloti bo'lsa, vaqtni tekshirish (Toshkent vaqtida)
       if (booking.timeSlotId && booking.scheduledStartTime && booking.date) {
-        const now = new Date();
-        const bookingDate = new Date(booking.date);
+        const tashkentDateStr = getTashkentDateStr();
+        const tashkentTimeStr = getTashkentTimeStr();
+        
+        const bookingDateStr = typeof booking.date === 'string'
+          ? booking.date.split('T')[0]
+          : new Date(booking.date).toISOString().split('T')[0];
+        
         const [startHour, startMin] = booking.scheduledStartTime.split(':').map(Number);
+        const [curHour, curMin] = tashkentTimeStr.split(':').map(Number);
         
-        // Scheduled start time in local timezone
-        const scheduledStart = new Date(bookingDate);
-        scheduledStart.setHours(startHour, startMin, 0, 0);
+        const scheduledMinutes = startHour * 60 + startMin;
+        const currentMinutes = curHour * 60 + curMin;
         
-        // Calculate time differences in minutes
-        const diffMinutes = (now.getTime() - scheduledStart.getTime()) / (1000 * 60);
-        
-        // Agar 15 minut dan oldin kelsa, hali erta - countdown ko'rsatish
-        if (diffMinutes < -15) {
-          // Kirish mumkin bo'lguncha qolgan vaqt (15 minut oldin)
-          const remainingMinutes = Math.abs(Math.floor(diffMinutes)) - 15;
+        // Faqat bugungi bron uchun vaqt tekshirish
+        if (bookingDateStr === tashkentDateStr) {
+          const diffMinutes = currentMinutes - scheduledMinutes;
           
-          return res.json({
-            success: false,
-            earlyArrival: true,
-            message: `Vaqtingiz hali kelmadi. ${remainingMinutes} minut qoldi.`,
-            remainingMinutes: remainingMinutes,
-            scheduledTime: booking.scheduledStartTime,
-            scheduledDate: booking.date
-          });
-        }
-        
-        // Agar 1 soatdan keyin kelsa (60+ minut o'tib ketgan), ulgirmadi
-        if (diffMinutes > 60) {
-          // Bronni "missed" holatiga o'zgartirish
+          // Agar 15 minutdan oldin kelsa, hali erta - countdown ko'rsatish
+          if (diffMinutes < -15) {
+            const remainingMinutes = Math.abs(diffMinutes) - 15;
+            
+            return res.json({
+              success: false,
+              earlyArrival: true,
+              message: `Vaqtingiz hali kelmadi. ${remainingMinutes} minut qoldi.`,
+              remainingMinutes: remainingMinutes,
+              scheduledTime: booking.scheduledStartTime,
+              scheduledDate: booking.date
+            });
+          }
+          
+          // Agar 1 soatdan keyin kelsa (60+ minut o'tib ketgan), ulgirmadi
+          if (diffMinutes > 60) {
+            await storage.updateBookingStatus(booking.id, 'missed');
+            
+            return res.json({
+              success: false,
+              missed: true,
+              message: "Afsuski, siz vaqtdan o'tib ketdingiz. Bron bekor qilindi.",
+              scheduledTime: booking.scheduledStartTime,
+              scheduledDate: booking.date
+            });
+          }
+        } else if (bookingDateStr < tashkentDateStr) {
+          // O'tgan kungi bron - missed
           await storage.updateBookingStatus(booking.id, 'missed');
           
           return res.json({
             success: false,
             missed: true,
-            message: "Afsuski, siz vaqtdan o'tib ketdingiz. Bron bekor qilindi.",
+            message: "Afsuski, bu bronning vaqti o'tib ketgan.",
+            scheduledTime: booking.scheduledStartTime,
+            scheduledDate: booking.date
+          });
+        } else {
+          // Kelajakdagi bron - erta kelgan
+          const bookingDateObj = new Date(bookingDateStr + 'T12:00:00');
+          const dayNames = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+          const dayName = dayNames[bookingDateObj.getDay()];
+          
+          return res.json({
+            success: false,
+            earlyArrival: true,
+            message: `Broningiz ${dayName}, ${bookingDateStr} kuni soat ${booking.scheduledStartTime} da. Hali erta!`,
+            remainingMinutes: 0,
             scheduledTime: booking.scheduledStartTime,
             scheduledDate: booking.date
           });

@@ -261,8 +261,8 @@ export default function HomePage() {
   });
 
   const bookings = bookingsData?.bookings || [];
-  const activeBookings = bookings.filter(b => !b.isCompleted && b.status !== 'missed');
-  const completedBookings = bookings.filter(b => b.isCompleted || b.status === 'missed');
+  const activeBookings = bookings.filter(b => !b.isCompleted && b.status !== 'missed' && b.status !== 'completed');
+  const completedBookings = bookings.filter(b => b.isCompleted || b.status === 'missed' || b.status === 'completed');
 
   const filteredGyms = gymsWithDistance.filter(gym => {
     const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategory);
@@ -356,29 +356,31 @@ export default function HomePage() {
   };
 
   const handleQRScan = async (data: string) => {
-    if (!selectedBooking) return;
-
     try {
+      const body: any = { qrCode: data };
+      if (selectedBooking) {
+        body.bookingId = selectedBooking.id;
+      }
+
       const response = await fetch('/api/verify-qr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          qrCode: data,
-          bookingId: selectedBooking.id
-        }),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
 
       if (result.success) {
         setIsScannerOpen(false);
-        const gymName = result.gym?.name || gyms.find(g => g.id === selectedBooking.gymId)?.name || "Zal";
+        setSelectedBooking(null);
+        const gymName = result.gym?.name || "Zal";
         setSuccessGymName(gymName);
         setShowSuccessAnimation(true);
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       } else if (result.earlyArrival) {
         setIsScannerOpen(false);
+        setSelectedBooking(null);
         setCountdownData({
           remainingMinutes: result.remainingMinutes,
           scheduledTime: result.scheduledTime,
@@ -392,6 +394,7 @@ export default function HomePage() {
           variant: "destructive",
         });
         setIsScannerOpen(false);
+        setSelectedBooking(null);
       }
     } catch (error) {
       toast({
@@ -400,6 +403,7 @@ export default function HomePage() {
         variant: "destructive",
       });
       setIsScannerOpen(false);
+      setSelectedBooking(null);
     }
   };
 
