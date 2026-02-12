@@ -910,7 +910,7 @@ export default function HomePage() {
       )}
 
       <Dialog open={!!homeDetailGym} onOpenChange={(open) => !open && setHomeDetailGym(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 rounded-xl border-none">
+        <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] overflow-y-auto p-0 rounded-2xl border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{homeDetailGym?.name}</DialogTitle>
             <DialogDescription>{homeDetailGym?.categories?.join(', ') || ''}</DialogDescription>
