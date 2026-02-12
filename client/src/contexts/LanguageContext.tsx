@@ -139,8 +139,9 @@ const translations: Record<Language, Record<string, string>> = {
     "payment.copied": "Nusxa olindi",
     "payment.pending_exists": "Sizda kutilayotgan to'lov mavjud",
     "payment.remaining_payment": "Qoldiq to'lov",
+    "payment.unpaid_amount": "Yetmayotgan summa",
     "payment.keys_for": "kalit uchun qoldiq",
-    "payment.remaining_desc": "Qoldiqni to'lang va chekni yuboring, shunda kalitlar hisobingizga qo'shiladi",
+    "payment.remaining_desc": "To'lovni yakunlang! Qoldiq summani to'lab, chekni yuboring",
     "payment.pay_remaining": "Qoldiqni to'lash"
   },
   ru: {
@@ -274,8 +275,9 @@ const translations: Record<Language, Record<string, string>> = {
     "payment.copied": "Скопировано",
     "payment.pending_exists": "У вас есть ожидающая оплата",
     "payment.remaining_payment": "Остаток оплаты",
+    "payment.unpaid_amount": "Недостающая сумма",
     "payment.keys_for": "ключей, остаток",
-    "payment.remaining_desc": "Оплатите остаток и отправьте чек, тогда ключи будут начислены",
+    "payment.remaining_desc": "Завершите оплату! Оплатите остаток и отправьте чек",
     "payment.pay_remaining": "Оплатить остаток"
   },
   en: {
@@ -409,8 +411,9 @@ const translations: Record<Language, Record<string, string>> = {
     "payment.copied": "Copied",
     "payment.pending_exists": "You have a pending payment",
     "payment.remaining_payment": "Remaining Payment",
+    "payment.unpaid_amount": "Unpaid amount",
     "payment.keys_for": "keys, remaining",
-    "payment.remaining_desc": "Pay the remaining amount and send the receipt, then keys will be added",
+    "payment.remaining_desc": "Complete payment! Pay the remaining amount and send the receipt",
     "payment.pay_remaining": "Pay Remaining"
   }
 };

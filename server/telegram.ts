@@ -206,31 +206,35 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           
           const payment = await storage.getCreditPayment(paymentId);
           if (payment) {
-            const remainingAmount = newAmount;
-            await storage.updateCreditPayment(paymentId, { 
-              status: 'partial',
-              remainingAmount: remainingAmount,
-            } as any);
+            const remainingAmount = payment.price - newAmount;
+            if (remainingAmount <= 0) {
+              await sendTelegramMessage(chatId, 'Kiritilgan summa asl narxdan kam bo\'lishi kerak. To\'liq tasdiqlash uchun "Tasdiqlash" tugmasini bosing.');
+            } else {
+              await storage.updateCreditPayment(paymentId, { 
+                status: 'partial',
+                remainingAmount: remainingAmount,
+              } as any);
 
-            // Notify user about partial payment
-            const user = await storage.getUser(payment.userId);
-            if (user?.chatId) {
+              const user = await storage.getUser(payment.userId);
+              if (user?.chatId) {
+                await sendTelegramMessage(
+                  user.chatId,
+                  `To'lovingiz qisman qabul qilindi.\n\n` +
+                  `To'langan summa: ${newAmount.toLocaleString()} so'm\n` +
+                  `<b>Qoldiq summa: ${remainingAmount.toLocaleString()} so'm</b>\n\n` +
+                  `Iltimos, qoldiq summani to'lab, chekni ilovada yuboring.`
+                );
+              }
+
               await sendTelegramMessage(
-                user.chatId,
-                `To'lovingiz qisman qabul qilindi.\n\n` +
-                `To'langan summa: ${newAmount.toLocaleString()} so'm\n` +
-                `<b>Qoldiq summa: ${remainingAmount.toLocaleString()} so'm</b>\n\n` +
-                `Iltimos, qoldiq summani to'lab, chekni ilovada yuboring.`
+                chatId,
+                `Miqdor o'zgartirildi.\n\n` +
+                `To'langan: ${newAmount.toLocaleString()} so'm\n` +
+                `Asl narx: ${payment.price.toLocaleString()} so'm\n` +
+                `Qoldiq: ${remainingAmount.toLocaleString()} so'm\n\n` +
+                `Mijoz qoldiqni to'lagandan so'ng tasdiqlang.`
               );
             }
-
-            await sendTelegramMessage(
-              chatId,
-              `Miqdor o'zgartirildi.\n\n` +
-              `Yangi summa: ${newAmount.toLocaleString()} so'm\n` +
-              `Mijozga qoldiq summa: ${remainingAmount.toLocaleString()} so'm ko'rsatildi.\n\n` +
-              `Mijoz qoldiqni to'lagandan so'ng tasdiqlang.`
-            );
           }
         } else {
           await sendTelegramMessage(chatId, 'Iltimos, to\'g\'ri raqam kiriting (masalan: 150000)');
