@@ -20,6 +20,7 @@ interface GymOwnerData {
     id: string;
     name: string;
     imageUrl?: string;
+    images?: string[];
     address?: string;
     totalEarnings: number;
     currentDebt: number;
@@ -32,8 +33,58 @@ export default function GymOwnerPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", imageUrl: "" });
+  const [editForm, setEditForm] = useState({ name: "", imageUrl: "", images: [] as string[] });
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleMultipleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("images", files[i]);
+    }
+
+    try {
+      const res = await fetch("/api/upload-images", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.imageUrls) {
+        setEditForm((prev) => ({
+          ...prev,
+          images: [...(prev.images || []), ...data.imageUrls],
+          imageUrl: prev.imageUrl || data.imageUrls[0]
+        }));
+        toast({
+          title: "Muvaffaqiyatli",
+          description: `${data.imageUrls.length} ta rasm yuklandi`,
+        });
+      }
+    } catch {
+      toast({
+        title: "Xatolik",
+        description: "Rasmlarni yuklashda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setEditForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+      // If we removed the main image, pick the next available one
+      imageUrl: prev.imageUrl === prev.images[index] 
+        ? (prev.images.filter((_, i) => i !== index)[0] || "") 
+        : prev.imageUrl
+    }));
+  };
   const [showVisitors, setShowVisitors] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
@@ -185,19 +236,24 @@ export default function GymOwnerPage() {
       setEditForm({
         name: data.gym.name,
         imageUrl: data.gym.imageUrl || "",
+        images: data.gym.images || [],
       });
       setIsEditDialogOpen(true);
     }
   };
 
   const handleSaveEdit = () => {
-    const updateData: { name?: string; imageUrl?: string } = {};
+    const updateData: { name?: string; imageUrl?: string; images?: string[] } = {};
     if (editForm.name && editForm.name !== data?.gym.name) {
       updateData.name = editForm.name;
     }
     if (editForm.imageUrl && editForm.imageUrl !== data?.gym.imageUrl) {
       updateData.imageUrl = editForm.imageUrl;
     }
+    if (JSON.stringify(editForm.images) !== JSON.stringify(data?.gym.images)) {
+      updateData.images = editForm.images;
+    }
+    
     if (Object.keys(updateData).length > 0) {
       updateGymMutation.mutate(updateData);
     } else {
@@ -412,20 +468,38 @@ export default function GymOwnerPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Zal rasmi</Label>
-              {editForm.imageUrl && (
-                <img
-                  src={editForm.imageUrl}
-                  alt="Preview"
-                  className="w-full h-32 object-cover rounded-md mb-2"
-                />
-              )}
+              <Label>Zal rasmlari</Label>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {editForm.images?.map((img, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-md overflow-hidden border">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {img === editForm.imageUrl && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5">
+                        Asosiy
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setEditForm(prev => ({ ...prev, imageUrl: img }))}
+                      className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-medium"
+                    >
+                      Asosiy qilish
+                    </button>
+                  </div>
+                ))}
+              </div>
               <Input
                 type="file"
+                multiple
                 accept="image/*"
-                onChange={handleImageUpload}
+                onChange={handleMultipleImagesUpload}
                 disabled={uploadingImage}
-                data-testid="input-edit-image"
+                data-testid="input-edit-images"
               />
               {uploadingImage && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

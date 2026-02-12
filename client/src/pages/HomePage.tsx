@@ -916,22 +916,26 @@ export default function HomePage() {
           {homeDetailGym && (
             <div className="space-y-4">
               {homeDetailGym.imageUrl && (
-                <div
-                  className="relative cursor-pointer rounded-md overflow-hidden"
-                  data-testid="image-home-detail-gym"
-                  onClick={() => {
-                    setHomeDetailGym(null);
-                    setHomeGalleryGym(homeDetailGym);
-                    setHomeGalleryIndex(0);
-                  }}
-                >
-                  <img src={homeDetailGym.imageUrl} alt={homeDetailGym.name} className="w-full h-48 object-cover" />
-                  {(homeDetailGym.images && homeDetailGym.images.length > 1) && (
-                    <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                      <ImageIcon className="w-3 h-3" />
-                      {homeDetailGym.images.length} ta rasm
-                    </div>
-                  )}
+                <div className="space-y-3">
+                  {/* Gallery Section with horizontal scroll */}
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
+                    {(homeDetailGym.images && homeDetailGym.images.length > 0 ? homeDetailGym.images : [homeDetailGym.imageUrl]).map((img, idx) => (
+                      <div
+                        key={idx}
+                        className="relative flex-shrink-0 w-full aspect-video cursor-pointer rounded-md overflow-hidden snap-center"
+                        data-testid={`image-home-detail-gym-${idx}`}
+                        onClick={() => {
+                          setHomeGalleryGym(homeDetailGym);
+                          setHomeGalleryIndex(idx);
+                        }}
+                      >
+                        <img src={img} alt={`${homeDetailGym.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-full">
+                          {idx + 1} / {(homeDetailGym.images?.length || 1)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -381,6 +381,48 @@ export default function AdminGymsPage() {
     }
   };
 
+  const handleSaveEdit = () => {
+    if (!selectedGym) return;
+    
+    const updateData: any = {
+      name: gymForm.name,
+      address: gymForm.address,
+      description: gymForm.description,
+      credits: parseInt(gymForm.credits),
+      categories: gymForm.categories,
+      imageUrl: gymForm.imageUrl,
+      images: gymForm.images,
+      facilities: gymForm.facilities,
+      hours: gymForm.hours,
+      latitude: gymForm.latitude,
+      longitude: gymForm.longitude,
+    };
+
+    updateGymMutation.mutate({ id: selectedGym.id, data: updateData });
+  };
+
+  const updateGymMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest(`/api/gyms/${id}`, 'PATCH', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+      toast({
+        title: "Zal yangilandi",
+        description: "Zal ma'lumotlari muvaffaqiyatli saqlandi.",
+      });
+      setSelectedGym(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Zalni yangilashda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCreateGym = () => {
     if (!gymForm.name || !gymForm.address || !gymForm.credits || gymForm.categories.length === 0) {
       toast({
@@ -1251,32 +1293,54 @@ export default function AdminGymsPage() {
             </div>
 
             <div>
-              <Label htmlFor="imageFile">Rasm Yuklash</Label>
+              <Label>Zal rasmlari</Label>
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {gymForm.images?.map((img, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-md overflow-hidden border">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setGymForm(prev => ({
+                        ...prev,
+                        images: prev.images.filter((_, i) => i !== idx),
+                        imageUrl: prev.imageUrl === prev.images[idx] ? (prev.images.filter((_, i) => i !== idx)[0] || "") : prev.imageUrl
+                      }))}
+                      className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {img === gymForm.imageUrl && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5">
+                        Asosiy
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setGymForm(prev => ({ ...prev, imageUrl: img }))}
+                      className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-medium"
+                    >
+                      Asosiy qilish
+                    </button>
+                  </div>
+                ))}
+              </div>
               <div className="space-y-2">
                 <Input
                   id="imageFile"
                   type="file"
+                  multiple
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleImageUpload(file);
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                      handleImagesUpload(files);
                     }
                   }}
                   disabled={uploadingImages}
-                  data-testid="input-gym-image"
+                  data-testid="input-gym-images"
                 />
                 {uploadingImages && (
-                  <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
-                )}
-                {gymForm.imageUrl && (
-                  <div className="mt-2">
-                    <img 
-                      src={gymForm.imageUrl} 
-                      alt="Preview" 
-                      className="rounded-lg w-full h-32 object-cover"
-                    />
-                  </div>
+                  <p className="text-sm text-muted-foreground animate-pulse">Yuklanmoqda...</p>
                 )}
               </div>
             </div>
