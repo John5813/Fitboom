@@ -182,6 +182,15 @@ export default function HomePage() {
     }
   }, [toast, queryClient]);
 
+  // Auto-refresh credits and payment status every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credit-payments/active'] });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const creditsCountValue = user?.credits ?? 0;
 
   const DAY_NAMES = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
