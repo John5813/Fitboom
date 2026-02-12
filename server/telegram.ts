@@ -63,10 +63,20 @@ interface TelegramMessage {
   contact?: TelegramContact;
 }
 
+interface TelegramCallbackQuery {
+  id: string;
+  from: TelegramUser;
+  message?: TelegramMessage;
+  data?: string;
+}
+
 interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 }
+
+const pendingAmountChanges = new Map<string, string>();
 
 async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -99,6 +109,68 @@ async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: a
   }
 }
 
+async function sendTelegramPhoto(chatId: number, photoUrl: string, caption: string, replyMarkup?: any) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+  
+  const body: any = {
+    chat_id: chatId,
+    photo: photoUrl,
+    caption: caption,
+    parse_mode: 'HTML',
+  };
+  
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup;
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Telegram API sendPhoto error:', data);
+    }
+    return data;
+  } catch (error) {
+    console.error('Error sending Telegram photo:', error);
+    return null;
+  }
+}
+
+async function answerCallbackQuery(callbackQueryId: string, text?: string) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callback_query_id: callbackQueryId, text: text || '' }),
+    });
+  } catch (error) {
+    console.error('Error answering callback query:', error);
+  }
+}
+
+async function editMessageReplyMarkup(chatId: number, messageId: number, replyMarkup?: any) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: replyMarkup || { inline_keyboard: [] },
+      }),
+    });
+  } catch (error) {
+    console.error('Error editing message markup:', error);
+  }
+}
+
 export function setupTelegramWebhook(app: Express, storage: IStorage) {
   if (!TELEGRAM_BOT_TOKEN) {
     console.warn('Telegram bot credentials not configured. Skipping webhook setup.');
@@ -108,6 +180,11 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
   app.post('/api/telegram/webhook', async (req, res) => {
     try {
       const update: TelegramUpdate = req.body;
+
+      if (update.callback_query) {
+        await handleCallbackQuery(update.callback_query, storage);
+        return res.sendStatus(200);
+      }
       
       if (!update.message) {
         return res.sendStatus(200);
@@ -116,6 +193,36 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       const message = update.message;
       const chatId = message.chat.id;
       const telegramUserId = message.from.id.toString();
+
+      const pendingKey = `amount_${chatId}`;
+      if (pendingAmountChanges.has(pendingKey) && message.text) {
+        const paymentId = pendingAmountChanges.get(pendingKey)!;
+        const newAmount = parseInt(message.text);
+        
+        if (!isNaN(newAmount) && newAmount > 0) {
+          pendingAmountChanges.delete(pendingKey);
+          
+          const payment = await storage.getCreditPayment(paymentId);
+          if (payment) {
+            const remainingAmount = newAmount;
+            await storage.updateCreditPayment(paymentId, { 
+              status: 'partial',
+              remainingAmount: remainingAmount,
+            } as any);
+
+            await sendTelegramMessage(
+              chatId,
+              `Miqdor o'zgartirildi.\n\n` +
+              `Yangi summa: ${newAmount.toLocaleString()} so'm\n` +
+              `Mijozga qoldiq summa: ${remainingAmount.toLocaleString()} so'm ko'rsatildi.\n\n` +
+              `Mijoz qoldiqni to'lagandan so'ng tasdiqlang.`
+            );
+          }
+        } else {
+          await sendTelegramMessage(chatId, 'Iltimos, to\'g\'ri raqam kiriting (masalan: 150000)');
+        }
+        return res.sendStatus(200);
+      }
 
       if (message.text?.startsWith('/start')) {
         const keyboard = {
@@ -259,6 +366,146 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
   });
 }
 
+async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage: IStorage) {
+  const data = callbackQuery.data;
+  if (!data) return;
+
+  const chatId = callbackQuery.message?.chat.id;
+  const messageId = callbackQuery.message?.message_id;
+  
+  if (!chatId || !messageId) return;
+
+  if (data.startsWith('pay_approve_')) {
+    const paymentId = data.replace('pay_approve_', '');
+    const payment = await storage.getCreditPayment(paymentId);
+    
+    if (!payment) {
+      await answerCallbackQuery(callbackQuery.id, 'To\'lov topilmadi');
+      return;
+    }
+
+    const user = await storage.getUser(payment.userId);
+    if (!user) {
+      await answerCallbackQuery(callbackQuery.id, 'Foydalanuvchi topilmadi');
+      return;
+    }
+
+    const newCredits = user.credits + payment.credits;
+    
+    let expiryDate: Date;
+    const now = new Date();
+    if (user.creditExpiryDate && new Date(user.creditExpiryDate) > now) {
+      expiryDate = new Date(user.creditExpiryDate);
+    } else {
+      expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+    }
+    
+    await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiryDate);
+    await storage.updateCreditPayment(paymentId, { status: 'approved' } as any);
+
+    await editMessageReplyMarkup(chatId, messageId);
+    await sendTelegramMessage(chatId, 
+      `Tasdiqlandi!\n\n` +
+      `${user.name || 'Foydalanuvchi'} ga ${payment.credits} kalit qo'shildi.\n` +
+      `Yangi balans: ${newCredits} kalit`
+    );
+
+    if (user.chatId) {
+      await sendTelegramMessage(user.chatId,
+        `Sizning to'lovingiz tasdiqlandi!\n\n` +
+        `${payment.credits} kalit hisobingizga qo'shildi.\n` +
+        `Yangi balans: ${newCredits} kalit`
+      );
+    }
+
+    await answerCallbackQuery(callbackQuery.id, 'Tasdiqlandi');
+  }
+  else if (data.startsWith('pay_reject_')) {
+    const paymentId = data.replace('pay_reject_', '');
+    const payment = await storage.getCreditPayment(paymentId);
+    
+    if (!payment) {
+      await answerCallbackQuery(callbackQuery.id, 'To\'lov topilmadi');
+      return;
+    }
+
+    await storage.updateCreditPayment(paymentId, { status: 'rejected' } as any);
+    
+    await editMessageReplyMarkup(chatId, messageId);
+    await sendTelegramMessage(chatId, `To'lov rad etildi.`);
+
+    const user = await storage.getUser(payment.userId);
+    if (user?.chatId) {
+      await sendTelegramMessage(user.chatId,
+        `Sizning to'lovingiz rad etildi.\n\n` +
+        `Iltimos, to'g'ri chek yuborishga harakat qiling yoki qo'llab-quvvatlash xizmatiga murojaat qiling.`
+      );
+    }
+
+    await answerCallbackQuery(callbackQuery.id, 'Rad etildi');
+  }
+  else if (data.startsWith('pay_change_')) {
+    const paymentId = data.replace('pay_change_', '');
+    
+    pendingAmountChanges.set(`amount_${chatId}`, paymentId);
+    
+    await sendTelegramMessage(chatId, 
+      `Yangi summani kiriting (so'mda):\n\n` +
+      `Masalan: 150000`
+    );
+
+    await answerCallbackQuery(callbackQuery.id, 'Yangi summani kiriting');
+  }
+}
+
+export async function sendPaymentReceiptToAdmin(
+  storage: IStorage,
+  paymentId: string,
+  receiptUrl: string,
+  user: any,
+  credits: number,
+  price: number
+) {
+  const admins = await storage.getAllUsers();
+  const adminUsers = admins.filter(u => u.isAdmin && u.chatId);
+
+  if (adminUsers.length === 0) {
+    console.warn('[Telegram] No admin users with chatId found');
+    return;
+  }
+
+  const caption = 
+    `<b>Yangi to'lov!</b>\n\n` +
+    `Mijoz: ${user.name || 'Noma\'lum'}\n` +
+    `Telefon: ${user.phone || 'Noma\'lum'}\n` +
+    `Paket: ${credits} kalit\n` +
+    `Summa: ${price.toLocaleString()} so'm\n` +
+    `To'lov ID: ${paymentId}`;
+
+  const inlineKeyboard = {
+    inline_keyboard: [
+      [
+        { text: 'Tasdiqlash', callback_data: `pay_approve_${paymentId}` },
+        { text: 'Rad etish', callback_data: `pay_reject_${paymentId}` },
+      ],
+      [
+        { text: 'Miqdorni o\'zgartirish', callback_data: `pay_change_${paymentId}` },
+      ],
+    ],
+  };
+
+  for (const admin of adminUsers) {
+    const result = await sendTelegramPhoto(admin.chatId!, receiptUrl, caption, inlineKeyboard);
+    if (result?.ok && result.result?.message_id) {
+      await storage.updateCreditPayment(paymentId, {
+        telegramMessageId: result.result.message_id,
+        adminChatId: admin.chatId!,
+      } as any);
+    }
+  }
+}
+
 export async function notifyProfileCompleted(user: any) {
   if (!user.telegramId || !user.chatId) {
     console.log(`[Telegram] No Telegram ID or chat ID for user ${user.id}`);
@@ -267,13 +514,13 @@ export async function notifyProfileCompleted(user: any) {
 
   try {
     const message = 
-      `🎉 <b>Tabriklaymiz!</b>\n\n` +
+      `<b>Tabriklaymiz!</b>\n\n` +
       `Profilingiz muvaffaqiyatli to'ldirildi:\n\n` +
-      `👤 Ism: ${user.name}\n` +
-      `📞 Telefon: ${user.phone}\n` +
-      `🎂 Yosh: ${user.age}\n` +
-      `👫 Jins: ${user.gender === 'male' ? 'Erkak' : 'Ayol'}\n\n` +
-      `Endi siz barcha xizmatlardan foydalanishingiz mumkin! 💪`;
+      `Ism: ${user.name}\n` +
+      `Telefon: ${user.phone}\n` +
+      `Yosh: ${user.age}\n` +
+      `Jins: ${user.gender === 'male' ? 'Erkak' : 'Ayol'}\n\n` +
+      `Endi siz barcha xizmatlardan foydalanishingiz mumkin!`;
 
     await sendTelegramMessage(user.chatId, message);
     console.log(`[Telegram] Profile completion notification sent to ${user.telegramId}`);
@@ -300,9 +547,9 @@ export async function setTelegramWebhook(webhookUrl: string) {
     const data = await response.json();
     
     if (data.ok) {
-      console.log('✅ Telegram webhook set successfully:', webhookUrl);
+      console.log('Telegram webhook set successfully:', webhookUrl);
     } else {
-      console.error('❌ Failed to set Telegram webhook:', data);
+      console.error('Failed to set Telegram webhook:', data);
     }
     
     return data;

@@ -10,7 +10,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
-import { setupTelegramWebhook } from "./telegram";
+import { setupTelegramWebhook, sendPaymentReceiptToAdmin } from "./telegram";
 
 function getTashkentNow(): Date {
   const now = new Date();
@@ -38,13 +38,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   }
 
-  // Rasmlar uchun papka yaratish
   const uploadsDir = path.join(process.cwd(), 'uploads');
   try {
     await fs.mkdir(uploadsDir, { recursive: true });
+    await fs.mkdir(path.join(uploadsDir, 'receipts'), { recursive: true });
   } catch (error) {
     console.error("Uploads papkasini yaratishda xatolik:", error);
   }
+  app.use('/uploads', express.static(uploadsDir));
 
   app.get('/api/tashkent-time', (req, res) => {
     const now = getTashkentNow();
@@ -715,6 +716,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Kredit qo\'shish xatosi:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/credit-payments', requireAuth, async (req, res) => {
+    try {
+      const { credits, price } = req.body;
+      
+      if (!credits || !allowedCreditPackages.includes(credits)) {
+        return res.status(400).json({ message: "Noto'g'ri kredit paketi" });
+      }
+
+      const existingPayment = await storage.getActiveCreditPayment(req.user!.id);
+      if (existingPayment) {
+        return res.status(400).json({ 
+          message: "Sizda kutilayotgan to'lov mavjud",
+          payment: existingPayment,
+        });
+      }
+
+      const payment = await storage.createCreditPayment({
+        userId: req.user!.id,
+        credits,
+        price,
+        status: 'pending',
+        remainingAmount: 0,
+      });
+
+      res.json({ success: true, payment });
+    } catch (error: any) {
+      console.error('Credit payment creation error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/credit-payments/active', requireAuth, async (req, res) => {
+    try {
+      const payment = await storage.getActiveCreditPayment(req.user!.id);
+      res.json({ payment: payment || null });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  const receiptUpload = multer({
+    storage: multer.diskStorage({
+      destination: async (_req, _file, cb) => {
+        const uploadDir = path.join(process.cwd(), 'uploads', 'receipts');
+        await fs.mkdir(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+      },
+      filename: (_req, file, cb) => {
+        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+      },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  });
+
+  app.post('/api/credit-payments/:id/receipt', requireAuth, receiptUpload.single('receipt'), async (req, res) => {
+    try {
+      const paymentId = req.params.id;
+      const payment = await storage.getCreditPayment(paymentId);
+      
+      if (!payment || payment.userId !== req.user!.id) {
+        return res.status(404).json({ message: "To'lov topilmadi" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Chek rasmi yuborilmadi" });
+      }
+
+      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
+
+      const user = await storage.getUser(req.user!.id);
+      const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`;
+      
+      await sendPaymentReceiptToAdmin(
+        storage,
+        paymentId,
+        fullReceiptUrl,
+        user,
+        payment.credits,
+        payment.price
+      );
+
+      res.json({ success: true, message: "Chek yuborildi" });
+    } catch (error: any) {
+      console.error('Receipt upload error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/credit-payments/:id/receipt-remaining', requireAuth, receiptUpload.single('receipt'), async (req, res) => {
+    try {
+      const paymentId = req.params.id;
+      const payment = await storage.getCreditPayment(paymentId);
+      
+      if (!payment || payment.userId !== req.user!.id) {
+        return res.status(404).json({ message: "To'lov topilmadi" });
+      }
+
+      if (payment.status !== 'partial') {
+        return res.status(400).json({ message: "Bu to'lov uchun qoldiq yo'q" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Chek rasmi yuborilmadi" });
+      }
+
+      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
+
+      const user = await storage.getUser(req.user!.id);
+      const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`;
+      
+      await sendPaymentReceiptToAdmin(
+        storage,
+        paymentId,
+        fullReceiptUrl,
+        user,
+        payment.credits,
+        payment.remainingAmount
+      );
+
+      res.json({ success: true, message: "Qoldiq chek yuborildi" });
+    } catch (error: any) {
+      console.error('Remaining receipt upload error:', error);
       res.status(500).json({ message: error.message });
     }
   });

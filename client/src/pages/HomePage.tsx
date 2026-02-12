@@ -742,20 +742,23 @@ export default function HomePage() {
           </DialogHeader>
           <div className="p-4 space-y-3">
             {completedBookings.length > 0 ? (
-              completedBookings.map((booking) => (
-                <div key={booking.id} className="p-3 bg-muted/30 rounded-lg border flex justify-between items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{booking.gymName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(booking.date).toLocaleDateString()} • {booking.time}
-                    </p>
+              completedBookings.map((booking) => {
+                const bGym = gyms.find(g => g.id === booking.gymId);
+                return (
+                  <div key={booking.id} className="p-3 bg-muted/30 rounded-lg border flex justify-between items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{bGym?.name || t('profile.unknown_gym')}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(booking.date).toLocaleDateString()} • {booking.time}
+                      </p>
+                    </div>
+                    <Badge variant={booking.status === 'completed' ? 'secondary' : 'outline'} className="text-[10px] h-5 px-1.5 flex-shrink-0">
+                      {booking.status === 'completed' ? 'Tashrif buyurilgan' : 
+                       booking.status === 'missed' ? 'Kelmagan' : 'Yakunlangan'}
+                    </Badge>
                   </div>
-                  <Badge variant={booking.status === 'completed' ? 'secondary' : 'outline'} className="text-[10px] h-5 px-1.5 flex-shrink-0">
-                    {booking.status === 'completed' ? 'Tashrif buyurilgan' : 
-                     booking.status === 'missed' ? 'Kelmagan' : 'Yakunlangan'}
-                  </Badge>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">{t('profile.no_history')}</p>
