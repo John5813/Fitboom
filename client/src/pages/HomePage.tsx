@@ -947,50 +947,44 @@ export default function HomePage() {
             const detailImages = homeDetailGym.images && homeDetailGym.images.length > 0 ? homeDetailGym.images : [homeDetailGym.imageUrl];
             return (
               <div>
-                <div
-                  className="relative aspect-[16/9] w-full cursor-pointer overflow-hidden"
-                  onClick={() => {
-                    setHomeDetailGym(null);
-                    setHomeGalleryGym(homeDetailGym);
-                    setHomeGalleryIndex(0);
-                  }}
-                >
-                  <img src={detailImages[0]} alt={homeDetailGym.name} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  {detailImages.length > 1 && (
-                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-lg text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
-                      <ImageIcon className="w-3 h-3" />
-                      {detailImages.length} ta rasm
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="text-white font-bold text-lg leading-tight drop-shadow-lg">
-                      {homeDetailGym.name}
-                    </h3>
-                    <p className="text-white/80 text-xs mt-0.5">{homeDetailGym.categories?.join(', ') || ''}</p>
-                  </div>
-                </div>
-
-                {detailImages.length > 1 && (
-                  <div className="flex gap-1.5 overflow-x-auto px-3 pt-2 pb-1 scrollbar-hide snap-x">
+                <div className="relative w-full bg-black/5 overflow-hidden">
+                  <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                     {detailImages.map((img, idx) => (
-                      <div
-                        key={idx}
-                        className="relative flex-shrink-0 w-14 h-14 cursor-pointer rounded-md overflow-hidden snap-center border-2 border-transparent transition-colors hover-elevate"
-                        data-testid={`button-home-detail-thumbnail-${idx}`}
+                      <div 
+                        key={idx} 
+                        className="flex-shrink-0 w-full aspect-[4/3] snap-center cursor-pointer"
                         onClick={() => {
                           setHomeDetailGym(null);
                           setHomeGalleryGym(homeDetailGym);
                           setHomeGalleryIndex(idx);
                         }}
                       >
-                        <img src={img} alt={`${homeDetailGym.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                        <img 
+                          src={img} 
+                          alt={`${homeDetailGym.name} ${idx + 1}`} 
+                          className="w-full h-full object-cover" 
+                        />
                       </div>
                     ))}
                   </div>
-                )}
+                  
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                  
+                  {detailImages.length > 1 && (
+                    <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                      {detailImages.length} ta rasm
+                    </div>
+                  )}
 
-                <div className="p-3 space-y-2.5">
+                  <div className="absolute bottom-2 left-3 right-10">
+                    <h3 className="text-white font-bold text-lg leading-tight drop-shadow-md truncate">
+                      {homeDetailGym.name}
+                    </h3>
+                    <p className="text-white/80 text-[10px] truncate">{homeDetailGym.categories?.join(', ') || ''}</p>
+                  </div>
+                </div>
+
+                <div className="p-3 space-y-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge>{homeDetailGym.credits} {t('profile.credits_count')}</Badge>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
