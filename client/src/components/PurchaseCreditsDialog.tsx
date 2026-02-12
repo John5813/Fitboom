@@ -106,6 +106,15 @@ export default function PurchaseCreditsDialog({
   });
 
   const handleSelectPackage = (pkg: CreditPackage) => {
+    if (activePayment && (activePayment.status === 'pending' || activePayment.status === 'partial')) {
+      toast({
+        title: t('payment.error'),
+        description: t('payment.pending_exists'),
+        variant: "destructive"
+      });
+      setStep('payment');
+      return;
+    }
     setSelectedPackage(pkg);
     createPaymentMutation.mutate(pkg);
   };
