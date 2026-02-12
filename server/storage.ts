@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -62,6 +62,11 @@ export interface IStorage {
   updateGymEarnings(gymId: string, amountEarned: number): Promise<Gym | undefined>;
   reduceGymDebt(gymId: string, paymentAmount: number): Promise<Gym | undefined>;
   getAllUsers(): Promise<User[]>;
+  createCreditPayment(payment: InsertCreditPayment): Promise<CreditPayment>;
+  getCreditPayment(id: string): Promise<CreditPayment | undefined>;
+  updateCreditPayment(id: string, updateData: Partial<InsertCreditPayment>): Promise<CreditPayment | undefined>;
+  getPendingCreditPayments(userId: string): Promise<CreditPayment[]>;
+  getActiveCreditPayment(userId: string): Promise<CreditPayment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -475,6 +480,35 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async createCreditPayment(payment: InsertCreditPayment): Promise<CreditPayment> {
+    const [created] = await db.insert(creditPayments).values(payment).returning();
+    return created;
+  }
+
+  async getCreditPayment(id: string): Promise<CreditPayment | undefined> {
+    const [payment] = await db.select().from(creditPayments).where(eq(creditPayments.id, id));
+    return payment || undefined;
+  }
+
+  async updateCreditPayment(id: string, updateData: Partial<InsertCreditPayment>): Promise<CreditPayment | undefined> {
+    const [updated] = await db.update(creditPayments).set(updateData).where(eq(creditPayments.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async getPendingCreditPayments(userId: string): Promise<CreditPayment[]> {
+    return await db.select().from(creditPayments)
+      .where(and(eq(creditPayments.userId, userId), eq(creditPayments.status, 'pending')));
+  }
+
+  async getActiveCreditPayment(userId: string): Promise<CreditPayment | undefined> {
+    const [payment] = await db.select().from(creditPayments)
+      .where(and(
+        eq(creditPayments.userId, userId),
+        sql`${creditPayments.status} IN ('pending', 'partial')`
+      ));
+    return payment || undefined;
   }
 }
 
