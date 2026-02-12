@@ -178,29 +178,32 @@ export default function HomePage() {
 
   const creditsCountValue = user?.credits ?? 0;
 
+  const DAY_NAMES = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+
+  const getDayOfWeek = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return DAY_NAMES[date.getDay()];
+  };
+
   // Calculate distance for each gym and sort by distance
   const gymsWithDistance = gyms.map(gym => {
-    let distanceValue = undefined;
+    let computedDistance: string = gym.distance;
     if (userLocation && gym.latitude && gym.longitude) {
       const gymLat = parseFloat(gym.latitude.toString().trim());
       const gymLng = parseFloat(gym.longitude.toString().trim());
 
       if (!isNaN(gymLat) && !isNaN(gymLng)) {
-        distanceValue = calculateDistance(
+        const dist = calculateDistance(
           userLocation.lat,
           userLocation.lng,
           gymLat,
           gymLng
         );
+        computedDistance = `${dist.toFixed(1)} km`;
       }
     }
-    return { ...gym, distance: distanceValue };
-  }).sort((a, b) => {
-    if (a.distance === undefined && b.distance === undefined) return 0;
-    if (a.distance === undefined) return 1;
-    if (b.distance === undefined) return -1;
-    return a.distance - b.distance;
-  });
+    return { ...gym, distance: computedDistance, _distanceNum: userLocation && gym.latitude && gym.longitude ? parseFloat(computedDistance) : Infinity };
+  }).sort((a, b) => a._distanceNum - b._distanceNum);
 
   // Fallback images for gyms based on category
   const getGymImage = (category: string) => {
@@ -282,13 +285,6 @@ export default function HomePage() {
 
   const handleCancelBooking = (bookingId: string) => {
     cancelBookingMutation.mutate(bookingId);
-  };
-
-  const DAY_NAMES = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
-
-  const getDayOfWeek = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return DAY_NAMES[date.getDay()];
   };
 
   const handleBookGym = (gymId: string) => {
@@ -512,10 +508,10 @@ export default function HomePage() {
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-white/80 text-sm flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              {gym.distance !== undefined 
+                              {gym.distance && gym.distance !== '0 km'
                                 ? (language === 'uz' 
-                                    ? `Sizdan ${gym.distance.toFixed(1)} km uzoqlikda` 
-                                    : `${gym.distance.toFixed(1)} км от вас`)
+                                    ? `Sizdan ${gym.distance} uzoqlikda` 
+                                    : `${gym.distance} от вас`)
                                 : (language === 'uz' ? 'Masofa nomaʼlum' : 'Расстояние неизвестно')}
                             </span>
                           </div>
@@ -594,10 +590,10 @@ export default function HomePage() {
                   imageUrl={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
                   images={gym.images}
                   address={gym.address}
-                  latitude={gym.latitude}
-                  longitude={gym.longitude}
-                  description={gym.description}
-                  facilities={gym.facilities}
+                  latitude={gym.latitude ?? undefined}
+                  longitude={gym.longitude ?? undefined}
+                  description={gym.description ?? undefined}
+                  facilities={gym.facilities ?? undefined}
                   onBook={handleBookGym}
                 />
               ))}
@@ -714,6 +710,7 @@ export default function HomePage() {
           <DialogContent className="w-[calc(100vw-2rem)] max-w-sm max-h-[80vh] overflow-y-auto p-0 sm:rounded-2xl">
             <DialogHeader className="sr-only">
               <DialogTitle>{selectedGymForBooking.name} - Band qilish</DialogTitle>
+              <DialogDescription>Sana va vaqtni tanlang</DialogDescription>
             </DialogHeader>
             <div className="relative h-32">
               <img
@@ -878,10 +875,10 @@ export default function HomePage() {
                 <span className="text-sm text-muted-foreground">{homeDetailGym.hours}</span>
               </div>
 
-              {homeDetailGym.distance !== undefined && typeof homeDetailGym.distance === 'number' && (
+              {homeDetailGym.distance && homeDetailGym.distance !== '0 km' && (
                 <div className="flex items-center gap-1.5 text-sm">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span>{(homeDetailGym.distance as number).toFixed(1)} km masofada</span>
+                  <span>{homeDetailGym.distance} masofada</span>
                 </div>
               )}
 
@@ -932,6 +929,7 @@ export default function HomePage() {
         <DialogContent className="max-w-4xl p-0 bg-black/95 border-none overflow-hidden sm:rounded-2xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{homeGalleryGym?.name} rasmlari</DialogTitle>
+            <DialogDescription>Zal rasmlari galereyasi</DialogDescription>
           </DialogHeader>
           {homeGalleryGym && (() => {
             const galleryImages = homeGalleryGym.images && homeGalleryGym.images.length > 0

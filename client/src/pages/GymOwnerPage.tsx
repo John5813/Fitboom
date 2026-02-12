@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -397,6 +397,7 @@ export default function GymOwnerPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Zalni tahrirlash</DialogTitle>
+            <DialogDescription>Zal ma'lumotlarini o'zgartirish</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -464,6 +465,7 @@ export default function GymOwnerPage() {
               <Users className="h-5 w-5" />
               Tashriflar ({visits.length})
             </DialogTitle>
+            <DialogDescription>Zal tashrifchilarining ro'yxati</DialogDescription>
           </DialogHeader>
           {visits.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
@@ -505,6 +507,7 @@ export default function GymOwnerPage() {
               <Clock className="h-5 w-5" />
               Vaqt slotlari
             </DialogTitle>
+            <DialogDescription>Haftalik jadval boshqaruvi</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -556,6 +559,7 @@ export default function GymOwnerPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Mehmon profili</DialogTitle>
+            <DialogDescription>Tashrifchi haqida ma'lumot</DialogDescription>
           </DialogHeader>
           {selectedVisitor && (
             <div className="flex flex-col items-center gap-4 py-4">
