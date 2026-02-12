@@ -206,34 +206,64 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           
           const payment = await storage.getCreditPayment(paymentId);
           if (payment) {
-            const remainingAmount = payment.price - newAmount;
-            if (remainingAmount <= 0) {
-              await sendTelegramMessage(chatId, 'Kiritilgan summa asl narxdan kam bo\'lishi kerak. To\'liq tasdiqlash uchun "Tasdiqlash" tugmasini bosing.');
+            const currentRemaining = payment.remainingAmount > 0 ? payment.remainingAmount : payment.price;
+            const remainingAmount = currentRemaining - newAmount;
+            if (remainingAmount < 0) {
+              await sendTelegramMessage(chatId, `Kiritilgan summa qoldiqdan ko'p (${currentRemaining.toLocaleString()} so'm). Iltimos, to'g'ri summani kiriting.`);
             } else {
               await storage.updateCreditPayment(paymentId, { 
-                status: 'partial',
+                status: remainingAmount === 0 ? 'approved' : 'partial',
                 remainingAmount: remainingAmount,
               } as any);
 
               const user = await storage.getUser(payment.userId);
-              if (user?.chatId) {
+              
+              if (remainingAmount === 0) {
+                // If fully paid via amount changes, update credits
+                const newCredits = user.credits + payment.credits;
+                let expiryDate: Date;
+                const now = new Date();
+                if (user.creditExpiryDate && new Date(user.creditExpiryDate) > now) {
+                  expiryDate = new Date(user.creditExpiryDate);
+                } else {
+                  expiryDate = new Date();
+                  expiryDate.setDate(expiryDate.getDate() + 30);
+                }
+                await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiryDate);
+                
+                await sendTelegramMessage(chatId, 
+                  `To'lov to'liq yakunlandi!\n\n` +
+                  `${user.name || 'Foydalanuvchi'} ga ${payment.credits} kalit qo'shildi.\n` +
+                  `Yangi balans: ${newCredits} kalit`
+                );
+                
+                if (user.chatId) {
+                  await sendTelegramMessage(user.chatId,
+                    `To'lovingiz to'liq tasdiqlandi!\n\n` +
+                    `${payment.credits} kalit hisobingizga qo'shildi.\n` +
+                    `Yangi balans: ${newCredits} kalit`
+                  );
+                }
+              } else {
+                if (user?.chatId) {
+                  await sendTelegramMessage(
+                    user.chatId,
+                    `To'lovingiz qisman qabul qilindi.\n\n` +
+                    `To'langan summa: ${newAmount.toLocaleString()} so'm\n` +
+                    `<b>Qoldiq summa: ${remainingAmount.toLocaleString()} so'm</b>\n\n` +
+                    `Iltimos, qoldiq summani to'lab, chekni ilovada yuboring.`
+                  );
+                }
+
                 await sendTelegramMessage(
-                  user.chatId,
-                  `To'lovingiz qisman qabul qilindi.\n\n` +
-                  `To'langan summa: ${newAmount.toLocaleString()} so'm\n` +
-                  `<b>Qoldiq summa: ${remainingAmount.toLocaleString()} so'm</b>\n\n` +
-                  `Iltimos, qoldiq summani to'lab, chekni ilovada yuboring.`
+                  chatId,
+                  `Miqdor ayirildi.\n\n` +
+                  `Ayirilgan summa: ${newAmount.toLocaleString()} so'm\n` +
+                  `Asl narx: ${payment.price.toLocaleString()} so'm\n` +
+                  `<b>Yangi qoldiq: ${remainingAmount.toLocaleString()} so'm</b>\n\n` +
+                  `Mijoz yana to'lov qilsa, miqdorni o'zgartirishni davom ettiring.`
                 );
               }
-
-              await sendTelegramMessage(
-                chatId,
-                `Miqdor o'zgartirildi.\n\n` +
-                `To'langan: ${newAmount.toLocaleString()} so'm\n` +
-                `Asl narx: ${payment.price.toLocaleString()} so'm\n` +
-                `Qoldiq: ${remainingAmount.toLocaleString()} so'm\n\n` +
-                `Mijoz qoldiqni to'lagandan so'ng tasdiqlang.`
-              );
             }
           }
         } else {
