@@ -131,6 +131,7 @@ async function sendTelegramPhoto(chatId: number, photoUrl: string, caption: stri
     });
     
     const data = await response.json();
+    console.log('[Telegram] sendPhoto result:', JSON.stringify(data));
     if (!response.ok) {
       console.error('Telegram API sendPhoto error:', data);
     }
@@ -182,6 +183,7 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       const update: TelegramUpdate = req.body;
 
       if (update.callback_query) {
+        console.log('[Telegram] Callback query received:', update.callback_query.data);
         await handleCallbackQuery(update.callback_query, storage);
         return res.sendStatus(200);
       }
