@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocation } from "wouter";
 import L from "leaflet";
 
 // Fix for default marker icons in react-leaflet
@@ -25,6 +26,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 export default function MapPage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const { t } = useLanguage();
+  const [, navigate] = useLocation();
   const [mapCenter, setMapCenter] = useState<[number, number]>([41.311151, 69.279737]); // Toshkent default
 
   const { data: gymsData, isLoading } = useQuery<{ gyms: Gym[] }>({
@@ -193,10 +195,18 @@ export default function MapPage() {
                           {t('map.view_on_google')}
                         </a>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold">{gym.credits} {t('profile.credits_count')}</span>
                         <span className="text-xs text-muted-foreground">{gym.hours}</span>
                       </div>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => navigate(`/gym/${gym.id}`)}
+                        data-testid={`button-map-gym-detail-${gym.id}`}
+                      >
+                        Batafsil ko'rish
+                      </Button>
                     </div>
                   </Popup>
                 </Marker>
