@@ -60,8 +60,6 @@ export default function AdminGymsPage() {
     images: [] as string[],
     facilities: '',
     hours: '09:00 - 22:00',
-    latitude: '',
-    longitude: '',
     locationLink: '',
   });
 
@@ -256,8 +254,6 @@ export default function AdminGymsPage() {
         images: [],
         facilities: '',
         hours: '09:00 - 22:00',
-        latitude: '',
-        longitude: '',
         locationLink: '',
       });
     },
@@ -378,11 +374,6 @@ export default function AdminGymsPage() {
       categories: gymForm.categories,
       imageUrl: gymForm.images?.[0] || gymForm.imageUrl
     };
-
-    if (gymForm.latitude && gymForm.longitude) {
-      gymData.latitude = gymForm.latitude.trim();
-      gymData.longitude = gymForm.longitude.trim();
-    }
 
     createGymMutation.mutate(gymData);
   };
@@ -1139,33 +1130,6 @@ export default function AdminGymsPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 Google Maps dan link kiritsangiz, koordinatalar avtomatik ajratib olinadi
               </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="latitude">Kenglik (Latitude) {gymForm.latitude && '✓'}</Label>
-                <Input
-                  id="latitude"
-                  value={gymForm.latitude}
-                  onChange={(e) => setGymForm({ ...gymForm, latitude: e.target.value })}
-                  placeholder="41.311151"
-                  data-testid="input-gym-latitude"
-                  readOnly={!!gymForm.locationLink}
-                  className={gymForm.latitude ? 'border-green-500' : ''}
-                />
-              </div>
-              <div>
-                <Label htmlFor="longitude">Uzunlik (Longitude) {gymForm.longitude && '✓'}</Label>
-                <Input
-                  id="longitude"
-                  value={gymForm.longitude}
-                  onChange={(e) => setGymForm({ ...gymForm, longitude: e.target.value })}
-                  placeholder="69.279737"
-                  data-testid="input-gym-longitude"
-                  readOnly={!!gymForm.locationLink}
-                  className={gymForm.longitude ? 'border-green-500' : ''}
-                />
-              </div>
             </div>
 
             <div>
