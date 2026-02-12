@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Settings, User, ShoppingCart, QrCode, Check } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, ShoppingCart, QrCode, Check, Info, CalendarCheck, ImageIcon, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -89,6 +89,9 @@ export default function HomePage() {
   const [selectedGymForBooking, setSelectedGymForBooking] = useState<Gym | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [selectedBookingDate, setSelectedBookingDate] = useState<string>('');
+  const [homeGalleryGym, setHomeGalleryGym] = useState<Gym | null>(null);
+  const [homeGalleryIndex, setHomeGalleryIndex] = useState(0);
+  const [homeDetailGym, setHomeDetailGym] = useState<Gym | null>(null);
   const [, setLocation] = useLocation();
   const [params] = useLocation();
 
@@ -447,33 +450,71 @@ export default function HomePage() {
               <p className="text-muted-foreground">{t('home.loading')}</p>
             ) : gymsWithDistance.length > 0 ? (
               <div className="flex flex-col gap-4">
-                {gymsWithDistance.slice(0, 8).map((gym) => (
-                  <Card
-                    key={gym.id}
-                    className="overflow-hidden cursor-pointer hover-elevate w-full"
-                    onClick={() => handleBookGym(gym.id)}
-                  >
-                    <div className="relative h-48">
-                      <img
-                        src={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
-                        alt={gym.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-white font-semibold text-lg truncate leading-tight">
-                          {gym.name}
-                        </h3>
-                        <p className="text-white/70 text-sm truncate">
-                          {gym.categories?.join(', ') || ''}
-                        </p>
-                        <p className="text-white/70 text-sm">
-                          {gym.distance !== undefined ? `${gym.distance.toFixed(1)} km` : t('home.unknown_distance')}
-                        </p>
+                {gymsWithDistance.slice(0, 8).map((gym) => {
+                  const gymImages = gym.images && gym.images.length > 0 ? gym.images : [gym.imageUrl || getGymImage(gym.categories?.[0] || '')];
+                  return (
+                    <Card
+                      key={gym.id}
+                      className="overflow-hidden w-full"
+                    >
+                      <div
+                        className="relative h-48 cursor-pointer"
+                        onClick={() => {
+                          setHomeGalleryGym(gym);
+                          setHomeGalleryIndex(0);
+                        }}
+                      >
+                        <img
+                          src={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
+                          alt={gym.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                        {gymImages.length > 1 && (
+                          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
+                            <ImageIcon className="w-3 h-3" />
+                            {gymImages.length}
+                          </div>
+                        )}
+                        <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5">
+                          {gym.credits} {t('profile.credits_count')}
+                        </Badge>
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="text-white font-semibold text-lg truncate leading-tight">
+                            {gym.name}
+                          </h3>
+                          <p className="text-white/70 text-sm truncate">
+                            {gym.categories?.join(', ') || ''}
+                          </p>
+                          <p className="text-white/70 text-sm">
+                            {gym.distance !== undefined ? `${gym.distance.toFixed(1)} km` : t('home.unknown_distance')}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                      <div className="p-3 flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setHomeDetailGym(gym)}
+                          data-testid={`button-home-gym-details-${gym.id}`}
+                        >
+                          <Info className="w-3.5 h-3.5 mr-1.5" />
+                          Batafsil
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleBookGym(gym.id)}
+                          data-testid={`button-home-gym-book-${gym.id}`}
+                        >
+                          <CalendarCheck className="w-3.5 h-3.5 mr-1.5" />
+                          Band qilish
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted-foreground text-sm text-center py-4">{t('home.no_gyms_yet')}</p>
@@ -518,6 +559,12 @@ export default function HomePage() {
                   distance={gym.distance}
                   hours={gym.hours}
                   imageUrl={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
+                  images={gym.images}
+                  address={gym.address}
+                  latitude={gym.latitude}
+                  longitude={gym.longitude}
+                  description={gym.description}
+                  facilities={gym.facilities}
                   onBook={handleBookGym}
                 />
               ))}
@@ -628,6 +675,143 @@ export default function HomePage() {
       <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} onScanQR={() => setIsScannerOpen(true)} />
       <PurchaseCreditsDialog isOpen={isPurchaseDialogOpen} onClose={() => setIsPurchaseDialogOpen(false)} onPurchase={handlePurchase} />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
+
+      <Dialog open={!!homeDetailGym} onOpenChange={(open) => !open && setHomeDetailGym(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">{homeDetailGym?.name}</DialogTitle>
+            <DialogDescription>{homeDetailGym?.categories?.join(', ') || ''}</DialogDescription>
+          </DialogHeader>
+          {homeDetailGym && (
+            <div className="space-y-4">
+              {homeDetailGym.imageUrl && (
+                <div
+                  className="relative cursor-pointer rounded-md overflow-hidden"
+                  data-testid="image-home-detail-gym"
+                  onClick={() => {
+                    setHomeDetailGym(null);
+                    setHomeGalleryGym(homeDetailGym);
+                    setHomeGalleryIndex(0);
+                  }}
+                >
+                  <img src={homeDetailGym.imageUrl} alt={homeDetailGym.name} className="w-full h-48 object-cover" />
+                  {(homeDetailGym.images && homeDetailGym.images.length > 1) && (
+                    <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <ImageIcon className="w-3 h-3" />
+                      {homeDetailGym.images.length} ta rasm
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Badge>{homeDetailGym.credits} {t('profile.credits_count')}</Badge>
+                <span className="text-sm text-muted-foreground">{homeDetailGym.hours}</span>
+              </div>
+
+              {homeDetailGym.distance !== undefined && typeof homeDetailGym.distance === 'number' && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span>{(homeDetailGym.distance as number).toFixed(1)} km masofada</span>
+                </div>
+              )}
+
+              {homeDetailGym.description && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Tavsif</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.description}</p>
+                </div>
+              )}
+
+              {homeDetailGym.facilities && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Imkoniyatlar</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.facilities}</p>
+                </div>
+              )}
+
+              {(homeDetailGym.latitude && homeDetailGym.longitude) && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <Button
+                    variant="ghost"
+                    className="h-auto p-0 text-sm underline"
+                    onClick={() => window.open(`https://www.google.com/maps?q=${homeDetailGym.latitude},${homeDetailGym.longitude}`, '_blank')}
+                  >
+                    {t('map.view_on_google')}
+                    <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setHomeDetailGym(null);
+                  handleBookGym(homeDetailGym.id);
+                }}
+              >
+                <CalendarCheck className="w-4 h-4 mr-2" />
+                Zalni band qilish
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!homeGalleryGym} onOpenChange={(open) => !open && setHomeGalleryGym(null)}>
+        <DialogContent className="max-w-4xl p-0 bg-black/95 border-none overflow-hidden sm:rounded-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{homeGalleryGym?.name} rasmlari</DialogTitle>
+          </DialogHeader>
+          {homeGalleryGym && (() => {
+            const galleryImages = homeGalleryGym.images && homeGalleryGym.images.length > 0
+              ? homeGalleryGym.images
+              : [homeGalleryGym.imageUrl || getGymImage(homeGalleryGym.categories?.[0] || '')];
+            return (
+              <div className="relative aspect-video flex items-center justify-center">
+                <img
+                  src={galleryImages[homeGalleryIndex]}
+                  alt={`${homeGalleryGym.name} gallery ${homeGalleryIndex + 1}`}
+                  className="max-w-full max-h-full object-contain"
+                />
+                {galleryImages.length > 1 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-4 text-white rounded-full"
+                      onClick={() => setHomeGalleryIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
+                      data-testid="button-home-gallery-prev"
+                    >
+                      <ChevronLeft className="w-8 h-8" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-4 text-white rounded-full"
+                      onClick={() => setHomeGalleryIndex((prev) => (prev + 1) % galleryImages.length)}
+                      data-testid="button-home-gallery-next"
+                    >
+                      <ChevronRight className="w-8 h-8" />
+                    </Button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {galleryImages.map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            i === homeGalleryIndex ? "bg-white w-4" : "bg-white/40"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
