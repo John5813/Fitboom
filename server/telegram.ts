@@ -459,6 +459,8 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
   }
 }
 
+const ADMIN_PANEL_CHAT_ID = 5304482470;
+
 export async function sendPaymentReceiptToAdmin(
   storage: IStorage,
   paymentId: string,
@@ -467,18 +469,11 @@ export async function sendPaymentReceiptToAdmin(
   credits: number,
   price: number
 ) {
-  const admins = await storage.getAllUsers();
-  const adminUsers = admins.filter(u => u.isAdmin && u.chatId);
-
-  if (adminUsers.length === 0) {
-    console.warn('[Telegram] No admin users with chatId found');
-    return;
-  }
-
   const caption = 
     `<b>Yangi to'lov!</b>\n\n` +
     `Mijoz: ${user.name || 'Noma\'lum'}\n` +
     `Telefon: ${user.phone || 'Noma\'lum'}\n` +
+    `Telegram: ${user.telegramId || 'Noma\'lum'}\n` +
     `Paket: ${credits} kalit\n` +
     `Summa: ${price.toLocaleString()} so'm\n` +
     `To'lov ID: ${paymentId}`;
@@ -495,14 +490,12 @@ export async function sendPaymentReceiptToAdmin(
     ],
   };
 
-  for (const admin of adminUsers) {
-    const result = await sendTelegramPhoto(admin.chatId!, receiptUrl, caption, inlineKeyboard);
-    if (result?.ok && result.result?.message_id) {
-      await storage.updateCreditPayment(paymentId, {
-        telegramMessageId: result.result.message_id,
-        adminChatId: admin.chatId!,
-      } as any);
-    }
+  const result = await sendTelegramPhoto(ADMIN_PANEL_CHAT_ID, receiptUrl, caption, inlineKeyboard);
+  if (result?.ok && result.result?.message_id) {
+    await storage.updateCreditPayment(paymentId, {
+      telegramMessageId: result.result.message_id,
+      adminChatId: String(ADMIN_PANEL_CHAT_ID),
+    } as any);
   }
 }
 

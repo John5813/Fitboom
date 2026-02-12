@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, KeyRound, CreditCard, Upload, CheckCircle2, AlertCircle, Copy } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Clock, KeyRound, CreditCard, Upload, AlertCircle, Copy, ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -32,7 +32,7 @@ const packages: CreditPackage[] = [
 const CARD_NUMBER = "9860160104562378";
 const CARD_HOLDER = "Javlonbek Mo'ydinov";
 
-type Step = 'packages' | 'payment' | 'upload';
+type Step = 'packages' | 'payment';
 
 export default function PurchaseCreditsDialog({
   isOpen,
@@ -44,9 +44,9 @@ export default function PurchaseCreditsDialog({
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>('packages');
   const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const remainingFileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: activePaymentData } = useQuery<{ payment: any }>({
     queryKey: ['/api/credit-payments/active'],
@@ -54,13 +54,12 @@ export default function PurchaseCreditsDialog({
   });
 
   const activePayment = activePaymentData?.payment;
+  const showRemainingPayment = activePayment && activePayment.status === 'partial' && activePayment.remainingAmount > 0;
 
-  // Dialog ochilganda har doim paketlar tanlash bosqichidan boshlash
   useEffect(() => {
     if (isOpen) {
       setStep('packages');
       setSelectedPackage(null);
-      setPaymentId(null);
     }
   }, [isOpen]);
 
@@ -76,40 +75,9 @@ export default function PurchaseCreditsDialog({
   const remainingDays = getRemainingDays();
   const hasActiveSubscription = remainingDays !== null && remainingDays > 0;
 
-  const createPaymentMutation = useMutation({
-    mutationFn: async (pkg: CreditPackage) => {
-      const response = await apiRequest('/api/credit-payments', 'POST', {
-        credits: pkg.credits,
-        price: pkg.price,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setPaymentId(data.payment.id);
-      setStep('payment');
-      queryClient.invalidateQueries({ queryKey: ['/api/credit-payments/active'] });
-    },
-    onError: (error: any) => {
-      if (error.message?.includes('kutilayotgan')) {
-        toast({ title: t('payment.error'), description: t('payment.pending_exists'), variant: "destructive" });
-      } else {
-        toast({ title: t('payment.error'), description: error.message, variant: "destructive" });
-      }
-    },
-  });
-
   const handleSelectPackage = (pkg: CreditPackage) => {
-    if (activePayment && (activePayment.status === 'pending' || activePayment.status === 'partial')) {
-      toast({
-        title: t('payment.error'),
-        description: t('payment.pending_exists'),
-        variant: "destructive"
-      });
-      setStep('payment');
-      return;
-    }
     setSelectedPackage(pkg);
-    createPaymentMutation.mutate(pkg);
+    setStep('payment');
   };
 
   const handleUploadReceipt = async (file: File, isRemaining: boolean = false) => {
@@ -117,12 +85,18 @@ export default function PurchaseCreditsDialog({
     const formData = new FormData();
     formData.append('receipt', file);
 
-    const pid = isRemaining ? activePayment?.id : paymentId;
-    const endpoint = isRemaining 
-      ? `/api/credit-payments/${pid}/receipt-remaining`
-      : `/api/credit-payments/${pid}/receipt`;
-
     try {
+      let endpoint: string;
+      if (isRemaining && activePayment) {
+        endpoint = `/api/credit-payments/${activePayment.id}/receipt-remaining`;
+      } else if (selectedPackage) {
+        formData.append('credits', String(selectedPackage.credits));
+        formData.append('price', String(selectedPackage.price));
+        endpoint = '/api/credit-payments/submit';
+      } else {
+        return;
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
@@ -156,24 +130,35 @@ export default function PurchaseCreditsDialog({
     toast({ title: t('payment.copied'), description: CARD_NUMBER });
   };
 
-  const displayPrice = selectedPackage?.price || 0;
-  const showRemainingPayment = activePayment && activePayment.status === 'partial' && activePayment.remainingAmount > 0;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90vw] max-w-[360px] max-h-[80vh] overflow-y-auto p-0 rounded-2xl border-none">
         <DialogHeader className="p-4 pb-2">
-          <DialogTitle className="font-display text-lg">{t('payment.buy_keys')}</DialogTitle>
-          <DialogDescription className="text-xs">
-            {hasActiveSubscription ? (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {t('payment.subscription_active')}: {remainingDays} {t('payment.days_left')}
-              </span>
-            ) : (
-              <span>{t('payment.new_subscription')}</span>
+          <div className="flex items-center gap-2">
+            {step === 'payment' && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setStep('packages')}
+                data-testid="button-back-to-packages"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
             )}
-          </DialogDescription>
+            <div>
+              <DialogTitle className="font-display text-lg">{t('payment.buy_keys')}</DialogTitle>
+              <DialogDescription className="text-xs">
+                {hasActiveSubscription ? (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {t('payment.subscription_active')}: {remainingDays} {t('payment.days_left')}
+                  </span>
+                ) : (
+                  <span>{t('payment.new_subscription')}</span>
+                )}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {showRemainingPayment && step === 'packages' && (
@@ -187,16 +172,29 @@ export default function PurchaseCreditsDialog({
                     {activePayment.credits} {t('payment.keys_for')} {activePayment.remainingAmount.toLocaleString()} {t('payment.som')}
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-1">{t('payment.remaining_desc')}</p>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={remainingFileInputRef}
+                    onChange={(e) => handleFileChange(e, true)}
+                    data-testid="input-remaining-receipt-file"
+                  />
+
                   <Button
                     size="sm"
                     className="mt-2 w-full text-xs"
-                    onClick={() => {
-                      setSelectedPackage({ credits: activePayment.credits, price: activePayment.remainingAmount });
-                      setStep('payment');
-                    }}
+                    disabled={uploading}
+                    onClick={() => remainingFileInputRef.current?.click()}
                     data-testid="button-pay-remaining"
                   >
-                    {t('payment.pay_remaining')} ({activePayment.remainingAmount.toLocaleString()} {t('payment.som')})
+                    {uploading ? t('payment.uploading') : (
+                      <>
+                        <Upload className="w-3 h-3 mr-1" />
+                        {t('payment.pay_remaining')} ({activePayment.remainingAmount.toLocaleString()} {t('payment.som')})
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -230,10 +228,9 @@ export default function PurchaseCreditsDialog({
                   </div>
                   <Button
                     size="sm"
-                    disabled={createPaymentMutation.isPending}
                     data-testid={`button-buy-${pkg.credits}`}
                   >
-                    {createPaymentMutation.isPending ? '...' : t('payment.buy')}
+                    {t('payment.buy')}
                   </Button>
                 </div>
               </Card>
@@ -241,7 +238,7 @@ export default function PurchaseCreditsDialog({
           </div>
         )}
 
-        {step === 'payment' && (
+        {step === 'payment' && selectedPackage && (
           <div className="px-4 pb-4 space-y-3">
             <Card className="p-3 bg-primary/5 border-primary/20">
               <div className="flex items-center gap-2 mb-2">
@@ -269,10 +266,10 @@ export default function PurchaseCreditsDialog({
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('payment.amount_to_pay')}</p>
                 <p className="text-2xl font-bold text-primary">
-                  {(showRemainingPayment ? activePayment.remainingAmount : displayPrice).toLocaleString()} {t('payment.som')}
+                  {selectedPackage.price.toLocaleString()} {t('payment.som')}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  {selectedPackage?.credits} {t('payment.keys')}
+                  {selectedPackage.credits} {t('payment.keys')}
                 </p>
               </div>
             </Card>
@@ -286,7 +283,7 @@ export default function PurchaseCreditsDialog({
               accept="image/*"
               className="hidden"
               ref={fileInputRef}
-              onChange={(e) => handleFileChange(e, !!showRemainingPayment)}
+              onChange={(e) => handleFileChange(e, false)}
               data-testid="input-receipt-file"
             />
 

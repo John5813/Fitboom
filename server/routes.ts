@@ -720,46 +720,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/credit-payments', requireAuth, async (req, res) => {
-    try {
-      const { credits, price } = req.body;
-      
-      if (!credits || !allowedCreditPackages.includes(credits)) {
-        return res.status(400).json({ message: "Noto'g'ri kredit paketi" });
-      }
-
-      const existingPayment = await storage.getActiveCreditPayment(req.user!.id);
-      if (existingPayment) {
-        return res.status(400).json({ 
-          message: "Sizda kutilayotgan to'lov mavjud",
-          payment: existingPayment,
-        });
-      }
-
-      const payment = await storage.createCreditPayment({
-        userId: req.user!.id,
-        credits,
-        price,
-        status: 'pending',
-        remainingAmount: 0,
-      });
-
-      res.json({ success: true, payment });
-    } catch (error: any) {
-      console.error('Credit payment creation error:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get('/api/credit-payments/active', requireAuth, async (req, res) => {
-    try {
-      const payment = await storage.getActiveCreditPayment(req.user!.id);
-      res.json({ payment: payment || null });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   const receiptUpload = multer({
     storage: multer.diskStorage({
       destination: async (_req, _file, cb) => {
@@ -775,13 +735,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     limits: { fileSize: 10 * 1024 * 1024 },
   });
 
-  app.post('/api/credit-payments/:id/receipt', requireAuth, receiptUpload.single('receipt'), async (req, res) => {
+  app.post('/api/credit-payments/submit', requireAuth, receiptUpload.single('receipt'), async (req, res) => {
     try {
-      const paymentId = req.params.id;
-      const payment = await storage.getCreditPayment(paymentId);
-      
-      if (!payment || payment.userId !== req.user!.id) {
-        return res.status(404).json({ message: "To'lov topilmadi" });
+      const { credits, price } = req.body;
+      const creditsNum = parseInt(credits);
+      const priceNum = parseInt(price);
+
+      if (!creditsNum || !allowedCreditPackages.includes(creditsNum)) {
+        return res.status(400).json({ message: "Noto'g'ri kredit paketi" });
       }
 
       if (!req.file) {
@@ -789,23 +750,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const receiptUrl = `/uploads/receipts/${req.file.filename}`;
-      await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
+
+      const payment = await storage.createCreditPayment({
+        userId: req.user!.id,
+        credits: creditsNum,
+        price: priceNum,
+        status: 'pending',
+        remainingAmount: 0,
+      });
+
+      await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
       const user = await storage.getUser(req.user!.id);
       const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`;
-      
+
       await sendPaymentReceiptToAdmin(
         storage,
-        paymentId,
+        payment.id,
         fullReceiptUrl,
         user,
-        payment.credits,
-        payment.price
+        creditsNum,
+        priceNum
       );
 
       res.json({ success: true, message: "Chek yuborildi" });
     } catch (error: any) {
-      console.error('Receipt upload error:', error);
+      console.error('Credit payment submit error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/credit-payments/active', requireAuth, async (req, res) => {
+    try {
+      const payment = await storage.getActiveCreditPayment(req.user!.id);
+      const partialPayment = payment && payment.status === 'partial' ? payment : null;
+      res.json({ payment: partialPayment });
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
@@ -814,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const paymentId = req.params.id;
       const payment = await storage.getCreditPayment(paymentId);
-      
+
       if (!payment || payment.userId !== req.user!.id) {
         return res.status(404).json({ message: "To'lov topilmadi" });
       }
@@ -832,7 +812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUser(req.user!.id);
       const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`;
-      
+
       await sendPaymentReceiptToAdmin(
         storage,
         paymentId,
