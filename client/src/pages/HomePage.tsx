@@ -735,6 +735,39 @@ export default function HomePage() {
         </div>
       )}
 
+      <Dialog open={showVisitHistory} onOpenChange={setShowVisitHistory}>
+        <DialogContent className="w-[90vw] max-w-[360px] max-h-[80vh] overflow-y-auto p-0 rounded-2xl border-none">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>{t('profile.history_title')}</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 space-y-3">
+            {completedBookings.length > 0 ? (
+              completedBookings.map((booking) => (
+                <div key={booking.id} className="p-3 bg-muted/30 rounded-lg border flex justify-between items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{booking.gymName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(booking.date).toLocaleDateString()} • {booking.time}
+                    </p>
+                  </div>
+                  <Badge variant={booking.status === 'completed' ? 'secondary' : 'outline'} className="text-[10px] h-5 px-1.5 flex-shrink-0">
+                    {booking.status === 'completed' ? 'Tashrif buyurilgan' : 
+                     booking.status === 'missed' ? 'Kelmagan' : 'Yakunlangan'}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">{t('profile.no_history')}</p>
+              </div>
+            )}
+            <Button onClick={() => setShowVisitHistory(false)} variant="outline" className="w-full mt-4">
+              Yopish
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} onScanQR={() => setIsScannerOpen(true)} />
       <PurchaseCreditsDialog isOpen={isPurchaseDialogOpen} onClose={() => setIsPurchaseDialogOpen(false)} onPurchase={handlePurchase} />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
