@@ -61,6 +61,8 @@ export default function AdminGymsPage() {
     facilities: '',
     hours: '09:00 - 22:00',
     locationLink: '',
+    latitude: '',
+    longitude: '',
   });
 
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -255,6 +257,8 @@ export default function AdminGymsPage() {
         facilities: '',
         hours: '09:00 - 22:00',
         locationLink: '',
+        latitude: '',
+        longitude: '',
       });
     },
     onError: (error: any) => {
@@ -315,46 +319,64 @@ export default function AdminGymsPage() {
     }
   });
 
-  const extractCoordinatesFromLink = (link: string) => {
-    try {
-      const patterns = [
-        /@(-?\d+\.\d+),(-?\d+\.\d+)/,
-        /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
-        /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
-        /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/
-      ];
+  const [isResolvingUrl, setIsResolvingUrl] = useState(false);
 
-      for (const pattern of patterns) {
-        const match = link.match(pattern);
-        if (match) {
-          return {
-            latitude: match[1],
-            longitude: match[2]
-          };
-        }
+  const handleLocationLinkChange = async (link: string) => {
+    setGymForm(prev => ({ ...prev, locationLink: link, address: link }));
+
+    if (!link || link.length < 10) return;
+
+    const localPatterns = [
+      /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+      /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+      /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+      /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/
+    ];
+    for (const pattern of localPatterns) {
+      const match = link.match(pattern);
+      if (match) {
+        setGymForm(prev => ({
+          ...prev,
+          locationLink: link,
+          address: link,
+          latitude: match[1],
+          longitude: match[2]
+        }));
+        toast({
+          title: "Koordinatalar topildi",
+          description: `Lat: ${match[1]}, Lng: ${match[2]}`,
+        });
+        return;
       }
-      return null;
-    } catch {
-      return null;
     }
-  };
 
-  const handleLocationLinkChange = (link: string) => {
-    setGymForm({ ...gymForm, locationLink: link, address: link });
-
-    const coords = extractCoordinatesFromLink(link);
-    if (coords) {
-      setGymForm(prev => ({
-        ...prev,
-        locationLink: link,
-        address: link,
-        latitude: coords.latitude,
-        longitude: coords.longitude
-      }));
-      toast({
-        title: "Koordinatalar topildi",
-        description: `Lat: ${coords.latitude}, Lng: ${coords.longitude}`,
-      });
+    if (link.includes("maps.app.goo.gl") || link.includes("goo.gl") || link.includes("google.com/maps")) {
+      setIsResolvingUrl(true);
+      try {
+        const res = await apiRequest("POST", "/api/resolve-maps-url", { url: link });
+        const coords = await res.json();
+        if (coords.latitude && coords.longitude) {
+          setGymForm(prev => ({
+            ...prev,
+            locationLink: link,
+            address: link,
+            latitude: coords.latitude,
+            longitude: coords.longitude
+          }));
+          toast({
+            title: "Koordinatalar topildi",
+            description: `Lat: ${coords.latitude}, Lng: ${coords.longitude}`,
+          });
+        }
+      } catch {
+        toast({
+          title: "Koordinatalar topilmadi",
+          description: "Havola noto'g'ri yoki server bilan bog'lanib bo'lmadi. To'liq Google Maps havolasini kiriting.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsResolvingUrl(false);
+      }
     }
   };
 
@@ -589,10 +611,33 @@ export default function AdminGymsPage() {
             <p className="text-muted-foreground mt-2">Barcha sport zallar va ularning ma'lumotlari</p>
           </div>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-gym">
-          <Plus className="h-4 w-4 mr-2" />
-          Yangi Zal
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const res = await apiRequest("POST", "/api/fix-gym-coordinates", {});
+                const data = await res.json();
+                const fixed = data.results?.filter((r: any) => r.status === "fixed").length || 0;
+                toast({
+                  title: "Koordinatalar yangilandi",
+                  description: `${fixed} ta zal koordinatalari topildi va saqlandi.`,
+                });
+                queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+              } catch {
+                toast({ title: "Xatolik", variant: "destructive" });
+              }
+            }}
+            data-testid="button-fix-coordinates"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Koordinatalarni tuzatish
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-gym">
+            <Plus className="h-4 w-4 mr-2" />
+            Yangi Zal
+          </Button>
+        </div>
       </div>
 
       <Card className="p-6">
@@ -1127,9 +1172,24 @@ export default function AdminGymsPage() {
                 placeholder="https://maps.google.com/?q=41.311151,69.279737"
                 data-testid="input-gym-location-link"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Google Maps dan link kiritsangiz, koordinatalar avtomatik ajratib olinadi
-              </p>
+              {isResolvingUrl && (
+                <p className="text-xs text-primary mt-1">Koordinatalar aniqlanmoqda...</p>
+              )}
+              {gymForm.latitude && gymForm.longitude && (
+                <p className="text-xs text-green-600 mt-1">
+                  Koordinatalar topildi: {gymForm.latitude}, {gymForm.longitude}
+                </p>
+              )}
+              {!isResolvingUrl && !gymForm.latitude && gymForm.locationLink && gymForm.locationLink.length > 10 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Google Maps dan link kiriting (qisqartirilgan yoki to'liq havola)
+                </p>
+              )}
+              {!gymForm.locationLink && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Google Maps dan link kiritsangiz, koordinatalar avtomatik ajratib olinadi
+                </p>
+              )}
             </div>
 
             <div>
@@ -1190,11 +1250,11 @@ export default function AdminGymsPage() {
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={handleCreateGym}
-                disabled={createGymMutation.isPending}
+                disabled={createGymMutation.isPending || isResolvingUrl}
                 className="flex-1"
                 data-testid="button-submit-gym"
               >
-                {createGymMutation.isPending ? 'Yuklanmoqda...' : "Qo'shish"}
+                {createGymMutation.isPending ? 'Yuklanmoqda...' : isResolvingUrl ? 'Koordinatalar aniqlanmoqda...' : "Qo'shish"}
               </Button>
               <Button
                 variant="outline"

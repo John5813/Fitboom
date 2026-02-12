@@ -220,9 +220,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/resolve-maps-url", requireAuth, async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) {
+        return res.status(400).json({ error: "URL is required" });
+      }
+
+      const extractCoordinates = (fullUrl: string) => {
+        const patterns = [
+          /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+        ];
+        for (const pattern of patterns) {
+          const match = fullUrl.match(pattern);
+          if (match) {
+            return { latitude: match[1], longitude: match[2] };
+          }
+        }
+        return null;
+      };
+
+      let coords = extractCoordinates(url);
+      if (coords) {
+        return res.json(coords);
+      }
+
+      const allowedDomains = ["maps.app.goo.gl", "goo.gl", "google.com", "maps.google.com", "www.google.com"];
+      let urlHost = "";
+      try { urlHost = new URL(url).hostname; } catch {}
+      if (!allowedDomains.some(d => urlHost === d || urlHost.endsWith("." + d))) {
+        return res.status(400).json({ error: "Faqat Google Maps havolalari qo'llab-quvvatlanadi" });
+      }
+
+      if (url.includes("maps.app.goo.gl") || url.includes("goo.gl")) {
+        try {
+          const response = await fetch(url, { redirect: "follow" });
+          const resolvedUrl = response.url;
+          coords = extractCoordinates(resolvedUrl);
+          if (coords) {
+            return res.json(coords);
+          }
+
+          const html = await response.text();
+          const htmlCoordMatch = html.match(/center=(-?\d+\.\d+)%2C(-?\d+\.\d+)/) ||
+                                  html.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                                  html.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+          if (htmlCoordMatch) {
+            return res.json({ latitude: htmlCoordMatch[1], longitude: htmlCoordMatch[2] });
+          }
+        } catch (fetchError) {
+          console.error("Error resolving maps URL:", fetchError);
+        }
+      }
+
+      res.status(404).json({ error: "Koordinatalar topilmadi. To'liq Google Maps havolasini kiriting." });
+    } catch (error: any) {
+      console.error("Error resolving maps URL:", error);
+      res.status(500).json({ error: "URL ochishda xatolik" });
+    }
+  });
+
+  app.post("/api/fix-gym-coordinates", requireAuth, async (req, res) => {
+    try {
+      const gyms = await storage.getGyms();
+      const results: any[] = [];
+
+      const extractCoords = (url: string) => {
+        const patterns = [
+          /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
+          /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+        ];
+        for (const p of patterns) {
+          const m = url.match(p);
+          if (m) return { latitude: m[1], longitude: m[2] };
+        }
+        return null;
+      };
+
+      for (const gym of gyms) {
+        if (gym.latitude && gym.longitude) {
+          results.push({ id: gym.id, name: gym.name, status: "already_has_coordinates" });
+          continue;
+        }
+
+        if (!gym.address) {
+          results.push({ id: gym.id, name: gym.name, status: "no_address" });
+          continue;
+        }
+
+        let coords = extractCoords(gym.address);
+        if (!coords && (gym.address.includes("maps.app.goo.gl") || gym.address.includes("goo.gl"))) {
+          try {
+            const resp = await fetch(gym.address, { redirect: "follow" });
+            const resolvedUrl = resp.url;
+            coords = extractCoords(resolvedUrl);
+            if (!coords) {
+              const html = await resp.text();
+              const htmlMatch = html.match(/center=(-?\d+\.\d+)%2C(-?\d+\.\d+)/) ||
+                                html.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                                html.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+              if (htmlMatch) coords = { latitude: htmlMatch[1], longitude: htmlMatch[2] };
+            }
+          } catch (e) {
+            console.error(`Error resolving URL for gym ${gym.name}:`, e);
+          }
+        }
+
+        if (coords) {
+          await storage.updateGym(gym.id, { latitude: coords.latitude, longitude: coords.longitude });
+          results.push({ id: gym.id, name: gym.name, status: "fixed", ...coords });
+        } else {
+          results.push({ id: gym.id, name: gym.name, status: "could_not_resolve" });
+        }
+      }
+
+      res.json({ results });
+    } catch (error: any) {
+      console.error("Error fixing coordinates:", error);
+      res.status(500).json({ error: "Koordinatalarni tuzatishda xatolik" });
+    }
+  });
+
   app.post("/api/gyms", requireAuth, async (req, res) => {
     try {
       const gymData = insertGymSchema.parse(req.body);
+
+      if (!gymData.latitude && !gymData.longitude && gymData.address) {
+        const addressUrl = gymData.address;
+        const extractCoords = (url: string) => {
+          const patterns = [
+            /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+            /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+            /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+            /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
+            /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+          ];
+          for (const p of patterns) {
+            const m = url.match(p);
+            if (m) return { latitude: m[1], longitude: m[2] };
+          }
+          return null;
+        };
+
+        let coords = extractCoords(addressUrl);
+        if (!coords && (addressUrl.includes("maps.app.goo.gl") || addressUrl.includes("goo.gl"))) {
+          try {
+            const resp = await fetch(addressUrl, { redirect: "follow" });
+            const resolvedUrl = resp.url;
+            coords = extractCoords(resolvedUrl);
+            if (!coords) {
+              const html = await resp.text();
+              const htmlMatch = html.match(/center=(-?\d+\.\d+)%2C(-?\d+\.\d+)/) ||
+                                html.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                                html.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+              if (htmlMatch) coords = { latitude: htmlMatch[1], longitude: htmlMatch[2] };
+            }
+          } catch (e) {
+            console.error("Error resolving maps URL during gym creation:", e);
+          }
+        }
+        if (coords) {
+          gymData.latitude = coords.latitude;
+          gymData.longitude = coords.longitude;
+        }
+      }
 
       // Generate unique 6-character access code for gym owner
       const generateAccessCode = (): string => {
