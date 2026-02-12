@@ -503,12 +503,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveCreditPayment(userId: string): Promise<CreditPayment | undefined> {
-    const [payment] = await db.select().from(creditPayments)
+    const results = await db.select().from(creditPayments)
       .where(and(
         eq(creditPayments.userId, userId),
-        sql`${creditPayments.status} IN ('pending', 'partial')`
+        sql`status IN ('pending', 'partial')`
       ));
-    return payment || undefined;
+    const partial = results.find(p => p.status === 'partial');
+    return partial || undefined;
   }
 }
 
