@@ -215,6 +215,20 @@ export default function HomePage() {
   };
 
   // Fetch video collections from API
+  const { data: gymTimeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
+    queryKey: ['/api/time-slots', selectedGymForBooking?.id],
+    enabled: !!selectedGymForBooking?.id,
+    queryFn: () => fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}`, { credentials: 'include' }).then(res => res.json()),
+  });
+
+  const gymTimeSlots = gymTimeSlotsData?.timeSlots || [];
+
+  const slotsForSelectedDate = selectedBookingDate
+    ? gymTimeSlots
+        .filter(slot => slot.dayOfWeek === getDayOfWeek(selectedBookingDate))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    : [];
+
   const { data: collectionsData, isLoading: classesLoading } = useQuery<{ collections: any[] }>({
     queryKey: ['/api/collections'],
   });
@@ -270,10 +284,19 @@ export default function HomePage() {
     cancelBookingMutation.mutate(bookingId);
   };
 
+  const DAY_NAMES = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+
+  const getDayOfWeek = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return DAY_NAMES[date.getDay()];
+  };
+
   const handleBookGym = (gymId: string) => {
     const gym = gyms.find(g => g.id === gymId);
     if (gym) {
       setSelectedGymForBooking(gym);
+      setSelectedBookingDate('');
+      setSelectedTimeSlot(null);
     }
   };
 
@@ -480,17 +503,24 @@ export default function HomePage() {
                           </div>
                         )}
                         <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5">
-                          {gym.credits} {t('profile.credits_count')}
+                          {gym.credits} kalit
                         </Badge>
                         <div className="absolute bottom-0 left-0 right-0 p-4">
                           <h3 className="text-white font-semibold text-lg truncate leading-tight">
                             {gym.name}
                           </h3>
-                          <p className="text-white/70 text-sm truncate">
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-white/80 text-sm flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {gym.distance !== undefined 
+                                ? (language === 'uz' 
+                                    ? `Sizdan ${gym.distance.toFixed(1)} km uzoqlikda` 
+                                    : `${gym.distance.toFixed(1)} км от вас`)
+                                : (language === 'uz' ? 'Masofa nomaʼlum' : 'Расстояние неизвестно')}
+                            </span>
+                          </div>
+                          <p className="text-white/60 text-xs mt-0.5 truncate">
                             {gym.categories?.join(', ') || ''}
-                          </p>
-                          <p className="text-white/70 text-sm">
-                            {gym.distance !== undefined ? `${gym.distance.toFixed(1)} km` : t('home.unknown_distance')}
                           </p>
                         </div>
                       </div>
@@ -707,18 +737,23 @@ export default function HomePage() {
                     date.setDate(date.getDate() + i);
                     const dateStr = date.toISOString().split('T')[0];
                     const isSelected = selectedBookingDate === dateStr;
+                    const isSunday = date.getDay() === 0;
                     return (
                       <Button
                         key={dateStr}
                         variant={isSelected ? "default" : "outline"}
                         size="sm"
-                        className="flex-shrink-0 flex flex-col h-auto py-1.5 px-3"
-                        onClick={() => setSelectedBookingDate(dateStr)}
+                        className={`flex-shrink-0 flex flex-col h-auto py-1.5 px-3 ${isSunday ? 'opacity-60' : ''}`}
+                        onClick={() => {
+                          setSelectedBookingDate(dateStr);
+                          setSelectedTimeSlot(null);
+                        }}
                       >
                         <span className="text-[10px] opacity-70">
                           {date.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', { weekday: 'short' })}
                         </span>
                         <span className="text-sm font-bold">{date.getDate()}</span>
+                        {isSunday && <span className="text-[8px] opacity-50">dam</span>}
                       </Button>
                     );
                   })}
@@ -728,52 +763,69 @@ export default function HomePage() {
               {selectedBookingDate && (
                 <div>
                   <h3 className="text-sm font-semibold mb-2">Vaqtni tanlang</h3>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"].map((time) => {
-                      const isSelected = selectedTimeSlot?.startTime === time;
-                      return (
-                        <Button
-                          key={time}
-                          variant={isSelected ? "default" : "outline"}
-                          size="sm"
-                          className="text-xs px-2"
-                          onClick={() => setSelectedTimeSlot({
-                            id: time,
-                            gymId: selectedGymForBooking.id,
-                            startTime: time,
-                            endTime: "",
-                            dayOfWeek: "",
-                            availableSpots: 10,
-                            capacity: 10
-                          })}
-                        >
-                          {time}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                  {getDayOfWeek(selectedBookingDate) === 'Yakshanba' && slotsForSelectedDate.length === 0 ? (
+                    <div className="text-center py-4 bg-muted/30 rounded-md">
+                      <p className="text-sm text-muted-foreground font-medium">Dam olish kuni</p>
+                      <p className="text-xs text-muted-foreground mt-1">Yakshanba kuni zal yopiq</p>
+                    </div>
+                  ) : slotsForSelectedDate.length === 0 ? (
+                    <div className="text-center py-4 bg-muted/30 rounded-md">
+                      <p className="text-sm text-muted-foreground">Bu kun uchun vaqt slotlari mavjud emas</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {slotsForSelectedDate.map((slot) => {
+                        const isSelected = selectedTimeSlot?.id === slot.id;
+                        const isFull = slot.availableSpots <= 0;
+                        return (
+                          <Button
+                            key={slot.id}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            className={`text-xs px-1.5 flex flex-col h-auto py-1.5 ${isFull ? 'opacity-50' : ''}`}
+                            disabled={isFull}
+                            onClick={() => setSelectedTimeSlot(slot)}
+                            data-testid={`button-slot-${slot.startTime}`}
+                          >
+                            <span className="font-medium">{slot.startTime}</span>
+                            <span className={`text-[10px] ${isFull ? 'text-destructive' : 'opacity-70'}`}>
+                              {isFull ? 'To\'liq' : `${slot.availableSpots} joy`}
+                            </span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
               <Button
                 className="w-full"
                 disabled={!selectedBookingDate || !selectedTimeSlot || (user?.credits || 0) < selectedGymForBooking.credits}
+                data-testid="button-confirm-booking"
                 onClick={async () => {
                   try {
-                    const response = await fetch('/api/bookings', {
+                    const response = await fetch('/api/book-gym', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
                       body: JSON.stringify({
                         gymId: selectedGymForBooking.id,
                         date: selectedBookingDate,
                         time: selectedTimeSlot?.startTime,
+                        timeSlotId: selectedTimeSlot?.id,
+                        scheduledStartTime: selectedTimeSlot?.startTime,
+                        scheduledEndTime: selectedTimeSlot?.endTime,
                       }),
                     });
                     if (response.ok) {
                       toast({ title: "Muvaffaqiyatli!", description: "Zal band qilindi" });
                       setSelectedGymForBooking(null);
+                      setSelectedTimeSlot(null);
+                      setSelectedBookingDate('');
                       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
                       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/time-slots', selectedGymForBooking.id] });
                       setActiveTab('bookings');
                     } else {
                       const err = await response.json();

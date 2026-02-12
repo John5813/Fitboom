@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X } from "lucide-react";
+import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { GymVisit, GymPayment } from "@shared/schema";
+import type { GymVisit, GymPayment, TimeSlot } from "@shared/schema";
 
 interface GymOwnerData {
   gym: {
@@ -36,6 +36,8 @@ export default function GymOwnerPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showVisitors, setShowVisitors] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
+  const [showTimeSlots, setShowTimeSlots] = useState(false);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   const gymId = localStorage.getItem("gymOwnerId");
   const accessCode = localStorage.getItem("gymOwnerCode");
@@ -55,6 +57,59 @@ export default function GymOwnerPage() {
     },
     enabled: !!gymId,
   });
+
+  const { data: timeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
+    queryKey: ['/api/time-slots', gymId],
+    enabled: !!gymId,
+    queryFn: () => fetch(`/api/time-slots?gymId=${gymId}`, { credentials: 'include' }).then(res => res.json()),
+  });
+
+  const timeSlots = timeSlotsData?.timeSlots || [];
+
+  const DAY_ORDER = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+  const groupedSlots = DAY_ORDER.map(day => ({
+    day,
+    slots: timeSlots.filter(s => s.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime)),
+  }));
+
+  const handleOwnerAutoGenerate = async () => {
+    if (!gymId) return;
+    setIsAutoGenerating(true);
+    try {
+      const response = await fetch('/api/time-slots/auto-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ gymId }),
+      });
+      const resData = await response.json();
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
+        toast({ title: "Muvaffaqiyatli", description: resData.message });
+      } else {
+        toast({ title: "Xatolik", description: resData.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Xatolik", description: "Server bilan bog'lanishda xatolik", variant: "destructive" });
+    } finally {
+      setIsAutoGenerating(false);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId: string) => {
+    try {
+      const response = await fetch(`/api/time-slots/${slotId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
+        toast({ title: "O'chirildi", description: "Vaqt sloti o'chirildi" });
+      }
+    } catch {
+      toast({ title: "Xatolik", description: "O'chirishda xatolik", variant: "destructive" });
+    }
+  };
 
   const updateGymMutation = useMutation({
     mutationFn: async (updateData: { name?: string; imageUrl?: string }) => {
@@ -271,6 +326,19 @@ export default function GymOwnerPage() {
         <Button
           variant="outline"
           className="w-full justify-between"
+          onClick={() => setShowTimeSlots(true)}
+          data-testid="button-manage-time-slots"
+        >
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            <span>Vaqt slotlarini boshqarish</span>
+          </div>
+          <Badge variant="secondary">{timeSlots.length}</Badge>
+        </Button>
+
+        <Button
+          variant="outline"
+          className="w-full justify-between"
           onClick={() => setShowVisitors(true)}
           data-testid="button-view-visitors"
         >
@@ -427,6 +495,60 @@ export default function GymOwnerPage() {
               </div>
             </ScrollArea>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTimeSlots} onOpenChange={setShowTimeSlots}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Vaqt slotlari
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-3 border rounded-md bg-muted/30">
+              <p className="text-xs text-muted-foreground mb-2">
+                Du-Sh, 09:00-21:00, har soatga 15 kishi. Yakshanba dam olish kuni.
+              </p>
+              <Button
+                onClick={handleOwnerAutoGenerate}
+                disabled={isAutoGenerating}
+                className="w-full"
+                data-testid="button-owner-auto-generate"
+              >
+                {isAutoGenerating ? 'Yaratilmoqda...' : 'Avtomatik yaratish'}
+              </Button>
+            </div>
+
+            {timeSlots.length === 0 ? (
+              <p className="text-center text-muted-foreground text-sm py-4">Hali vaqt slotlari yo'q</p>
+            ) : (
+              <div className="space-y-3">
+                {groupedSlots.filter(g => g.slots.length > 0).map(group => (
+                  <div key={group.day}>
+                    <h4 className="text-sm font-semibold mb-1.5">{group.day}</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.slots.map(slot => (
+                        <div key={slot.id} className="flex items-center gap-1 border rounded-md px-2 py-1 text-xs">
+                          <span>{slot.startTime}-{slot.endTime}</span>
+                          <span className="text-muted-foreground">({slot.availableSpots}/{slot.capacity})</span>
+                          <button
+                            onClick={() => handleDeleteSlot(slot.id)}
+                            className="ml-1 text-destructive"
+                            data-testid={`button-owner-delete-slot-${slot.id}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

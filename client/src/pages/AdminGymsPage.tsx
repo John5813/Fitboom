@@ -116,9 +116,10 @@ export default function AdminGymsPage() {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [bulkTimeSlot, setBulkTimeSlot] = useState({
     startTime: '09:00',
-    endTime: '22:00',
-    capacity: '20',
+    endTime: '21:00',
+    capacity: '15',
   });
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   const WEEKDAYS = [
     { short: 'Du', full: 'Dushanba' },
@@ -459,25 +460,77 @@ export default function AdminGymsPage() {
     }
 
     const capacity = parseInt(bulkTimeSlot.capacity);
-    
+    const startHour = parseInt(bulkTimeSlot.startTime.split(':')[0]);
+    const endHour = parseInt(bulkTimeSlot.endTime.split(':')[0]);
+
+    let totalSlots = 0;
     for (const day of selectedDays) {
-      await createTimeSlotMutation.mutateAsync({
-        gymId: selectedGym.id,
-        dayOfWeek: day,
-        startTime: bulkTimeSlot.startTime,
-        endTime: bulkTimeSlot.endTime,
-        capacity: capacity,
-        availableSpots: capacity,
-      });
+      for (let h = startHour; h < endHour; h++) {
+        const sTime = `${h.toString().padStart(2, '0')}:00`;
+        const eTime = `${(h + 1).toString().padStart(2, '0')}:00`;
+        await createTimeSlotMutation.mutateAsync({
+          gymId: selectedGym.id,
+          dayOfWeek: day,
+          startTime: sTime,
+          endTime: eTime,
+          capacity: capacity,
+          availableSpots: capacity,
+        });
+        totalSlots++;
+      }
     }
 
     toast({
       title: "Vaqt slotlari qo'shildi",
-      description: `${selectedDays.length} kun uchun vaqt slotlari qo'shildi.`,
+      description: `${totalSlots} ta soatlik slot ${selectedDays.length} kun uchun yaratildi.`,
     });
 
     setSelectedDays([]);
     setIsTimeSlotDialogOpen(false);
+  };
+
+  const handleAutoGenerate = async () => {
+    if (!selectedGym) {
+      toast({
+        title: "Xatolik",
+        description: "Zal tanlanmagan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAutoGenerating(true);
+    try {
+      const response = await fetch('/api/time-slots/auto-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ gymId: selectedGym.id }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/time-slots', selectedGym.id] });
+        toast({
+          title: "Muvaffaqiyatli",
+          description: data.message || `${data.count} ta slot yaratildi`,
+        });
+        setIsTimeSlotDialogOpen(false);
+      } else {
+        toast({
+          title: "Xatolik",
+          description: data.error || "Slotlarni yaratishda xatolik",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "Server bilan bog'lanishda xatolik",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAutoGenerating(false);
+    }
   };
 
   const handleDeleteTimeSlot = (id: string) => {
@@ -956,53 +1009,59 @@ export default function AdminGymsPage() {
           </DialogHeader>
 
           <div className="space-y-5">
-            {/* Weekday Selection */}
+            <div className="p-3 border rounded-md bg-muted/30">
+              <p className="text-sm font-medium mb-2">Tez sozlash</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Du-Sh, 09:00-21:00, har soatga 15 kishi. Yakshanba dam olish kuni.
+              </p>
+              <Button
+                onClick={handleAutoGenerate}
+                disabled={isAutoGenerating}
+                className="w-full"
+                data-testid="button-auto-generate-slots"
+              >
+                {isAutoGenerating ? 'Yaratilmoqda...' : 'Avtomatik yaratish (Du-Sh, 09:00-21:00)'}
+              </Button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Yoki qo'lda sozlang</span>
+              </div>
+            </div>
+
             <div>
               <Label className="mb-3 block">Kunlarni tanlang</Label>
               <div className="flex flex-wrap gap-2 mb-3">
                 {WEEKDAYS.map((day) => (
-                  <Button
-                    key={day.full}
-                    type="button"
-                    variant={selectedDays.includes(day.full) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleDay(day.full)}
-                    className="min-w-[48px]"
-                    data-testid={`toggle-day-${day.short}`}
-                  >
-                    {day.short}
-                  </Button>
+                  <div key={day.full} className="flex flex-col items-center gap-1">
+                    <Button
+                      type="button"
+                      variant={selectedDays.includes(day.full) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleDay(day.full)}
+                      className="min-w-[48px]"
+                      data-testid={`toggle-day-${day.short}`}
+                    >
+                      {day.short}
+                    </Button>
+                    {day.full === 'Yakshanba' && (
+                      <span className="text-[10px] text-muted-foreground">Dam kun</span>
+                    )}
+                  </div>
                 ))}
               </div>
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={selectAllWeekdays}
-                  className="text-xs"
-                  data-testid="button-select-weekdays"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={selectAllWeekdays} className="text-xs" data-testid="button-select-weekdays">
                   Du-Ju
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={selectAllDays}
-                  className="text-xs"
-                  data-testid="button-select-all-days"
-                >
-                  Hammasi
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedDays(['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'])} className="text-xs" data-testid="button-select-workdays">
+                  Du-Sh
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearDays}
-                  className="text-xs"
-                  data-testid="button-clear-days"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={clearDays} className="text-xs" data-testid="button-clear-days">
                   Tozalash
                 </Button>
               </div>
@@ -1013,10 +1072,9 @@ export default function AdminGymsPage() {
               )}
             </div>
 
-            {/* Time inputs */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="bulkStartTime">Ochilish vaqti</Label>
+                <Label htmlFor="bulkStartTime">Boshlanish vaqti</Label>
                 <Input
                   id="bulkStartTime"
                   type="time"
@@ -1026,7 +1084,7 @@ export default function AdminGymsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="bulkEndTime">Yopilish vaqti</Label>
+                <Label htmlFor="bulkEndTime">Tugash vaqti</Label>
                 <Input
                   id="bulkEndTime"
                   type="time"
@@ -1038,14 +1096,14 @@ export default function AdminGymsPage() {
             </div>
 
             <div>
-              <Label htmlFor="bulkCapacity">Sig'im (kishi)</Label>
+              <Label htmlFor="bulkCapacity">Har bir soat uchun sig'im (kishi)</Label>
               <Input
                 id="bulkCapacity"
                 type="number"
                 min="1"
                 value={bulkTimeSlot.capacity}
                 onChange={(e) => setBulkTimeSlot({ ...bulkTimeSlot, capacity: e.target.value })}
-                placeholder="Misol: 20"
+                placeholder="Misol: 15"
                 data-testid="input-bulk-capacity"
               />
             </div>
@@ -1057,7 +1115,7 @@ export default function AdminGymsPage() {
                 className="flex-1"
                 data-testid="button-submit-time-slots"
               >
-                {createTimeSlotMutation.isPending ? 'Yuklanmoqda...' : `${selectedDays.length} kun uchun qo'shish`}
+                {createTimeSlotMutation.isPending ? 'Yuklanmoqda...' : `Soatlik slotlar yaratish`}
               </Button>
               <Button
                 variant="outline"

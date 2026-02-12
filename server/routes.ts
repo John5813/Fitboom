@@ -511,6 +511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const timeSlotData = insertTimeSlotSchema.parse(req.body);
 
+      if (timeSlotData.dayOfWeek === 'Yakshanba') {
+        return res.status(400).json({ error: "Yakshanba dam olish kuni. Bu kunga slot yaratib bo'lmaydi." });
+      }
+
       const gym = await storage.getGym(timeSlotData.gymId);
       if (!gym) {
         return res.status(404).json({ error: "Gym not found" });
@@ -567,6 +571,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete time slot" });
+    }
+  });
+
+  app.post("/api/time-slots/auto-generate", requireAuth, async (req, res) => {
+    try {
+      const { gymId, startHour, endHour, capacity, days } = req.body;
+
+      if (!gymId) {
+        return res.status(400).json({ error: "gymId majburiy" });
+      }
+
+      const gym = await storage.getGym(gymId);
+      if (!gym) {
+        return res.status(404).json({ error: "Zal topilmadi" });
+      }
+
+      const sHour = startHour || 9;
+      const eHour = endHour || 21;
+      const cap = capacity || 15;
+      const daysList = days || ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+
+      await storage.deleteTimeSlotsForGym(gymId);
+
+      const createdSlots = [];
+      for (const day of daysList) {
+        for (let h = sHour; h < eHour; h++) {
+          const startTime = `${h.toString().padStart(2, '0')}:00`;
+          const endTime = `${(h + 1).toString().padStart(2, '0')}:00`;
+          const slot = await storage.createTimeSlot({
+            gymId,
+            dayOfWeek: day,
+            startTime,
+            endTime,
+            capacity: cap,
+            availableSpots: cap,
+          });
+          createdSlots.push(slot);
+        }
+      }
+
+      res.json({ 
+        message: `${createdSlots.length} ta vaqt sloti yaratildi`,
+        timeSlots: createdSlots,
+        count: createdSlots.length
+      });
+    } catch (error: any) {
+      console.error("Error auto-generating time slots:", error);
+      res.status(500).json({ error: error.message || "Vaqt slotlarini yaratishda xatolik" });
     }
   });
 
@@ -684,6 +736,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newCredits = user.credits + gym.credits;
       await storage.updateUserCredits(user.id, newCredits);
 
+      if (booking.timeSlotId) {
+        const timeSlot = await storage.getTimeSlot(booking.timeSlotId);
+        if (timeSlot) {
+          await storage.updateTimeSlot(booking.timeSlotId, {
+            availableSpots: Math.min(timeSlot.availableSpots + 1, timeSlot.capacity)
+          });
+        }
+      }
+
       const success = await storage.deleteBooking(bookingId);
       if (!success) {
         return res.status(500).json({ message: "Bron o'chirilmadi" });
@@ -728,6 +789,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookingDate = date || new Date().toISOString().split('T')[0];
       const bookingTime = time || '09:00';
 
+      const bookingDayOfWeek = new Date(bookingDate).getDay();
+      if (bookingDayOfWeek === 0) {
+        await storage.updateUserCredits(user.id, user.credits);
+        return res.status(400).json({ message: "Yakshanba dam olish kuni. Bu kunga bron qilib bo'lmaydi." });
+      }
+
       // Yangi bron yaratish
       const qrCodeData = JSON.stringify({
         gymId,
@@ -746,11 +813,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending'
       };
 
-      // Agar vaqt sloti tanlangan bo'lsa, qo'shimcha ma'lumotlarni qo'shamiz
       if (timeSlotId) {
+        const timeSlot = await storage.getTimeSlot(timeSlotId);
+        if (!timeSlot) {
+          await storage.updateUserCredits(user.id, user.credits);
+          return res.status(400).json({ message: "Vaqt sloti topilmadi" });
+        }
+        if (timeSlot.availableSpots <= 0) {
+          await storage.updateUserCredits(user.id, user.credits);
+          return res.status(400).json({ message: "Bu vaqtda joy qolmagan" });
+        }
         bookingToCreate.timeSlotId = timeSlotId;
         bookingToCreate.scheduledStartTime = scheduledStartTime;
         bookingToCreate.scheduledEndTime = scheduledEndTime;
+
+        await storage.updateTimeSlot(timeSlotId, {
+          availableSpots: timeSlot.availableSpots - 1
+        });
       }
 
       const booking = await storage.createBooking(bookingToCreate);
