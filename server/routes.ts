@@ -12,6 +12,25 @@ import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramWebhook } from "./telegram";
 
+function getTashkentNow(): Date {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 5 * 3600000);
+}
+
+function getTashkentDateStr(): string {
+  const tashkent = getTashkentNow();
+  const y = tashkent.getFullYear();
+  const m = String(tashkent.getMonth() + 1).padStart(2, '0');
+  const d = String(tashkent.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getTashkentTimeStr(): string {
+  const tashkent = getTashkentNow();
+  return `${String(tashkent.getHours()).padStart(2, '0')}:${String(tashkent.getMinutes()).padStart(2, '0')}`;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe sozlamalari
   let stripe: Stripe | null = null;
@@ -26,6 +45,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error("Uploads papkasini yaratishda xatolik:", error);
   }
+
+  app.get('/api/tashkent-time', (req, res) => {
+    const now = getTashkentNow();
+    res.json({
+      date: getTashkentDateStr(),
+      time: getTashkentTimeStr(),
+      dayOfWeek: now.getDay(),
+      timestamp: now.getTime(),
+    });
+  });
 
   // Multer sozlamalari - disk saqlash
   const multerStorage = multer.diskStorage({
@@ -679,25 +708,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bookings = await storage.getBookings(req.user!.id);
       
-      // Muddati o'tgan bronlarni avtomatik "missed" statusiga o'tkazish
-      const now = new Date();
+      const todayStr = getTashkentDateStr();
+      const currentTime = getTashkentTimeStr();
+      
       for (const booking of bookings) {
-        // Faqat faol va pending statusdagi bronlarni tekshirish
         if (!booking.isCompleted && booking.status !== 'missed' && booking.status !== 'completed') {
-          // Agar scheduledEndTime mavjud bo'lsa
-          if (booking.scheduledEndTime && booking.date) {
-            const bookingDate = new Date(booking.date);
-            const [endHour, endMin] = booking.scheduledEndTime.split(':').map(Number);
-            const endTime = new Date(bookingDate);
-            endTime.setHours(endHour, endMin, 0, 0);
+          if (booking.date) {
+            const bookingDateStr = typeof booking.date === 'string' 
+              ? booking.date.split('T')[0] 
+              : new Date(booking.date).toISOString().split('T')[0];
             
-            // 1 soat grace period qo'shish
-            const graceEndTime = new Date(endTime.getTime() + 60 * 60 * 1000);
-            
-            // Agar hozirgi vaqt grace period tugashidan o'tgan bo'lsa
-            if (now > graceEndTime) {
+            if (bookingDateStr < todayStr) {
               await storage.updateBookingStatus(booking.id, 'missed');
-              booking.status = 'missed'; // Local ma'lumotni ham yangilash
+              booking.status = 'missed';
+            } else if (bookingDateStr === todayStr && booking.scheduledEndTime) {
+              const [endH, endM] = booking.scheduledEndTime.split(':').map(Number);
+              const endWithGrace = `${String(endH + 1).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+              if (currentTime >= endWithGrace) {
+                await storage.updateBookingStatus(booking.id, 'missed');
+                booking.status = 'missed';
+              }
             }
           }
         }
@@ -783,17 +813,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Kredit yetarli emas yoki muddati o'tgan" });
       }
 
-      const newCredits = user.credits - gym.credits;
-      await storage.updateUserCredits(user.id, newCredits);
-
-      const bookingDate = date || new Date().toISOString().split('T')[0];
+      const todayTashkent = getTashkentDateStr();
+      const currentTimeTashkent = getTashkentTimeStr();
+      const bookingDate = date || todayTashkent;
       const bookingTime = time || '09:00';
 
-      const bookingDayOfWeek = new Date(bookingDate).getDay();
+      if (bookingDate < todayTashkent) {
+        return res.status(400).json({ message: "O'tgan kunga bron qilib bo'lmaydi." });
+      }
+
+      if (bookingDate === todayTashkent && bookingTime <= currentTimeTashkent) {
+        return res.status(400).json({ message: "O'tgan vaqtga bron qilib bo'lmaydi." });
+      }
+
+      const bookingDayOfWeek = new Date(bookingDate + 'T12:00:00').getDay();
       if (bookingDayOfWeek === 0) {
-        await storage.updateUserCredits(user.id, user.credits);
         return res.status(400).json({ message: "Yakshanba dam olish kuni. Bu kunga bron qilib bo'lmaydi." });
       }
+
+      const newCredits = user.credits - gym.credits;
+      await storage.updateUserCredits(user.id, newCredits);
 
       // Yangi bron yaratish
       const qrCodeData = JSON.stringify({

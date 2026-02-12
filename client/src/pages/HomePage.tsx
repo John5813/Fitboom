@@ -95,6 +95,11 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const [params] = useLocation();
 
+  const { data: tashkentTime } = useQuery<{ date: string; time: string; dayOfWeek: number }>({
+    queryKey: ['/api/tashkent-time'],
+    refetchInterval: 60000,
+  });
+
   const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
     queryKey: ['/api/gyms'],
   });
@@ -226,9 +231,20 @@ export default function HomePage() {
 
   const gymTimeSlots = gymTimeSlotsData?.timeSlots || [];
 
+  const getDayOfWeekFromDateStr = (dateStr: string): string => {
+    const date = new Date(dateStr + 'T12:00:00');
+    return DAY_NAMES[date.getDay()];
+  };
+
   const slotsForSelectedDate = selectedBookingDate
     ? gymTimeSlots
-        .filter(slot => slot.dayOfWeek === getDayOfWeek(selectedBookingDate))
+        .filter(slot => {
+          if (slot.dayOfWeek !== getDayOfWeekFromDateStr(selectedBookingDate)) return false;
+          if (tashkentTime && selectedBookingDate === tashkentTime.date) {
+            return slot.endTime > tashkentTime.time;
+          }
+          return true;
+        })
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
     : [];
 
@@ -729,43 +745,53 @@ export default function HomePage() {
               <div>
                 <h3 className="text-sm font-semibold mb-2">Sanani tanlang</h3>
                 <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                  {[...Array(7)].map((_, i) => {
-                    const date = new Date();
-                    date.setDate(date.getDate() + i);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = selectedBookingDate === dateStr;
-                    const isSunday = date.getDay() === 0;
-                    return (
-                      <Button
-                        key={dateStr}
-                        variant={isSelected ? "default" : "outline"}
-                        size="sm"
-                        className={`flex-shrink-0 flex flex-col h-auto py-1.5 px-3 ${isSunday ? 'opacity-60' : ''}`}
-                        onClick={() => {
-                          setSelectedBookingDate(dateStr);
-                          setSelectedTimeSlot(null);
-                        }}
-                      >
-                        <span className="text-[10px] opacity-70">
-                          {date.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', { weekday: 'short' })}
-                        </span>
-                        <span className="text-sm font-bold">{date.getDate()}</span>
-                        {isSunday && <span className="text-[8px] opacity-50">dam</span>}
-                      </Button>
-                    );
-                  })}
+                  {(() => {
+                    const dates: Date[] = [];
+                    const startDate = tashkentTime 
+                      ? new Date(tashkentTime.date + 'T12:00:00')
+                      : new Date();
+                    let dayOffset = 0;
+                    while (dates.length < 7) {
+                      const d = new Date(startDate);
+                      d.setDate(startDate.getDate() + dayOffset);
+                      if (d.getDay() !== 0) {
+                        dates.push(d);
+                      }
+                      dayOffset++;
+                    }
+                    return dates.map((date) => {
+                      const y = date.getFullYear();
+                      const m = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      const dateStr = `${y}-${m}-${day}`;
+                      const isSelected = selectedBookingDate === dateStr;
+                      return (
+                        <Button
+                          key={dateStr}
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          className="flex-shrink-0 flex flex-col h-auto py-1.5 px-3"
+                          onClick={() => {
+                            setSelectedBookingDate(dateStr);
+                            setSelectedTimeSlot(null);
+                          }}
+                          data-testid={`button-date-${dateStr}`}
+                        >
+                          <span className="text-[10px] opacity-70">
+                            {date.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', { weekday: 'short' })}
+                          </span>
+                          <span className="text-sm font-bold">{date.getDate()}</span>
+                        </Button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
 
               {selectedBookingDate && (
                 <div>
                   <h3 className="text-sm font-semibold mb-2">Vaqtni tanlang</h3>
-                  {getDayOfWeek(selectedBookingDate) === 'Yakshanba' && slotsForSelectedDate.length === 0 ? (
-                    <div className="text-center py-4 bg-muted/30 rounded-md">
-                      <p className="text-sm text-muted-foreground font-medium">Dam olish kuni</p>
-                      <p className="text-xs text-muted-foreground mt-1">Yakshanba kuni zal yopiq</p>
-                    </div>
-                  ) : slotsForSelectedDate.length === 0 ? (
+                  {slotsForSelectedDate.length === 0 ? (
                     <div className="text-center py-4 bg-muted/30 rounded-md">
                       <p className="text-sm text-muted-foreground">Bu kun uchun vaqt slotlari mavjud emas</p>
                     </div>
