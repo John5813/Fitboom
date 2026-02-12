@@ -338,7 +338,7 @@ export default function AdminGymsPage() {
 
   const updateTimeSlotCapacityMutation = useMutation({
     mutationFn: async ({ id, capacity }: { id: string; capacity: number }) => {
-      const response = await apiRequest(`/api/time-slots/${id}`, 'PUT', { capacity, availableSpots: capacity });
+      const response = await apiRequest(`/api/time-slots/${id}`, 'PUT', { capacity });
       return response.json();
     },
     onSuccess: () => {

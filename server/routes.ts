@@ -590,14 +590,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Time slot not found" });
       }
 
-      const capacity = updateData.capacity ?? existingSlot.capacity;
-      const availableSpots = updateData.availableSpots ?? existingSlot.availableSpots;
+      const newCapacity = updateData.capacity ?? existingSlot.capacity;
+      const bookedCount = existingSlot.capacity - existingSlot.availableSpots;
+      const newAvailableSpots = Math.max(0, newCapacity - bookedCount);
 
-      if (availableSpots > capacity) {
-        return res.status(400).json({ error: "Available spots cannot exceed capacity" });
-      }
+      const finalUpdate = {
+        ...updateData,
+        capacity: newCapacity,
+        availableSpots: newAvailableSpots
+      };
 
-      const timeSlot = await storage.updateTimeSlot(req.params.id, updateData);
+      const timeSlot = await storage.updateTimeSlot(req.params.id, finalUpdate);
       res.json({ timeSlot });
     } catch (error) {
       res.status(400).json({ error: "Invalid time slot data" });

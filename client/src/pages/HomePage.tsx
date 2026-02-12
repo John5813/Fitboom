@@ -226,6 +226,7 @@ export default function HomePage() {
   // Fetch video collections from API
   const { data: gymTimeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
     queryKey: ['/api/time-slots', selectedGymForBooking?.id],
+    refetchInterval: 15000,
     enabled: !!selectedGymForBooking?.id,
     queryFn: () => fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}`, { credentials: 'include' }).then(res => res.json()),
   });
@@ -286,6 +287,7 @@ export default function HomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/time-slots'] });
       toast({
         title: "Bron bekor qilindi",
         description: "Kalitingiz qaytarildi.",

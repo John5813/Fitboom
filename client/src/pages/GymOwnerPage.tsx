@@ -98,7 +98,7 @@ export default function GymOwnerPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ capacity, availableSpots: capacity }),
+        body: JSON.stringify({ capacity }),
       });
       if (!response.ok) throw new Error("Failed to update capacity");
       return response.json();
@@ -134,6 +134,7 @@ export default function GymOwnerPage() {
 
   const { data: timeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
     queryKey: ['/api/time-slots', gymId],
+    refetchInterval: 15000,
     enabled: !!gymId,
     queryFn: () => fetch(`/api/time-slots?gymId=${gymId}`, { credentials: 'include' }).then(res => res.json()),
   });
