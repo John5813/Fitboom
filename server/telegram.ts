@@ -217,9 +217,9 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
               } as any);
 
               const user = await storage.getUser(payment.userId);
+              if (!user) return;
               
               if (remainingAmount === 0) {
-                // If fully paid via amount changes, update credits
                 const newCredits = user.credits + payment.credits;
                 let expiryDate: Date;
                 const now = new Date();
