@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2 } from "lucide-react";
+import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2, QrCode, CheckCircle2 } from "lucide-react";
+import QRScanner from "@/components/QRScanner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -88,9 +89,14 @@ export default function GymOwnerPage() {
   const [showVisitors, setShowVisitors] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; visitorName?: string; visitorProfileImage?: string } | null>(null);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState('');
+
+  const gymId = localStorage.getItem("gymOwnerId");
+  const accessCode = localStorage.getItem("gymOwnerCode");
 
   const updateCapacityMutation = useMutation({
     mutationFn: async ({ slotId, capacity }: { slotId: string; capacity: number }) => {
@@ -113,8 +119,44 @@ export default function GymOwnerPage() {
     }
   });
 
-  const gymId = localStorage.getItem("gymOwnerId");
-  const accessCode = localStorage.getItem("gymOwnerCode");
+  const verifyQRMutation = useMutation({
+    mutationFn: async (qrCode: string) => {
+      const response = await fetch('/api/verify-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ qrCode, gymId }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "QR kodni tekshirishda xatolik");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setScanResult({
+        success: true,
+        message: "Tashrif muvaffaqiyatli qayd etildi",
+        visitorName: data.visitorName,
+        visitorProfileImage: data.visitorProfileImage
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/gym-owner'] });
+      setShowScanner(false);
+    },
+    onError: (error: any) => {
+      setScanResult({
+        success: false,
+        message: error.message
+      });
+      setShowScanner(false);
+    }
+  });
+
+  const handleScan = (data: string | null) => {
+    if (data && !verifyQRMutation.isPending) {
+      verifyQRMutation.mutate(data);
+    }
+  };
 
   useEffect(() => {
     if (!gymId || !accessCode) {
@@ -359,6 +401,15 @@ export default function GymOwnerPage() {
       </div>
 
       <div className="p-4 space-y-4">
+        <Button
+          className="w-full h-16 text-lg font-bold gap-3 shadow-lg hover-elevate active-elevate-2 bg-primary text-primary-foreground"
+          onClick={() => setShowScanner(true)}
+          data-testid="button-open-scanner"
+        >
+          <QrCode className="h-8 w-8" />
+          QR Skanerlash
+        </Button>
+
         <Card data-testid="card-gym-info">
           <CardContent className="p-4">
             <div className="flex gap-4">
@@ -552,6 +603,69 @@ export default function GymOwnerPage() {
                 )}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showScanner} onOpenChange={setShowScanner}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>QR Kodni Skanerlang</DialogTitle>
+            <DialogDescription>Mijozning QR kodini kameraga ko'rsating</DialogDescription>
+          </DialogHeader>
+          <div className="aspect-square overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/50">
+            {showScanner && (
+              <QRScanner
+                isOpen={showScanner}
+                onClose={() => setShowScanner(false)}
+                onScan={handleScan}
+              />
+            )}
+          </div>
+          <Button variant="outline" onClick={() => setShowScanner(false)} className="w-full">
+            Yopish
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!scanResult} onOpenChange={(open) => !open && setScanResult(null)}>
+        <DialogContent className="max-w-sm">
+          <div className="flex flex-col items-center text-center p-4">
+            {scanResult?.success ? (
+              <>
+                <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                  <CheckCircle2 className="h-12 w-12 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">Muvaffaqiyatli!</h3>
+                <p className="text-muted-foreground mb-6">{scanResult.message}</p>
+                
+                {scanResult.visitorName && (
+                  <div className="flex flex-col items-center gap-2 mb-6">
+                    <Avatar className="h-20 w-20 border-4 border-green-500 shadow-xl">
+                      {scanResult.visitorProfileImage && (
+                        <img src={scanResult.visitorProfileImage} alt={scanResult.visitorName} className="h-full w-full object-cover" />
+                      )}
+                      <AvatarFallback className="text-2xl">{scanResult.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-bold text-2xl text-foreground">{scanResult.visitorName}</span>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      Tashrif tasdiqlandi
+                    </Badge>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                  <X className="h-12 w-12 text-destructive" />
+                </div>
+                <h3 className="text-2xl font-bold text-destructive mb-2">Xatolik!</h3>
+                <p className="text-muted-foreground mb-6">{scanResult?.message}</p>
+              </>
+            )}
+            <Button onClick={() => setScanResult(null)} className="w-full">
+              Tushunarli
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
