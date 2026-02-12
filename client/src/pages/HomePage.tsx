@@ -92,6 +92,12 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const [params] = useLocation();
 
+  const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
+    queryKey: ['/api/gyms'],
+  });
+
+  const gyms = gymsData?.gyms || [];
+
   // Handle direct gym links
   useEffect(() => {
     const path = window.location.pathname;
@@ -148,12 +154,12 @@ export default function HomePage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
-    const credits = urlParams.get('credits');
+    const creditsParam = urlParams.get('credits');
 
     if (paymentStatus === 'success') {
       toast({
         title: "To'lov muvaffaqiyatli!",
-        description: credits ? `${credits} kredit hisobingizga qo'shildi` : "Kredit hisobingizga qo'shildi",
+        description: creditsParam ? `${creditsParam} kredit hisobingizga qo'shildi` : "Kredit hisobingizga qo'shildi",
       });
       window.history.replaceState({}, '', '/');
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -167,24 +173,17 @@ export default function HomePage() {
     }
   }, [toast, queryClient]);
 
-  const credits = user?.credits ?? 0;
-
-  // Fetch gyms from API
-  const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
-    queryKey: ['/api/gyms'],
-  });
-
-  const gyms = gymsData?.gyms || [];
+  const creditsCountValue = user?.credits ?? 0;
 
   // Calculate distance for each gym and sort by distance
   const gymsWithDistance = gyms.map(gym => {
-    let distance = undefined;
+    let distanceValue = undefined;
     if (userLocation && gym.latitude && gym.longitude) {
       const gymLat = parseFloat(gym.latitude.toString().trim());
       const gymLng = parseFloat(gym.longitude.toString().trim());
 
       if (!isNaN(gymLat) && !isNaN(gymLng)) {
-        distance = calculateDistance(
+        distanceValue = calculateDistance(
           userLocation.lat,
           userLocation.lng,
           gymLat,
@@ -192,7 +191,7 @@ export default function HomePage() {
         );
       }
     }
-    return { ...gym, distance };
+    return { ...gym, distance: distanceValue };
   }).sort((a, b) => {
     if (a.distance === undefined && b.distance === undefined) return 0;
     if (a.distance === undefined) return 1;
@@ -427,7 +426,7 @@ export default function HomePage() {
           </div>
 
           <CreditBalance
-            credits={credits}
+            credits={creditsCountValue}
             onPurchase={() => setIsPurchaseDialogOpen(true)}
             creditExpiryDate={user?.creditExpiryDate}
           />
