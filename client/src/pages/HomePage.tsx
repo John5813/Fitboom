@@ -938,7 +938,7 @@ export default function HomePage() {
       )}
 
       <Dialog open={!!homeDetailGym} onOpenChange={(open) => !open && setHomeDetailGym(null)}>
-        <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] overflow-y-auto p-0 rounded-2xl border-none">
+        <DialogContent className="w-[90vw] max-w-[360px] max-h-[80vh] overflow-y-auto p-0 rounded-2xl border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{homeDetailGym?.name}</DialogTitle>
             <DialogDescription>{homeDetailGym?.categories?.join(', ') || ''}</DialogDescription>
@@ -948,7 +948,7 @@ export default function HomePage() {
             return (
               <div>
                 <div
-                  className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden"
+                  className="relative aspect-[16/9] w-full cursor-pointer overflow-hidden"
                   onClick={() => {
                     setHomeDetailGym(null);
                     setHomeGalleryGym(homeDetailGym);
@@ -958,25 +958,25 @@ export default function HomePage() {
                   <img src={detailImages[0]} alt={homeDetailGym.name} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   {detailImages.length > 1 && (
-                    <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-lg text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
-                      <ImageIcon className="w-3.5 h-3.5" />
+                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-lg text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                      <ImageIcon className="w-3 h-3" />
                       {detailImages.length} ta rasm
                     </div>
                   )}
-                  <div className="absolute bottom-0 left-0 right-0 p-5">
-                    <h3 className="text-white font-bold text-2xl leading-tight drop-shadow-lg">
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <h3 className="text-white font-bold text-lg leading-tight drop-shadow-lg">
                       {homeDetailGym.name}
                     </h3>
-                    <p className="text-white/80 text-sm mt-1">{homeDetailGym.categories?.join(', ') || ''}</p>
+                    <p className="text-white/80 text-xs mt-0.5">{homeDetailGym.categories?.join(', ') || ''}</p>
                   </div>
                 </div>
 
                 {detailImages.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 scrollbar-hide snap-x">
+                  <div className="flex gap-1.5 overflow-x-auto px-3 pt-2 pb-1 scrollbar-hide snap-x">
                     {detailImages.map((img, idx) => (
                       <div
                         key={idx}
-                        className="relative flex-shrink-0 w-20 h-20 cursor-pointer rounded-md overflow-hidden snap-center border-2 border-transparent transition-colors hover-elevate"
+                        className="relative flex-shrink-0 w-14 h-14 cursor-pointer rounded-md overflow-hidden snap-center border-2 border-transparent transition-colors hover-elevate"
                         data-testid={`button-home-detail-thumbnail-${idx}`}
                         onClick={() => {
                           setHomeDetailGym(null);
@@ -990,42 +990,42 @@ export default function HomePage() {
                   </div>
                 )}
 
-                <div className="p-4 space-y-4">
+                <div className="p-3 space-y-2.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge>{homeDetailGym.credits} {t('profile.credits_count')}</Badge>
-                    <span className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
                       {homeDetailGym.hours}
                     </span>
                   </div>
 
                   {homeDetailGym.distance && homeDetailGym.distance !== '0 km' && (
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1 text-xs">
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>{homeDetailGym.distance} masofada</span>
                     </div>
                   )}
 
                   {homeDetailGym.description && (
                     <div>
-                      <h4 className="font-semibold text-sm mb-1">Tavsif</h4>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.description}</p>
+                      <h4 className="font-semibold text-xs mb-0.5">Tavsif</h4>
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">{homeDetailGym.description}</p>
                     </div>
                   )}
 
                   {homeDetailGym.facilities && (
                     <div>
-                      <h4 className="font-semibold text-sm mb-1">Imkoniyatlar</h4>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.facilities}</p>
+                      <h4 className="font-semibold text-xs mb-0.5">Imkoniyatlar</h4>
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-2">{homeDetailGym.facilities}</p>
                     </div>
                   )}
 
                   {(homeDetailGym.latitude && homeDetailGym.longitude) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                       <Button
                         variant="ghost"
-                        className="h-auto p-0 text-sm underline"
+                        className="h-auto p-0 text-xs underline"
                         onClick={() => window.open(`https://www.google.com/maps?q=${homeDetailGym.latitude},${homeDetailGym.longitude}`, '_blank')}
                       >
                         {t('map.view_on_google')}
@@ -1035,13 +1035,14 @@ export default function HomePage() {
                   )}
 
                   <Button
+                    size="sm"
                     className="w-full"
                     onClick={() => {
                       setHomeDetailGym(null);
                       handleBookGym(homeDetailGym.id);
                     }}
                   >
-                    <CalendarCheck className="w-4 h-4 mr-2" />
+                    <CalendarCheck className="w-3.5 h-3.5 mr-1.5" />
                     Zalni band qilish
                   </Button>
                 </div>
