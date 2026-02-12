@@ -54,12 +54,25 @@ export default function GymCard({
 
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    const container = document.getElementById(`gallery-container-${id}`);
+    if (container) {
+      container.scrollBy({ left: container.clientWidth, behavior: 'smooth' });
+    }
   };
 
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    const container = document.getElementById(`gallery-container-${id}`);
+    if (container) {
+      container.scrollBy({ left: -container.clientWidth, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToImage = (idx: number) => {
+    const container = document.getElementById(`gallery-container-${id}`);
+    if (container) {
+      container.scrollTo({ left: container.clientWidth * idx, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -247,7 +260,16 @@ export default function GymCard({
             <DialogTitle>{name} rasmlari</DialogTitle>
             <DialogDescription>Zal rasmlari galereyasi</DialogDescription>
           </DialogHeader>
-          <div className="relative flex flex-col items-center justify-center" style={{ height: '85vh' }}>
+          <div 
+            id={`gallery-container-${id}`}
+            className="relative flex flex-col items-center justify-center overflow-hidden" 
+            style={{ height: '85vh' }}
+            onScroll={(e) => {
+              const container = e.currentTarget;
+              const index = Math.round(container.scrollLeft / container.clientWidth);
+              if (index !== currentImageIndex) setCurrentImageIndex(index);
+            }}
+          >
             <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white text-sm px-3 py-1.5 rounded-full font-medium">
               {name}
             </div>
@@ -256,12 +278,17 @@ export default function GymCard({
                 {currentImageIndex + 1} / {allImages.length}
               </div>
             )}
-            <img 
-              src={allImages[currentImageIndex]} 
-              key={`gallery-${currentImageIndex}`}
-              alt={`${name} gallery ${currentImageIndex + 1}`}
-              className="max-w-full max-h-full object-contain rounded-md"
-            />
+            <div className="flex-1 overflow-x-auto snap-x snap-mandatory scrollbar-hide flex items-center h-full">
+              {allImages.map((img, i) => (
+                <div key={i} className="min-w-full h-full flex items-center justify-center snap-center">
+                  <img 
+                    src={img} 
+                    alt={`${name} gallery ${i + 1}`}
+                    className="max-w-full max-h-full object-contain rounded-md"
+                  />
+                </div>
+              ))}
+            </div>
             {allImages.length > 1 && (
               <>
                 <Button 
@@ -290,7 +317,7 @@ export default function GymCard({
                         i === currentImageIndex ? "bg-white w-6 h-2" : "bg-white/40 w-2 h-2"
                       }`}
                       data-testid={`button-gallery-dot-${id}-${i}`}
-                      onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i); }}
+                      onClick={(e) => { e.stopPropagation(); scrollToImage(i); }}
                     />
                   ))}
                 </div>

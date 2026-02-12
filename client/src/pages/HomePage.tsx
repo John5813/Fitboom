@@ -1038,8 +1038,38 @@ export default function HomePage() {
               ? homeGalleryIndex 
               : 0;
             
+            const scrollToHomeImage = (idx: number) => {
+              const container = document.getElementById(`home-gallery-container`);
+              if (container) {
+                container.scrollTo({ left: container.clientWidth * idx, behavior: 'smooth' });
+              }
+            };
+
+            const nextHomeImage = () => {
+              const container = document.getElementById(`home-gallery-container`);
+              if (container) {
+                container.scrollBy({ left: container.clientWidth, behavior: 'smooth' });
+              }
+            };
+
+            const prevHomeImage = () => {
+              const container = document.getElementById(`home-gallery-container`);
+              if (container) {
+                container.scrollBy({ left: -container.clientWidth, behavior: 'smooth' });
+              }
+            };
+            
             return (
-              <div className="relative flex flex-col items-center justify-center" style={{ height: '85vh' }}>
+              <div 
+                id="home-gallery-container"
+                className="relative flex flex-col items-center justify-center overflow-hidden" 
+                style={{ height: '85vh' }}
+                onScroll={(e) => {
+                  const container = e.currentTarget;
+                  const index = Math.round(container.scrollLeft / container.clientWidth);
+                  if (index !== homeGalleryIndex) setHomeGalleryIndex(index);
+                }}
+              >
                 <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white text-sm px-3 py-1.5 rounded-full font-medium">
                   {homeGalleryGym.name}
                 </div>
@@ -1048,19 +1078,24 @@ export default function HomePage() {
                     {currentIndex + 1} / {galleryImages.length}
                   </div>
                 )}
-                <img
-                  src={galleryImages[currentIndex]}
-                  key={`home-gallery-${currentIndex}`}
-                  alt={`${homeGalleryGym.name} gallery ${currentIndex + 1}`}
-                  className="max-w-full max-h-full object-contain rounded-md"
-                />
+                <div className="flex-1 overflow-x-auto snap-x snap-mandatory scrollbar-hide flex items-center h-full">
+                  {galleryImages.map((img, i) => (
+                    <div key={i} className="min-w-full h-full flex items-center justify-center snap-center">
+                      <img
+                        src={img}
+                        alt={`${homeGalleryGym.name} gallery ${i + 1}`}
+                        className="max-w-full max-h-full object-contain rounded-md"
+                      />
+                    </div>
+                  ))}
+                </div>
                 {galleryImages.length > 1 && (
                   <>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-white rounded-full bg-white/10 backdrop-blur-sm"
-                      onClick={() => setHomeGalleryIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
+                      onClick={prevHomeImage}
                       data-testid="button-home-gallery-prev"
                     >
                       <ChevronLeft className="w-6 h-6" />
@@ -1069,7 +1104,7 @@ export default function HomePage() {
                       variant="ghost"
                       size="icon"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-white rounded-full bg-white/10 backdrop-blur-sm"
-                      onClick={() => setHomeGalleryIndex((prev) => (prev + 1) % galleryImages.length)}
+                      onClick={nextHomeImage}
                       data-testid="button-home-gallery-next"
                     >
                       <ChevronRight className="w-6 h-6" />
@@ -1082,7 +1117,7 @@ export default function HomePage() {
                             i === currentIndex ? "bg-white w-6 h-2" : "bg-white/40 w-2 h-2"
                           }`}
                           data-testid={`button-home-gallery-dot-${i}`}
-                          onClick={() => setHomeGalleryIndex(i)}
+                          onClick={() => scrollToHomeImage(i)}
                         />
                       ))}
                     </div>
