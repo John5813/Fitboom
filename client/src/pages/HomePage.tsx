@@ -428,28 +428,28 @@ export default function HomePage() {
             {gymsLoading ? (
               <p className="text-muted-foreground">{t('home.loading')}</p>
             ) : gymsWithDistance.length > 0 ? (
-              <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
+              <div className="flex flex-col gap-4">
                 {gymsWithDistance.slice(0, 8).map((gym) => (
                   <Card
                     key={gym.id}
-                    className="overflow-hidden cursor-pointer hover-elevate aspect-square min-w-[110px] w-[110px] flex-shrink-0 snap-start"
+                    className="overflow-hidden cursor-pointer hover-elevate w-full"
                     onClick={() => handleBookGym(gym.id)}
                   >
-                    <div className="relative h-full">
+                    <div className="relative h-48">
                       <img
                         src={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
                         alt={gym.name}
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-2">
-                        <h3 className="text-white font-semibold text-xs truncate leading-tight">
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 className="text-white font-semibold text-lg truncate leading-tight">
                           {gym.name}
                         </h3>
-                        <p className="text-white/70 text-[10px] truncate">
+                        <p className="text-white/70 text-sm truncate">
                           {gym.categories?.join(', ') || ''}
                         </p>
-                        <p className="text-white/70 text-[10px]">
+                        <p className="text-white/70 text-sm">
                           {gym.distance !== undefined ? `${gym.distance.toFixed(1)} km` : t('home.unknown_distance')}
                         </p>
                       </div>
