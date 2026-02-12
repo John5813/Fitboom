@@ -271,7 +271,10 @@ export default function HomePage() {
   };
 
   const handleBookGym = (gymId: string) => {
-    setLocation(`/gym/${gymId}`);
+    const gym = gyms.find(g => g.id === gymId);
+    if (gym) {
+      setSelectedGymForBooking(gym);
+    }
   };
 
   const purchaseMutation = useMutation({
@@ -675,6 +678,115 @@ export default function HomePage() {
       <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} onScanQR={() => setIsScannerOpen(true)} />
       <PurchaseCreditsDialog isOpen={isPurchaseDialogOpen} onClose={() => setIsPurchaseDialogOpen(false)} onPurchase={handlePurchase} />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
+
+      {selectedGymForBooking && (
+        <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 border-none sm:rounded-2xl">
+            <div className="relative h-48 sm:h-64">
+              <img
+                src={selectedGymForBooking.imageUrl || getGymImage(selectedGymForBooking.categories?.[0] || '')}
+                alt={selectedGymForBooking.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4">
+                <h2 className="text-white text-2xl font-display font-bold">{selectedGymForBooking.name}</h2>
+                <p className="text-white/80 text-sm">{selectedGymForBooking.categories?.join(', ')}</p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Sanani tanlang</h3>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {[...Array(7)].map((_, i) => {
+                    const date = new Date();
+                    date.setDate(date.getDate() + i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const isSelected = selectedBookingDate === dateStr;
+                    return (
+                      <Button
+                        key={dateStr}
+                        variant={isSelected ? "default" : "outline"}
+                        className="flex-shrink-0 flex flex-col h-auto py-2 px-4"
+                        onClick={() => setSelectedBookingDate(dateStr)}
+                      >
+                        <span className="text-xs opacity-70">
+                          {date.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', { weekday: 'short' })}
+                        </span>
+                        <span className="font-bold">{date.getDate()}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {selectedBookingDate && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Vaqtni tanlang</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"].map((time) => {
+                      const isSelected = selectedTimeSlot?.startTime === time;
+                      return (
+                        <Button
+                          key={time}
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedTimeSlot({
+                            id: time,
+                            gymId: selectedGymForBooking.id,
+                            startTime: time,
+                            endTime: "",
+                            dayOfWeek: "",
+                            availableSpots: 10,
+                            capacity: 10
+                          })}
+                        >
+                          {time}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                className="w-full h-12 text-lg font-bold"
+                disabled={!selectedBookingDate || !selectedTimeSlot || (user?.credits || 0) < selectedGymForBooking.credits}
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/bookings', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        gymId: selectedGymForBooking.id,
+                        date: selectedBookingDate,
+                        time: selectedTimeSlot?.startTime,
+                      }),
+                    });
+                    if (response.ok) {
+                      toast({ title: "Muvaffaqiyatli!", description: "Zal band qilindi" });
+                      setSelectedGymForBooking(null);
+                      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                      setActiveTab('bookings');
+                    } else {
+                      const err = await response.json();
+                      toast({ title: "Xatolik", description: err.message, variant: "destructive" });
+                    }
+                  } catch (e) {
+                    toast({ title: "Xatolik", description: "Bron qilishda xatolik", variant: "destructive" });
+                  }
+                }}
+              >
+                {(user?.credits || 0) < selectedGymForBooking.credits 
+                  ? "Kredit yetarli emas" 
+                  : `${selectedGymForBooking.credits} kalit bilan band qilish`}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={!!homeDetailGym} onOpenChange={(open) => !open && setHomeDetailGym(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
