@@ -494,6 +494,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/gyms/:id", requireAuth, async (req, res) => {
+    try {
+      const updateData = insertGymSchema.partial().parse(req.body);
+      const gym = await storage.updateGym(req.params.id, updateData);
+      if (!gym) {
+        return res.status(404).json({ error: "Gym not found" });
+      }
+      res.json({ gym });
+    } catch (error) {
+      res.status(400).json({ error: "Invalid gym data" });
+    }
+  });
+
   app.delete("/api/gyms/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteTimeSlotsForGym(req.params.id);
@@ -1592,6 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: gym.id,
           name: gym.name,
           imageUrl: gym.imageUrl,
+          images: gym.images || [],
           address: gym.address,
           totalEarnings: gym.totalEarnings || 0,
           currentDebt: gym.currentDebt || 0
@@ -1608,9 +1622,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update gym owner's gym (only name and imageUrl allowed)
   app.put('/api/gym-owner/:gymId', async (req, res) => {
     try {
-      const { name, imageUrl, accessCode } = req.body;
+      const { name, imageUrl, images, accessCode } = req.body;
       
-      // Verify access code first
       if (!accessCode) {
         return res.status(401).json({ message: "Kirish kodi talab qilinadi" });
       }
@@ -1620,9 +1633,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Sizda bu zalni tahrirlash huquqi yo'q" });
       }
       
-      const updateData: { name?: string; imageUrl?: string } = {};
+      const updateData: { name?: string; imageUrl?: string; images?: string[] } = {};
       if (name) updateData.name = name;
       if (imageUrl) updateData.imageUrl = imageUrl;
+      if (images) updateData.images = images;
       
       const updatedGym = await storage.updateGym(req.params.gymId, updateData);
       res.json({ gym: updatedGym });

@@ -759,7 +759,23 @@ export default function AdminGymsPage() {
                     key={gym.id} 
                     data-testid={`row-gym-${gym.id}`}
                     className="cursor-pointer hover-elevate"
-                    onClick={() => setSelectedGym(gym)}
+                    onClick={() => {
+                      setSelectedGym(gym);
+                      setGymForm(prev => ({
+                        ...prev,
+                        name: gym.name || '',
+                        address: gym.address || '',
+                        description: gym.description || '',
+                        credits: String(gym.credits || ''),
+                        categories: gym.categories || [],
+                        imageUrl: gym.imageUrl || '',
+                        images: gym.images || [],
+                        facilities: gym.facilities || '',
+                        hours: gym.hours || '',
+                        latitude: gym.latitude || '',
+                        longitude: gym.longitude || '',
+                      }));
+                    }}
                   >
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
@@ -891,6 +907,14 @@ export default function AdminGymsPage() {
                     </label>
                   </div>
                   {uploadingImages && <p className="text-xs text-muted-foreground mt-1 animate-pulse">Yuklanmoqda...</p>}
+                  <Button
+                    className="w-full mt-2"
+                    onClick={handleSaveEdit}
+                    disabled={updateGymMutation.isPending}
+                    data-testid="button-save-images"
+                  >
+                    {updateGymMutation.isPending ? 'Saqlanmoqda...' : 'Rasmlarni saqlash'}
+                  </Button>
                 </div>
 
               {selectedGym.qrCode && (
@@ -1330,12 +1354,7 @@ export default function AdminGymsPage() {
                   type="file"
                   multiple
                   accept="image/*"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files && files.length > 0) {
-                      handleImagesUpload(files);
-                    }
-                  }}
+                  onChange={handleImagesUpload}
                   disabled={uploadingImages}
                   data-testid="input-gym-images"
                 />

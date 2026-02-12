@@ -163,7 +163,7 @@ export default function GymOwnerPage() {
   };
 
   const updateGymMutation = useMutation({
-    mutationFn: async (updateData: { name?: string; imageUrl?: string }) => {
+    mutationFn: async (updateData: { name?: string; imageUrl?: string; images?: string[] }) => {
       const response = await apiRequest(`/api/gym-owner/${gymId}`, "PUT", {
         ...updateData,
         accessCode,
