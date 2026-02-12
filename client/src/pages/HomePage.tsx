@@ -681,24 +681,27 @@ export default function HomePage() {
 
       {selectedGymForBooking && (
         <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 border-none sm:rounded-2xl">
-            <div className="relative h-48 sm:h-64">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-sm max-h-[80vh] overflow-y-auto p-0 sm:rounded-2xl">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{selectedGymForBooking.name} - Band qilish</DialogTitle>
+            </DialogHeader>
+            <div className="relative h-32">
               <img
                 src={selectedGymForBooking.imageUrl || getGymImage(selectedGymForBooking.categories?.[0] || '')}
                 alt={selectedGymForBooking.name}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4">
-                <h2 className="text-white text-2xl font-display font-bold">{selectedGymForBooking.name}</h2>
-                <p className="text-white/80 text-sm">{selectedGymForBooking.categories?.join(', ')}</p>
+              <div className="absolute bottom-3 left-3 right-3">
+                <h2 className="text-white text-lg font-display font-bold truncate">{selectedGymForBooking.name}</h2>
+                <p className="text-white/80 text-xs">{selectedGymForBooking.categories?.join(', ')}</p>
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-4">Sanani tanlang</h3>
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <h3 className="text-sm font-semibold mb-2">Sanani tanlang</h3>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                   {[...Array(7)].map((_, i) => {
                     const date = new Date();
                     date.setDate(date.getDate() + i);
@@ -708,13 +711,14 @@ export default function HomePage() {
                       <Button
                         key={dateStr}
                         variant={isSelected ? "default" : "outline"}
-                        className="flex-shrink-0 flex flex-col h-auto py-2 px-4"
+                        size="sm"
+                        className="flex-shrink-0 flex flex-col h-auto py-1.5 px-3"
                         onClick={() => setSelectedBookingDate(dateStr)}
                       >
-                        <span className="text-xs opacity-70">
+                        <span className="text-[10px] opacity-70">
                           {date.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', { weekday: 'short' })}
                         </span>
-                        <span className="font-bold">{date.getDate()}</span>
+                        <span className="text-sm font-bold">{date.getDate()}</span>
                       </Button>
                     );
                   })}
@@ -723,8 +727,8 @@ export default function HomePage() {
 
               {selectedBookingDate && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Vaqtni tanlang</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <h3 className="text-sm font-semibold mb-2">Vaqtni tanlang</h3>
+                  <div className="grid grid-cols-4 gap-1.5">
                     {["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"].map((time) => {
                       const isSelected = selectedTimeSlot?.startTime === time;
                       return (
@@ -732,6 +736,7 @@ export default function HomePage() {
                           key={time}
                           variant={isSelected ? "default" : "outline"}
                           size="sm"
+                          className="text-xs px-2"
                           onClick={() => setSelectedTimeSlot({
                             id: time,
                             gymId: selectedGymForBooking.id,
@@ -751,7 +756,7 @@ export default function HomePage() {
               )}
 
               <Button
-                className="w-full h-12 text-lg font-bold"
+                className="w-full"
                 disabled={!selectedBookingDate || !selectedTimeSlot || (user?.credits || 0) < selectedGymForBooking.credits}
                 onClick={async () => {
                   try {
