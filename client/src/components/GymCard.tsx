@@ -95,7 +95,9 @@ export default function GymCard({
             <div className="flex items-center gap-1.5">
               <MapPin className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">
-                {typeof distance === 'number' ? `${distance.toFixed(1)} km` : distance || t('profile.unknown_gym')}
+                {typeof distance === 'number' 
+                  ? `${distance.toFixed(1)} km` 
+                  : (distance || t('home.unknown_distance'))}
               </span>
             </div>
             <div className="flex items-center gap-1.5">

@@ -56,6 +56,12 @@ export default function HomePage() {
   const getTabFromHash = (): 'home' | 'gyms' | 'classes' | 'bookings' | 'scanner' => {
     const hash = window.location.hash.replace('#', '');
     const validTabs = ['home', 'gyms', 'classes', 'bookings', 'scanner'];
+    
+    // Check if we are on a specific gym route
+    if (window.location.pathname.startsWith('/gym/')) {
+      return 'gyms';
+    }
+    
     return validTabs.includes(hash) ? (hash as any) : 'home';
   };
 
@@ -84,6 +90,19 @@ export default function HomePage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [selectedBookingDate, setSelectedBookingDate] = useState<string>('');
   const [, setLocation] = useLocation();
+  const [params] = useLocation();
+
+  // Handle direct gym links
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/gym/')) {
+      const gymId = path.split('/')[2];
+      const gym = gyms.find(g => g.id === gymId);
+      if (gym) {
+        setSelectedGymForBooking(gym);
+      }
+    }
+  }, [gyms.length, window.location.pathname]);
 
   // Tab o'zgarganda URL hash ni yangilash
   const setActiveTab = (tab: 'home' | 'gyms' | 'classes' | 'bookings' | 'scanner') => {
@@ -416,7 +435,7 @@ export default function HomePage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-semibold text-xl">{t('home.near_gyms')}</h2>
-              <Link href="/gyms">
+              <Link href="/map">
                 <Button variant="ghost" size="sm" className="text-primary">
                   {t('home.view_all')}
                 </Button>

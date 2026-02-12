@@ -95,6 +95,11 @@ function Router() {
           <GymOwnerPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/gym/:id">
+        <ProtectedRoute>
+          <HomePage />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
