@@ -1001,14 +1001,18 @@ export default function HomePage() {
             <DialogDescription>Zal rasmlari galereyasi</DialogDescription>
           </DialogHeader>
           {homeGalleryGym && (() => {
-            const galleryImages = homeGalleryGym.images && homeGalleryGym.images.length > 0
+            const galleryImages = (homeGalleryGym.images && homeGalleryGym.images.length > 0)
               ? homeGalleryGym.images
               : [homeGalleryGym.imageUrl || getGymImage(homeGalleryGym.categories?.[0] || '')];
+            
+            // Ensure homeGalleryIndex is within bounds if images changed
+            const currentIndex = homeGalleryIndex >= galleryImages.length ? 0 : homeGalleryIndex;
+            
             return (
               <div className="relative aspect-video flex items-center justify-center">
                 <img
-                  src={galleryImages[homeGalleryIndex]}
-                  alt={`${homeGalleryGym.name} gallery ${homeGalleryIndex + 1}`}
+                  src={galleryImages[currentIndex]}
+                  alt={`${homeGalleryGym.name} gallery ${currentIndex + 1}`}
                   className="max-w-full max-h-full object-contain"
                 />
                 {galleryImages.length > 1 && (
