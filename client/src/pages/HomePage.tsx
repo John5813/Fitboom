@@ -495,7 +495,7 @@ export default function HomePage() {
             {gymsLoading ? (
               <p className="text-muted-foreground">{t('home.loading')}</p>
             ) : gymsWithDistance.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 {gymsWithDistance.slice(0, 8).map((gym) => {
                   const gymImages = gym.images && gym.images.length > 0 ? gym.images : [gym.imageUrl || getGymImage(gym.categories?.[0] || '')];
                   return (
@@ -504,34 +504,36 @@ export default function HomePage() {
                       className="overflow-hidden w-full"
                     >
                       <div
-                        className="relative h-48 cursor-pointer"
+                        className="relative cursor-pointer"
                         onClick={() => {
                           setHomeGalleryGym(gym);
                           setHomeGalleryIndex(0);
                         }}
                       >
-                        <img
-                          src={gymImages[0]}
-                          alt={gym.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                        <div className="aspect-[4/3] w-full overflow-hidden">
+                          <img
+                            src={gymImages[0]}
+                            alt={gym.name}
+                            className="w-full h-full object-cover transition-transform duration-500"
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                         {gymImages.length > 1 && (
-                          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
-                            <ImageIcon className="w-3 h-3" />
-                            {gymImages.length}
+                          <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-lg text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            {gymImages.length} ta rasm
                           </div>
                         )}
-                        <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5">
+                        <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground border-primary-border font-display font-bold text-sm px-3 py-1">
                           {gym.credits} kalit
                         </Badge>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-white font-semibold text-lg truncate leading-tight">
+                        <div className="absolute bottom-0 left-0 right-0 p-5">
+                          <h3 className="text-white font-bold text-xl leading-tight drop-shadow-lg">
                             {gym.name}
                           </h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-white/80 text-sm flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="text-white/90 text-sm flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5" />
                               {gym.distance && gym.distance !== '0 km'
                                 ? (language === 'uz' 
                                     ? `Sizdan ${gym.distance} uzoqlikda` 
@@ -539,7 +541,7 @@ export default function HomePage() {
                                 : (language === 'uz' ? 'Masofa nomaʼlum' : 'Расстояние неизвестно')}
                             </span>
                           </div>
-                          <p className="text-white/60 text-xs mt-0.5 truncate">
+                          <p className="text-white/70 text-sm mt-1">
                             {gym.categories?.join(', ') || ''}
                           </p>
                         </div>
@@ -908,96 +910,121 @@ export default function HomePage() {
       )}
 
       <Dialog open={!!homeDetailGym} onOpenChange={(open) => !open && setHomeDetailGym(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl">{homeDetailGym?.name}</DialogTitle>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{homeDetailGym?.name}</DialogTitle>
             <DialogDescription>{homeDetailGym?.categories?.join(', ') || ''}</DialogDescription>
           </DialogHeader>
-          {homeDetailGym && (
-            <div className="space-y-4">
-              {homeDetailGym.imageUrl && (
-                <div className="space-y-3">
-                  {/* Gallery Section with horizontal scroll */}
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
-                    {(homeDetailGym.images && homeDetailGym.images.length > 0 ? homeDetailGym.images : [homeDetailGym.imageUrl]).map((img, idx) => (
+          {homeDetailGym && (() => {
+            const detailImages = homeDetailGym.images && homeDetailGym.images.length > 0 ? homeDetailGym.images : [homeDetailGym.imageUrl];
+            return (
+              <div>
+                <div
+                  className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden"
+                  onClick={() => {
+                    setHomeDetailGym(null);
+                    setHomeGalleryGym(homeDetailGym);
+                    setHomeGalleryIndex(0);
+                  }}
+                >
+                  <img src={detailImages[0]} alt={homeDetailGym.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  {detailImages.length > 1 && (
+                    <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-lg text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      {detailImages.length} ta rasm
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <h3 className="text-white font-bold text-2xl leading-tight drop-shadow-lg">
+                      {homeDetailGym.name}
+                    </h3>
+                    <p className="text-white/80 text-sm mt-1">{homeDetailGym.categories?.join(', ') || ''}</p>
+                  </div>
+                </div>
+
+                {detailImages.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 scrollbar-hide snap-x">
+                    {detailImages.map((img, idx) => (
                       <div
                         key={idx}
-                        className="relative flex-shrink-0 w-full aspect-video cursor-pointer rounded-md overflow-hidden snap-center"
-                        data-testid={`image-home-detail-gym-${idx}`}
+                        className="relative flex-shrink-0 w-20 h-20 cursor-pointer rounded-md overflow-hidden snap-center border-2 border-transparent transition-colors hover-elevate"
+                        data-testid={`button-home-detail-thumbnail-${idx}`}
                         onClick={() => {
+                          setHomeDetailGym(null);
                           setHomeGalleryGym(homeDetailGym);
                           setHomeGalleryIndex(idx);
                         }}
                       >
                         <img src={img} alt={`${homeDetailGym.name} ${idx + 1}`} className="w-full h-full object-cover" />
-                        {(homeDetailGym.images?.length || 1) > 1 && (
-                          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-full">
-                            {idx + 1} / {(homeDetailGym.images?.length || 1)}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex items-center gap-2">
-                <Badge>{homeDetailGym.credits} {t('profile.credits_count')}</Badge>
-                <span className="text-sm text-muted-foreground">{homeDetailGym.hours}</span>
-              </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge>{homeDetailGym.credits} {t('profile.credits_count')}</Badge>
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      {homeDetailGym.hours}
+                    </span>
+                  </div>
 
-              {homeDetailGym.distance && homeDetailGym.distance !== '0 km' && (
-                <div className="flex items-center gap-1.5 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span>{homeDetailGym.distance} masofada</span>
-                </div>
-              )}
+                  {homeDetailGym.distance && homeDetailGym.distance !== '0 km' && (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span>{homeDetailGym.distance} masofada</span>
+                    </div>
+                  )}
 
-              {homeDetailGym.description && (
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Tavsif</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.description}</p>
-                </div>
-              )}
+                  {homeDetailGym.description && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Tavsif</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.description}</p>
+                    </div>
+                  )}
 
-              {homeDetailGym.facilities && (
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Imkoniyatlar</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.facilities}</p>
-                </div>
-              )}
+                  {homeDetailGym.facilities && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Imkoniyatlar</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{homeDetailGym.facilities}</p>
+                    </div>
+                  )}
 
-              {(homeDetailGym.latitude && homeDetailGym.longitude) && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  {(homeDetailGym.latitude && homeDetailGym.longitude) && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <Button
+                        variant="ghost"
+                        className="h-auto p-0 text-sm underline"
+                        onClick={() => window.open(`https://www.google.com/maps?q=${homeDetailGym.latitude},${homeDetailGym.longitude}`, '_blank')}
+                      >
+                        {t('map.view_on_google')}
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      </Button>
+                    </div>
+                  )}
+
                   <Button
-                    variant="ghost"
-                    className="h-auto p-0 text-sm underline"
-                    onClick={() => window.open(`https://www.google.com/maps?q=${homeDetailGym.latitude},${homeDetailGym.longitude}`, '_blank')}
+                    className="w-full"
+                    onClick={() => {
+                      setHomeDetailGym(null);
+                      handleBookGym(homeDetailGym.id);
+                    }}
                   >
-                    {t('map.view_on_google')}
-                    <ExternalLink className="w-3 h-3 ml-1" />
+                    <CalendarCheck className="w-4 h-4 mr-2" />
+                    Zalni band qilish
                   </Button>
                 </div>
-              )}
-
-              <Button
-                className="w-full"
-                onClick={() => {
-                  setHomeDetailGym(null);
-                  handleBookGym(homeDetailGym.id);
-                }}
-              >
-                <CalendarCheck className="w-4 h-4 mr-2" />
-                Zalni band qilish
-              </Button>
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!homeGalleryGym} onOpenChange={(open) => !open && setHomeGalleryGym(null)}>
-        <DialogContent className="max-w-4xl p-0 bg-black/95 border-none overflow-hidden sm:rounded-2xl">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black border-none overflow-hidden sm:rounded-2xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{homeGalleryGym?.name} rasmlari</DialogTitle>
             <DialogDescription>Zal rasmlari galereyasi</DialogDescription>
@@ -1007,45 +1034,54 @@ export default function HomePage() {
               ? homeGalleryGym.images
               : [homeGalleryGym.imageUrl || getGymImage(homeGalleryGym.categories?.[0] || '')];
             
-            // Ensure homeGalleryIndex is within bounds
             const currentIndex = (homeGalleryIndex >= 0 && homeGalleryIndex < galleryImages.length) 
               ? homeGalleryIndex 
               : 0;
             
             return (
-              <div className="relative aspect-video flex items-center justify-center">
+              <div className="relative flex flex-col items-center justify-center" style={{ height: '85vh' }}>
+                <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white text-sm px-3 py-1.5 rounded-full font-medium">
+                  {homeGalleryGym.name}
+                </div>
+                {galleryImages.length > 1 && (
+                  <div className="absolute top-4 right-4 z-10 bg-black/50 backdrop-blur-lg text-white text-sm px-3 py-1.5 rounded-full font-medium">
+                    {currentIndex + 1} / {galleryImages.length}
+                  </div>
+                )}
                 <img
                   src={galleryImages[currentIndex]}
                   alt={`${homeGalleryGym.name} gallery ${currentIndex + 1}`}
-                  className="max-w-full max-h-full object-contain"
+                  className="max-w-full max-h-full object-contain rounded-md"
                 />
                 {galleryImages.length > 1 && (
                   <>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute left-4 text-white rounded-full bg-black/20 hover:bg-black/40"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white rounded-full bg-white/10 backdrop-blur-sm"
                       onClick={() => setHomeGalleryIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
                       data-testid="button-home-gallery-prev"
                     >
-                      <ChevronLeft className="w-8 h-8" />
+                      <ChevronLeft className="w-6 h-6" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-4 text-white rounded-full bg-black/20 hover:bg-black/40"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white rounded-full bg-white/10 backdrop-blur-sm"
                       onClick={() => setHomeGalleryIndex((prev) => (prev + 1) % galleryImages.length)}
                       data-testid="button-home-gallery-next"
                     >
-                      <ChevronRight className="w-8 h-8" />
+                      <ChevronRight className="w-6 h-6" />
                     </Button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
                       {galleryImages.map((_, i) => (
-                        <div
+                        <button
                           key={i}
-                          className={`w-1.5 h-1.5 rounded-full transition-all ${
-                            i === currentIndex ? "bg-white w-4" : "bg-white/40"
+                          className={`rounded-full transition-all ${
+                            i === currentIndex ? "bg-white w-6 h-2" : "bg-white/40 w-2 h-2"
                           }`}
+                          data-testid={`button-home-gallery-dot-${i}`}
+                          onClick={() => setHomeGalleryIndex(i)}
                         />
                       ))}
                     </div>

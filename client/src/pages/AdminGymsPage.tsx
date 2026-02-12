@@ -85,14 +85,28 @@ export default function AdminGymsPage() {
       const data = await res.json();
       if (data.imageUrls) {
         const newImages = [...(gymForm.images || []), ...data.imageUrls];
+        const newImageUrl = gymForm.imageUrl || data.imageUrls[0];
         setGymForm({
           ...gymForm,
           images: newImages,
-          imageUrl: gymForm.imageUrl || data.imageUrls[0] // Set first image as main if none exists
+          imageUrl: newImageUrl,
         });
+
+        if (selectedGym) {
+          try {
+            await apiRequest(`/api/gyms/${selectedGym.id}`, 'PATCH', {
+              images: newImages,
+              imageUrl: newImageUrl,
+            });
+            queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+          } catch (saveError) {
+            console.error("Auto-save images failed:", saveError);
+          }
+        }
+
         toast({
           title: "Muvaffaqiyatli",
-          description: `${data.imageUrls.length} ta rasm yuklandi`,
+          description: `${data.imageUrls.length} ta rasm yuklandi va saqlandi`,
         });
       }
     } catch (error) {
