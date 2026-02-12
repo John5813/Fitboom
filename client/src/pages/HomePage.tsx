@@ -503,47 +503,47 @@ export default function HomePage() {
                       key={gym.id}
                       className="overflow-hidden w-full"
                     >
-                      <div
-                        className="relative h-48 cursor-pointer"
-                        onClick={() => {
-                          setHomeGalleryGym(gym);
-                          setHomeGalleryIndex(0);
-                        }}
-                      >
-                        <img
-                          src={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
-                          alt={gym.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                        {gymImages.length > 1 && (
-                          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
-                            <ImageIcon className="w-3 h-3" />
-                            {gymImages.length}
-                          </div>
-                        )}
-                        <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5">
-                          {gym.credits} kalit
-                        </Badge>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-white font-semibold text-lg truncate leading-tight">
-                            {gym.name}
-                          </h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-white/80 text-sm flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {gym.distance && gym.distance !== '0 km'
-                                ? (language === 'uz' 
-                                    ? `Sizdan ${gym.distance} uzoqlikda` 
-                                    : `${gym.distance} от вас`)
-                                : (language === 'uz' ? 'Masofa nomaʼlum' : 'Расстояние неизвестно')}
-                            </span>
-                          </div>
-                          <p className="text-white/60 text-xs mt-0.5 truncate">
-                            {gym.categories?.join(', ') || ''}
-                          </p>
-                        </div>
-                      </div>
+                            <div
+                              className="relative h-48 cursor-pointer"
+                              onClick={() => {
+                                setHomeGalleryGym(gym);
+                                setHomeGalleryIndex(0);
+                              }}
+                            >
+                              <img
+                                src={gymImages[0]}
+                                alt={gym.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                              {gymImages.length > 1 && (
+                                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
+                                  <ImageIcon className="w-3 h-3" />
+                                  {gymImages.length}
+                                </div>
+                              )}
+                              <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground border-primary-border font-display font-bold text-xs px-2 py-0.5">
+                                {gym.credits} kalit
+                              </Badge>
+                              <div className="absolute bottom-0 left-0 right-0 p-4">
+                                <h3 className="text-white font-semibold text-lg truncate leading-tight">
+                                  {gym.name}
+                                </h3>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <span className="text-white/80 text-sm flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {gym.distance && gym.distance !== '0 km'
+                                      ? (language === 'uz' 
+                                          ? `Sizdan ${gym.distance} uzoqlikda` 
+                                          : `${gym.distance} от вас`)
+                                      : (language === 'uz' ? 'Masofa nomaʼlum' : 'Расстояние неизвестно')}
+                                  </span>
+                                </div>
+                                <p className="text-white/60 text-xs mt-0.5 truncate">
+                                  {gym.categories?.join(', ') || ''}
+                                </p>
+                              </div>
+                            </div>
                       <div className="p-3 flex gap-2">
                         <Button
                           variant="outline"
