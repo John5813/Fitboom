@@ -686,6 +686,9 @@ export default function HomePage() {
                     gymImage={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
                     date={new Date(booking.date).toLocaleDateString()}
                     time={booking.time}
+                    latitude={gym?.latitude ?? undefined}
+                    longitude={gym?.longitude ?? undefined}
+                    gymAddress={gym?.address ?? undefined}
                     onScanQR={() => handleScanQR(booking.id)}
                     onCancel={handleCancelBooking}
                   />
@@ -706,16 +709,19 @@ export default function HomePage() {
               {activeBookings.map((booking) => {
                 const gym = gyms.find(g => g.id === booking.gymId);
                 return (
-                  <Card key={booking.id} className="cursor-pointer hover-elevate" onClick={() => handleScanQR(booking.id)}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <img src={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')} alt={gym?.name} className="w-16 h-16 rounded-md object-cover" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{gym?.name}</h3>
-                        <p className="text-sm text-muted-foreground">{new Date(booking.date).toLocaleDateString()} • {booking.time}</p>
-                      </div>
-                      <QrCode className="w-6 h-6 text-primary" />
-                    </CardContent>
-                  </Card>
+                  <BookingCard
+                    key={booking.id}
+                    id={booking.id}
+                    gymName={gym?.name || t('profile.unknown_gym')}
+                    gymImage={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
+                    date={new Date(booking.date).toLocaleDateString()}
+                    time={booking.time}
+                    latitude={gym?.latitude ?? undefined}
+                    longitude={gym?.longitude ?? undefined}
+                    gymAddress={gym?.address ?? undefined}
+                    onScanQR={() => handleScanQR(booking.id)}
+                    onCancel={handleCancelBooking}
+                  />
                 );
               })}
             </div>
