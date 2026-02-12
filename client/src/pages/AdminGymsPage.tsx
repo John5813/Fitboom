@@ -133,6 +133,8 @@ export default function AdminGymsPage() {
     endTime: '21:00',
     capacity: '15',
   });
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+  const [editingCapacity, setEditingCapacity] = useState('');
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   const WEEKDAYS = [
@@ -329,6 +331,28 @@ export default function AdminGymsPage() {
       toast({
         title: "Xatolik",
         description: "Vaqt sloti o'chirishda xatolik yuz berdi.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateTimeSlotCapacityMutation = useMutation({
+    mutationFn: async ({ id, capacity }: { id: string; capacity: number }) => {
+      const response = await apiRequest(`/api/time-slots/${id}`, 'PUT', { capacity, availableSpots: capacity });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/time-slots', selectedGym?.id] });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Sig'im yangilandi",
+      });
+      setEditingSlotId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Xatolik",
+        description: error.message || "Sig'imni yangilashda xatolik yuz berdi",
         variant: "destructive"
       });
     }
@@ -1056,14 +1080,64 @@ export default function AdminGymsPage() {
                               </p>
                             </div>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteTimeSlot(slot.id)}
-                            data-testid={`button-delete-slot-${slot.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {editingSlotId === slot.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  className="w-16 h-8 text-xs"
+                                  value={editingCapacity}
+                                  onChange={(e) => setEditingCapacity(e.target.value)}
+                                  autoFocus
+                                  data-testid={`input-slot-capacity-${slot.id}`}
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={() => {
+                                    const cap = parseInt(editingCapacity);
+                                    if (cap > 0) updateTimeSlotCapacityMutation.mutate({ id: slot.id, capacity: cap });
+                                  }}
+                                  disabled={updateTimeSlotCapacityMutation.isPending}
+                                  data-testid={`button-save-capacity-${slot.id}`}
+                                >
+                                  OK
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2"
+                                  onClick={() => setEditingSlotId(null)}
+                                  data-testid={`button-cancel-capacity-${slot.id}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <Badge
+                                  variant="outline"
+                                  className="cursor-pointer"
+                                  onClick={() => {
+                                    setEditingSlotId(slot.id);
+                                    setEditingCapacity(slot.capacity.toString());
+                                  }}
+                                  data-testid={`badge-slot-capacity-${slot.id}`}
+                                >
+                                  Sig'im: {slot.capacity}
+                                </Badge>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => handleDeleteTimeSlot(slot.id)}
+                                  data-testid={`button-delete-slot-${slot.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

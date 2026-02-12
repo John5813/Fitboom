@@ -89,6 +89,29 @@ export default function GymOwnerPage() {
   const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+  const [editingCapacity, setEditingCapacity] = useState('');
+
+  const updateCapacityMutation = useMutation({
+    mutationFn: async ({ slotId, capacity }: { slotId: string; capacity: number }) => {
+      const response = await fetch(`/api/time-slots/${slotId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ capacity, availableSpots: capacity }),
+      });
+      if (!response.ok) throw new Error("Failed to update capacity");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
+      toast({ title: "Muvaffaqiyatli", description: "Sig'im yangilandi" });
+      setEditingSlotId(null);
+    },
+    onError: () => {
+      toast({ title: "Xatolik", description: "Sig'imni yangilashda xatolik yuz berdi", variant: "destructive" });
+    }
+  });
 
   const gymId = localStorage.getItem("gymOwnerId");
   const accessCode = localStorage.getItem("gymOwnerCode");
@@ -608,16 +631,66 @@ export default function GymOwnerPage() {
                     <h4 className="text-sm font-semibold mb-1.5">{group.day}</h4>
                     <div className="flex flex-wrap gap-1.5">
                       {group.slots.map(slot => (
-                        <div key={slot.id} className="flex items-center gap-1 border rounded-md px-2 py-1 text-xs">
-                          <span>{slot.startTime}-{slot.endTime}</span>
-                          <span className="text-muted-foreground">({slot.availableSpots}/{slot.capacity})</span>
-                          <button
-                            onClick={() => handleDeleteSlot(slot.id)}
-                            className="ml-1 text-destructive"
-                            data-testid={`button-owner-delete-slot-${slot.id}`}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                        <div key={slot.id} className="flex items-center justify-between w-full border rounded-md px-3 py-2 text-sm">
+                          <span className="font-medium">{slot.startTime}-{slot.endTime}</span>
+                          <div className="flex items-center gap-2">
+                            {editingSlotId === slot.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  className="w-16 h-8 text-xs"
+                                  value={editingCapacity}
+                                  onChange={(e) => setEditingCapacity(e.target.value)}
+                                  autoFocus
+                                  data-testid={`input-owner-slot-capacity-${slot.id}`}
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={() => {
+                                    const cap = parseInt(editingCapacity);
+                                    if (cap > 0) updateCapacityMutation.mutate({ slotId: slot.id, capacity: cap });
+                                  }}
+                                  disabled={updateCapacityMutation.isPending}
+                                  data-testid={`button-owner-save-capacity-${slot.id}`}
+                                >
+                                  OK
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2"
+                                  onClick={() => setEditingSlotId(null)}
+                                  data-testid={`button-owner-cancel-capacity-${slot.id}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <Badge
+                                  variant="outline"
+                                  className="cursor-pointer"
+                                  onClick={() => {
+                                    setEditingSlotId(slot.id);
+                                    setEditingCapacity(slot.capacity.toString());
+                                  }}
+                                  data-testid={`badge-owner-slot-capacity-${slot.id}`}
+                                >
+                                  {slot.availableSpots}/{slot.capacity}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  onClick={() => handleDeleteSlot(slot.id)}
+                                  data-testid={`button-owner-delete-slot-${slot.id}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
