@@ -81,6 +81,7 @@ export default function HomePage() {
     remainingMinutes: number;
     scheduledTime: string;
     scheduledDate: string;
+    message?: string;
   } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -381,10 +382,13 @@ export default function HomePage() {
       } else if (result.earlyArrival) {
         setIsScannerOpen(false);
         setSelectedBooking(null);
+        
+        // Show the countdown dialog with the message from server
         setCountdownData({
           remainingMinutes: result.remainingMinutes,
           scheduledTime: result.scheduledTime,
-          scheduledDate: result.scheduledDate
+          scheduledDate: result.scheduledDate,
+          message: result.message // Add this line
         });
         setShowCountdown(true);
       } else {
@@ -724,6 +728,31 @@ export default function HomePage() {
       <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} onScanQR={() => setIsScannerOpen(true)} />
       <PurchaseCreditsDialog isOpen={isPurchaseDialogOpen} onClose={() => setIsPurchaseDialogOpen(false)} onPurchase={handlePurchase} />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
+
+      <Dialog open={showCountdown} onOpenChange={setShowCountdown}>
+        <DialogContent className="max-w-sm sm:rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Hali erta!
+            </DialogTitle>
+            <DialogDescription>
+              {countdownData?.message || `Kirish uchun hali vaqt bor. ${countdownData?.remainingMinutes} minut qoldi.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 text-center">
+            <div className="text-4xl font-bold text-primary mb-2">
+              {countdownData?.scheduledTime}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Bron qilingan vaqt: {countdownData?.scheduledDate ? new Date(countdownData.scheduledDate).toLocaleDateString('uz-UZ') : ''}
+            </p>
+          </div>
+          <Button onClick={() => setShowCountdown(false)} className="w-full">
+            Tushunarli
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {selectedGymForBooking && (
         <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
