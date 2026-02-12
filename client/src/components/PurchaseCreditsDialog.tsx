@@ -55,16 +55,9 @@ export default function PurchaseCreditsDialog({
 
   const activePayment = activePaymentData?.payment;
 
-  // Qayta kirganda agar to'lov kutilayotgan holatda bo'lsa (pending) 
-  // va foydalanuvchi hali paketlar bosqichida bo'lsa, uni to'lov bosqichiga o'tkazamiz
+  // Dialog ochilganda har doim paketlar tanlash bosqichidan boshlash
   useEffect(() => {
-    if (isOpen && activePayment && activePayment.status === 'pending' && step === 'packages') {
-      setStep('payment');
-    }
-  }, [isOpen, activePayment, step]);
-
-  useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
       setStep('packages');
       setSelectedPackage(null);
       setPaymentId(null);
