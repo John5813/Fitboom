@@ -167,7 +167,7 @@ export const creditPayments = pgTable("credit_payments", {
   receiptUrl: text("receipt_url"),
   remainingAmount: integer("remaining_amount").notNull().default(0),
   telegramMessageId: integer("telegram_message_id"),
-  adminChatId: integer("admin_chat_id"),
+  adminChatId: text("admin_chat_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
