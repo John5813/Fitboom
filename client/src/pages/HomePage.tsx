@@ -792,28 +792,28 @@ export default function HomePage() {
 
       {selectedGymForBooking && (
         <Dialog open={!!selectedGymForBooking} onOpenChange={(open) => !open && setSelectedGymForBooking(null)}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-sm max-h-[80vh] overflow-y-auto p-0 sm:rounded-2xl">
-            <DialogHeader className="sr-only">
-              <DialogTitle>{selectedGymForBooking.name} - Band qilish</DialogTitle>
-              <DialogDescription>Sana va vaqtni tanlang</DialogDescription>
-            </DialogHeader>
-            <div className="relative h-32">
-              <img
-                src={selectedGymForBooking.imageUrl || getGymImage(selectedGymForBooking.categories?.[0] || '')}
-                alt={selectedGymForBooking.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3">
-                <h2 className="text-white text-lg font-display font-bold truncate">{selectedGymForBooking.name}</h2>
-                <p className="text-white/80 text-xs">{selectedGymForBooking.categories?.join(', ')}</p>
-              </div>
-            </div>
+    <DialogContent className="w-[90vw] max-w-[360px] max-h-[80vh] overflow-y-auto p-0 rounded-2xl border-none">
+      <DialogHeader className="sr-only">
+        <DialogTitle>{selectedGymForBooking.name} - Band qilish</DialogTitle>
+        <DialogDescription>Sana va vaqtni tanlang</DialogDescription>
+      </DialogHeader>
+      <div className="relative aspect-[16/9] w-full overflow-hidden">
+        <img
+          src={selectedGymForBooking.imageUrl || getGymImage(selectedGymForBooking.categories?.[0] || '')}
+          alt={selectedGymForBooking.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        <div className="absolute bottom-3 left-3 right-3">
+          <h2 className="text-white text-lg font-display font-bold truncate">{selectedGymForBooking.name}</h2>
+          <p className="text-white/80 text-xs">{selectedGymForBooking.categories?.join(', ')}</p>
+        </div>
+      </div>
 
-            <div className="p-4 space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Sanani tanlang</h3>
-                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="p-3 space-y-3">
+        <div>
+          <h3 className="text-xs font-semibold mb-2">Sanani tanlang</h3>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                   {(() => {
                     const dates: Date[] = [];
                     const startDate = tashkentTime 
@@ -859,13 +859,13 @@ export default function HomePage() {
 
               {selectedBookingDate && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-2">Vaqtni tanlang</h3>
+                  <h3 className="text-xs font-semibold mb-2">Vaqtni tanlang</h3>
                   {slotsForSelectedDate.length === 0 ? (
-                    <div className="text-center py-4 bg-muted/30 rounded-md">
-                      <p className="text-sm text-muted-foreground">Bu kun uchun vaqt slotlari mavjud emas</p>
+                    <div className="text-center py-3 bg-muted/30 rounded-md">
+                      <p className="text-xs text-muted-foreground">Vaqtlar mavjud emas</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-4 gap-1">
                       {slotsForSelectedDate.map((slot) => {
                         const isSelected = selectedTimeSlot?.id === slot.id;
                         const isFull = slot.availableSpots <= 0;
@@ -874,14 +874,14 @@ export default function HomePage() {
                             key={slot.id}
                             variant={isSelected ? "default" : "outline"}
                             size="sm"
-                            className={`text-xs px-1.5 flex flex-col h-auto py-1.5 ${isFull ? 'opacity-50' : ''}`}
+                            className={`text-[10px] px-1 flex flex-col h-auto py-1 ${isSelected ? 'border-primary' : ''} ${isFull ? 'opacity-40' : ''}`}
                             disabled={isFull}
                             onClick={() => setSelectedTimeSlot(slot)}
                             data-testid={`button-slot-${slot.startTime}`}
                           >
-                            <span className="font-medium">{slot.startTime}</span>
-                            <span className={`text-[10px] ${isFull ? 'text-destructive' : 'opacity-70'}`}>
-                              {isFull ? 'To\'liq' : `${slot.availableSpots} joy`}
+                            <span className="font-bold">{slot.startTime}</span>
+                            <span className={`text-[8px] leading-tight ${isFull ? 'text-destructive' : 'opacity-70'}`}>
+                              {isFull ? 'To\'liq' : `${slot.availableSpots} ta`}
                             </span>
                           </Button>
                         );
@@ -892,6 +892,7 @@ export default function HomePage() {
               )}
 
               <Button
+                size="sm"
                 className="w-full"
                 disabled={!selectedBookingDate || !selectedTimeSlot || (user?.credits || 0) < selectedGymForBooking.credits}
                 data-testid="button-confirm-booking"
