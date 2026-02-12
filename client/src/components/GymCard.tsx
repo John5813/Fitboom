@@ -151,7 +151,7 @@ export default function GymCard({
       </Card>
 
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 rounded-xl border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{name}</DialogTitle>
             <DialogDescription>{category}</DialogDescription>
