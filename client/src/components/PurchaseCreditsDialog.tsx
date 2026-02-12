@@ -163,15 +163,17 @@ export default function PurchaseCreditsDialog({
 
         {showRemainingPayment && step === 'packages' && (
           <div className="px-4 pb-2">
-            <Card className="p-3 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20">
+            <Card className="p-3 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold">{t('payment.remaining_payment')}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {activePayment.credits} {t('payment.keys_for')} {activePayment.remainingAmount.toLocaleString()} {t('payment.som')}
+                  <p className="text-xs font-bold text-red-600 dark:text-red-400">{t('payment.remaining_payment')}</p>
+                  <p className="text-sm font-bold text-red-700 dark:text-red-300 mt-1">
+                    {t('payment.unpaid_amount')}: {activePayment.remainingAmount.toLocaleString()} {t('payment.som')}
                   </p>
-                  <p className="text-[10px] text-muted-foreground mt-1">{t('payment.remaining_desc')}</p>
+                  <p className="text-[10px] text-red-600/80 dark:text-red-400/80 mt-1 font-medium">
+                    {t('payment.remaining_desc')}
+                  </p>
 
                   <input
                     type="file"
@@ -184,7 +186,8 @@ export default function PurchaseCreditsDialog({
 
                   <Button
                     size="sm"
-                    className="mt-2 w-full text-xs"
+                    variant="destructive"
+                    className="mt-2 w-full text-xs font-bold"
                     disabled={uploading}
                     onClick={() => remainingFileInputRef.current?.click()}
                     data-testid="button-pay-remaining"

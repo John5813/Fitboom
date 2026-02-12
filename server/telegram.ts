@@ -212,6 +212,18 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
               remainingAmount: remainingAmount,
             } as any);
 
+            // Notify user about partial payment
+            const user = await storage.getUser(payment.userId);
+            if (user?.chatId) {
+              await sendTelegramMessage(
+                user.chatId,
+                `To'lovingiz qisman qabul qilindi.\n\n` +
+                `To'langan summa: ${newAmount.toLocaleString()} so'm\n` +
+                `<b>Qoldiq summa: ${remainingAmount.toLocaleString()} so'm</b>\n\n` +
+                `Iltimos, qoldiq summani to'lab, chekni ilovada yuboring.`
+              );
+            }
+
             await sendTelegramMessage(
               chatId,
               `Miqdor o'zgartirildi.\n\n` +
