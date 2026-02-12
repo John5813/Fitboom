@@ -258,6 +258,7 @@ export default function GymCard({
             )}
             <img 
               src={allImages[currentImageIndex]} 
+              key={`gallery-${currentImageIndex}`}
               alt={`${name} gallery ${currentImageIndex + 1}`}
               className="max-w-full max-h-full object-contain rounded-md"
             />

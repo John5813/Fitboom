@@ -1050,6 +1050,7 @@ export default function HomePage() {
                 )}
                 <img
                   src={galleryImages[currentIndex]}
+                  key={`home-gallery-${currentIndex}`}
                   alt={`${homeGalleryGym.name} gallery ${currentIndex + 1}`}
                   className="max-w-full max-h-full object-contain rounded-md"
                 />
