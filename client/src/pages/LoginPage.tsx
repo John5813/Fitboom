@@ -24,10 +24,10 @@ const completeProfileSchema = z.object({
 
 type CompleteProfileFormData = z.infer<typeof completeProfileSchema>;
 
-export default function LoginPage() {
+export default function LoginPage({ fromTelegram = false }: { fromTelegram?: boolean }) {
   const [, setLocation] = useLocation();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(fromTelegram);
   const [loginCode, setLoginCode] = useState("");
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();

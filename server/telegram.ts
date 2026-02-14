@@ -194,7 +194,7 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
         if (err) {
           return res.status(500).json({ message: 'Tizimga kirishda xatolik' });
         }
-        res.json(user);
+        res.json({ success: true, profileCompleted: user.profileCompleted, user });
       });
     } catch (error) {
       console.error('[Telegram] Verify code error:', error);

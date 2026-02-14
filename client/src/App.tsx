@@ -29,7 +29,12 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Welcome} />
-      <Route path="/login" component={LoginPage} />
+      <Route path="/login">
+        <LoginPage />
+      </Route>
+      <Route path="/telegram-login">
+        <LoginPage fromTelegram={true} />
+      </Route>
       <Route path="/register" component={RegisterPage} />
       <Route path="/home">
         <ProtectedRoute>
