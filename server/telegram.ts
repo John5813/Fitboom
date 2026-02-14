@@ -77,7 +77,7 @@ function getWebhookUrl(): string {
 
 async function telegramApi(method: string, body: Record<string, any>) {
   if (!TELEGRAM_BOT_TOKEN) {
-    console.error('[Telegram] Bot token not configured');
+    console.log('[Telegram] Bot token not configured');
     return null;
   }
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`;
@@ -88,12 +88,12 @@ async function telegramApi(method: string, body: Record<string, any>) {
       body: JSON.stringify(body),
     });
     const data = await response.json();
-    if (!response.ok) {
-      console.error(`[Telegram] API error (${method}):`, data);
+    if (!data?.ok) {
+      console.log(`[Telegram] API error (${method}):`, JSON.stringify(data));
     }
     return data;
   } catch (error) {
-    console.error(`[Telegram] Request failed (${method}):`, error);
+    console.log(`[Telegram] Request failed (${method}):`, error);
     return null;
   }
 }
@@ -223,7 +223,7 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
 
 async function updatePaymentMessage(chatId: string, messageId: number, payment: any, user: any, resultText: string, isPhoto: boolean = true) {
   const paymentNum = payment.id.substring(0, 8).toUpperCase();
-  const text =
+  const summaryText =
     `<b>${resultText}</b>\n\n` +
     `To'lov: #${paymentNum}\n` +
     `Mijoz: ${user?.name || "Noma'lum"}\n` +
@@ -231,14 +231,29 @@ async function updatePaymentMessage(chatId: string, messageId: number, payment: 
     `Paket: ${payment.credits} kalit\n` +
     `Summa: ${payment.price.toLocaleString()} so'm`;
 
+  let edited = false;
+
   if (isPhoto) {
-    const result = await editMessageCaption(chatId, messageId, text, { inline_keyboard: [] });
-    if (!result?.ok) {
-      await editMessageText(chatId, messageId, text, { inline_keyboard: [] });
+    const r1 = await editMessageCaption(chatId, messageId, summaryText, { inline_keyboard: [] });
+    if (r1?.ok) {
+      edited = true;
+    } else {
+      const r2 = await editMessageReplyMarkup(chatId, messageId, { inline_keyboard: [] });
+      if (r2?.ok) edited = true;
+      await sendMessage(chatId, summaryText);
     }
   } else {
-    await editMessageText(chatId, messageId, text, { inline_keyboard: [] });
+    const r2 = await editMessageText(chatId, messageId, summaryText, { inline_keyboard: [] });
+    if (r2?.ok) {
+      edited = true;
+    } else {
+      const r3 = await editMessageReplyMarkup(chatId, messageId, { inline_keyboard: [] });
+      if (r3?.ok) edited = true;
+      await sendMessage(chatId, summaryText);
+    }
   }
+
+  console.log(`[Telegram] updatePaymentMessage: chatId=${chatId}, msgId=${messageId}, isPhoto=${isPhoto}, edited=${edited}`);
 }
 
 async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage: IStorage) {
@@ -247,51 +262,95 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
   const messageId = callbackQuery.message?.message_id || 0;
   const isPhoto = !!(callbackQuery.message?.photo && callbackQuery.message.photo.length > 0);
 
+  console.log(`[Telegram] Callback: data=${data}, chatId=${chatId}, msgId=${messageId}, isPhoto=${isPhoto}`);
+
   try {
     if (data.startsWith('pay_approve_')) {
       const paymentId = data.replace('pay_approve_', '');
       const payment = await storage.getCreditPayment(paymentId);
-      if (payment && (payment.status === 'pending' || payment.status === 'partial')) {
-        await storage.updateCreditPayment(paymentId, { status: 'approved', remainingAmount: 0 });
+      if (!payment) {
+        await answerCallbackQuery(callbackQuery.id, "To'lov topilmadi");
+        return;
+      }
+      if (payment.status === 'approved' || payment.status === 'rejected') {
         const user = await storage.getUser(payment.userId);
-        if (user) {
-          await storage.updateUserCredits(user.id, user.credits + payment.credits);
-          if (user.chatId) {
-            await sendMessage(user.chatId,
-              `<b>To'lovingiz tasdiqlandi!</b>\n\n` +
-              `Hisobingizga ${payment.credits} ta kalit qo'shildi.\n` +
-              `Hozirgi balansingiz: ${user.credits + payment.credits} ta kalit.`
-            );
-          }
-        }
         if (messageId) {
-          await updatePaymentMessage(chatId, messageId, payment, user, 'TASDIQLANDI', isPhoto);
+          const statusText = payment.status === 'approved' ? 'TASDIQLANDI' : 'RAD ETILDI';
+          await updatePaymentMessage(chatId, messageId, payment, user, statusText, isPhoto);
+        }
+        await answerCallbackQuery(callbackQuery.id, `Bu to'lov allaqachon ${payment.status === 'approved' ? 'tasdiqlangan' : 'rad etilgan'}`);
+        return;
+      }
+      await storage.updateCreditPayment(paymentId, { status: 'approved', remainingAmount: 0 });
+      const user = await storage.getUser(payment.userId);
+      if (user) {
+        await storage.updateUserCredits(user.id, user.credits + payment.credits);
+        if (user.chatId) {
+          await sendMessage(user.chatId,
+            `<b>To'lovingiz tasdiqlandi!</b>\n\n` +
+            `Hisobingizga ${payment.credits} ta kalit qo'shildi.\n` +
+            `Hozirgi balansingiz: ${user.credits + payment.credits} ta kalit.`
+          );
         }
       }
+      if (messageId) {
+        await updatePaymentMessage(chatId, messageId, payment, user, 'TASDIQLANDI', isPhoto);
+      }
+      await answerCallbackQuery(callbackQuery.id, 'Tasdiqlandi!');
+
     } else if (data.startsWith('pay_reject_')) {
       const paymentId = data.replace('pay_reject_', '');
       const payment = await storage.getCreditPayment(paymentId);
-      if (payment) {
-        await storage.updateCreditPayment(paymentId, { status: 'rejected' });
-        const user = await storage.getUser(payment.userId);
-        if (user && user.chatId) {
-          await sendMessage(user.chatId, `<b>Kechirasiz, to'lovingiz rad etildi.</b>\n\nIltimos, qaytadan urinib ko'ring.`);
-        }
-        if (messageId) {
-          await updatePaymentMessage(chatId, messageId, payment, user, 'RAD ETILDI', isPhoto);
-        }
+      if (!payment) {
+        await answerCallbackQuery(callbackQuery.id, "To'lov topilmadi");
+        return;
       }
+      if (payment.status === 'approved' || payment.status === 'rejected') {
+        const user = await storage.getUser(payment.userId);
+        if (messageId) {
+          const statusText = payment.status === 'approved' ? 'TASDIQLANDI' : 'RAD ETILDI';
+          await updatePaymentMessage(chatId, messageId, payment, user, statusText, isPhoto);
+        }
+        await answerCallbackQuery(callbackQuery.id, `Bu to'lov allaqachon ${payment.status === 'approved' ? 'tasdiqlangan' : 'rad etilgan'}`);
+        return;
+      }
+      await storage.updateCreditPayment(paymentId, { status: 'rejected' });
+      const user = await storage.getUser(payment.userId);
+      if (user && user.chatId) {
+        await sendMessage(user.chatId, `<b>Kechirasiz, to'lovingiz rad etildi.</b>\n\nIltimos, qaytadan urinib ko'ring.`);
+      }
+      if (messageId) {
+        await updatePaymentMessage(chatId, messageId, payment, user, 'RAD ETILDI', isPhoto);
+      }
+      await answerCallbackQuery(callbackQuery.id, 'Rad etildi');
+
     } else if (data.startsWith('pay_amount_')) {
       const paymentId = data.replace('pay_amount_', '');
+      const payment = await storage.getCreditPayment(paymentId);
+      if (!payment) {
+        await answerCallbackQuery(callbackQuery.id, "To'lov topilmadi");
+        return;
+      }
+      if (payment.status === 'approved' || payment.status === 'rejected') {
+        const user = await storage.getUser(payment.userId);
+        if (messageId) {
+          const statusText = payment.status === 'approved' ? 'TASDIQLANDI' : 'RAD ETILDI';
+          await updatePaymentMessage(chatId, messageId, payment, user, statusText, isPhoto);
+        }
+        await answerCallbackQuery(callbackQuery.id, `Bu to'lov allaqachon ${payment.status === 'approved' ? 'tasdiqlangan' : 'rad etilgan'}`);
+        return;
+      }
       pendingAmountChanges.set(`amount_${paymentId}`, chatId);
       pendingAmountChanges.set(`msg_${paymentId}`, messageId.toString());
       pendingAmountChanges.set(`photo_${paymentId}`, isPhoto ? '1' : '0');
       pendingAmountChanges.set(`amount_${chatId}`, paymentId);
       await sendMessage(chatId, 'Yangi summani kiriting (masalan: 150000):');
+      await answerCallbackQuery(callbackQuery.id);
+    } else {
+      await answerCallbackQuery(callbackQuery.id);
     }
-    await answerCallbackQuery(callbackQuery.id);
   } catch (err) {
-    console.error('[Telegram] Callback error:', err);
+    console.log('[Telegram] Callback error:', err);
     await answerCallbackQuery(callbackQuery.id, 'Xatolik yuz berdi');
   }
 }
