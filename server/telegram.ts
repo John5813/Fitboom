@@ -118,6 +118,24 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   return telegramApi('answerCallbackQuery', { callback_query_id: callbackQueryId, text });
 }
 
+async function editMessageCaption(chatId: number | string, messageId: number, caption: string, replyMarkup?: any) {
+  const body: any = { chat_id: chatId, message_id: messageId, caption, parse_mode: 'HTML' };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  return telegramApi('editMessageCaption', body);
+}
+
+async function editMessageReplyMarkup(chatId: number | string, messageId: number, replyMarkup?: any) {
+  const body: any = { chat_id: chatId, message_id: messageId };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  return telegramApi('editMessageReplyMarkup', body);
+}
+
+async function editMessageText(chatId: number | string, messageId: number, text: string, replyMarkup?: any) {
+  const body: any = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  return telegramApi('editMessageText', body);
+}
+
 function getAdminChatIds(): string[] {
   const adminIds = process.env.ADMIN_IDS || '';
   return adminIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
@@ -203,9 +221,31 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
   });
 }
 
+async function updatePaymentMessage(chatId: string, messageId: number, payment: any, user: any, resultText: string, isPhoto: boolean = true) {
+  const paymentNum = payment.id.substring(0, 8).toUpperCase();
+  const text =
+    `<b>${resultText}</b>\n\n` +
+    `To'lov: #${paymentNum}\n` +
+    `Mijoz: ${user?.name || "Noma'lum"}\n` +
+    `Tel: ${user?.phone || '-'}\n` +
+    `Paket: ${payment.credits} kalit\n` +
+    `Summa: ${payment.price.toLocaleString()} so'm`;
+
+  if (isPhoto) {
+    const result = await editMessageCaption(chatId, messageId, text, { inline_keyboard: [] });
+    if (!result?.ok) {
+      await editMessageText(chatId, messageId, text, { inline_keyboard: [] });
+    }
+  } else {
+    await editMessageText(chatId, messageId, text, { inline_keyboard: [] });
+  }
+}
+
 async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage: IStorage) {
   const data = callbackQuery.data || '';
   const chatId = callbackQuery.message?.chat.id.toString() || '';
+  const messageId = callbackQuery.message?.message_id || 0;
+  const isPhoto = !!(callbackQuery.message?.photo && callbackQuery.message.photo.length > 0);
 
   try {
     if (data.startsWith('pay_approve_')) {
@@ -224,7 +264,9 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
             );
           }
         }
-        await sendMessage(chatId, `To'lov tasdiqlandi (ID: ${paymentId})`);
+        if (messageId) {
+          await updatePaymentMessage(chatId, messageId, payment, user, 'TASDIQLANDI', isPhoto);
+        }
       }
     } else if (data.startsWith('pay_reject_')) {
       const paymentId = data.replace('pay_reject_', '');
@@ -235,10 +277,15 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
         if (user && user.chatId) {
           await sendMessage(user.chatId, `<b>Kechirasiz, to'lovingiz rad etildi.</b>\n\nIltimos, qaytadan urinib ko'ring.`);
         }
-        await sendMessage(chatId, `To'lov rad etildi (ID: ${paymentId})`);
+        if (messageId) {
+          await updatePaymentMessage(chatId, messageId, payment, user, 'RAD ETILDI', isPhoto);
+        }
       }
     } else if (data.startsWith('pay_amount_')) {
       const paymentId = data.replace('pay_amount_', '');
+      pendingAmountChanges.set(`amount_${paymentId}`, chatId);
+      pendingAmountChanges.set(`msg_${paymentId}`, messageId.toString());
+      pendingAmountChanges.set(`photo_${paymentId}`, isPhoto ? '1' : '0');
       pendingAmountChanges.set(`amount_${chatId}`, paymentId);
       await sendMessage(chatId, 'Yangi summani kiriting (masalan: 150000):');
     }
@@ -278,6 +325,8 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
   const pendingKey = `amount_${chatId}`;
   if (pendingAmountChanges.has(pendingKey) && message.text) {
     const paymentId = pendingAmountChanges.get(pendingKey)!;
+    const origMsgId = parseInt(pendingAmountChanges.get(`msg_${paymentId}`) || '0');
+    const isPhoto = pendingAmountChanges.get(`photo_${paymentId}`) === '1';
     const newAmount = parseInt(message.text);
     if (!isNaN(newAmount)) {
       const payment = await storage.getCreditPayment(paymentId);
@@ -289,12 +338,17 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
           status: remainingAmount === 0 ? 'approved' : 'partial',
         });
         pendingAmountChanges.delete(pendingKey);
-        await sendMessage(chatId, `Muvaffaqiyatli o'zgartirildi!\n\nYangi kiritilgan: ${newAmount.toLocaleString()} so'm\nQoldiq: ${remainingAmount.toLocaleString()} so'm`);
+        pendingAmountChanges.delete(`amount_${paymentId}`);
+        pendingAmountChanges.delete(`msg_${paymentId}`);
+        pendingAmountChanges.delete(`photo_${paymentId}`);
         const user = await storage.getUser(payment.userId);
         if (remainingAmount === 0) {
           if (user) {
             await storage.updateUserCredits(user.id, user.credits + payment.credits);
             if (user.chatId) await sendMessage(user.chatId, `<b>To'lovingiz tasdiqlandi!</b>\n\nBalansingiz: ${user.credits + payment.credits} ta kalit.`);
+          }
+          if (origMsgId) {
+            await updatePaymentMessage(chatId, origMsgId, payment, user, 'TASDIQLANDI (to\'liq to\'landi)', isPhoto);
           }
         } else {
           if (user && user.chatId) {
@@ -305,7 +359,13 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
               `Iltimos, qoldiq summani to'lab, chekni ilovadan yuboring.`
             );
           }
+          if (origMsgId) {
+            await updatePaymentMessage(chatId, origMsgId, payment, user,
+              `QISMAN TO'LANDI\nTo'langan: ${newAmount.toLocaleString()} so'm\nQoldiq: ${remainingAmount.toLocaleString()} so'm`, isPhoto
+            );
+          }
         }
+        await sendMessage(chatId, `Muvaffaqiyatli o'zgartirildi!\n\nYangi kiritilgan: ${newAmount.toLocaleString()} so'm\nQoldiq: ${remainingAmount.toLocaleString()} so'm`);
       }
     } else {
       await sendMessage(chatId, "Iltimos, to'g'ri raqam kiriting.");
