@@ -1,22 +1,21 @@
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { migrate } from "drizzle-orm/neon-serverless/migrator";
-import ws from "ws";
+import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 
-neonConfig.webSocketConstructor = ws;
+const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is not set");
+const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL is not set");
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle({ client: pool });
+const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+const db = drizzle(pool);
 
 async function runMigrations() {
   console.log("Running migrations...");
   try {
-    // Migrations often fail on Replit due to relation already exists errors
-    // We'll skip them and rely on db:push during development/first deploy
     if (process.env.NODE_ENV === "production" && !process.env.SKIP_MIGRATIONS) {
       await migrate(db, { migrationsFolder: "./migrations" });
       console.log("Migrations completed successfully!");
@@ -26,8 +25,6 @@ async function runMigrations() {
     process.exit(0);
   } catch (err: any) {
     console.error("Migration failed:", err);
-    // In many Replit environments, the tables already exist. 
-    // If it's a "relation already exists" error, we can potentially ignore it
     if (err.message && err.message.includes("already exists")) {
       console.log("Relation already exists, treating as success.");
       process.exit(0);

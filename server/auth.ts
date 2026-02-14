@@ -33,8 +33,8 @@ export function setupAuth(app: Express) {
     throw new Error("SESSION_SECRET environment variable is required in production");
   }
 
-  // DATABASE_URL tekshirish
-  if (!process.env.DATABASE_URL) {
+  const dbUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+  if (!dbUrl) {
     console.error("⚠️ DATABASE_URL environment variable bo'sh!");
     console.error("PostgreSQL database manzilini sozlang.");
     throw new Error("DATABASE_URL environment variable is required");
@@ -49,7 +49,7 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     store: new PgSession({
-      conString: process.env.DATABASE_URL,
+      conString: process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL,
       createTableIfMissing: true,
     }),
     cookie: {
