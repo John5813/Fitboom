@@ -238,7 +238,7 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       const telegramUserId = message.from.id.toString();
 
       if (adminBroadcastMode.has(chatId) && chatId === ADMIN_PANEL_CHAT_ID) {
-        if (message.text?.startsWith('/')) {
+        if (message.text === '/admin') {
           adminBroadcastMode.delete(chatId);
         } else {
         adminBroadcastMode.delete(chatId);
@@ -351,36 +351,96 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
         return res.sendStatus(200);
       }
 
-      if (message.text?.startsWith('/start')) {
-        if (chatId === ADMIN_PANEL_CHAT_ID) {
-          const adminKeyboard = {
-            inline_keyboard: [
-              [{ text: 'Kutilayotgan to\'lovlar', callback_data: 'admin_pending' }],
-              [{ text: 'Reklama yuborish', callback_data: 'admin_broadcast' }],
-            ],
-          };
-          await sendTelegramMessage(
-            chatId,
-            '<b>Admin panel</b>\n\nQuyidagi tugmalardan birini tanlang:',
-            adminKeyboard
-          );
-        } else {
-          const keyboard = {
-            keyboard: [
-              [{ text: 'Telefon raqamni ulashish', request_contact: true }]
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: true,
-          };
+      if (message.text === '/admin' && chatId === ADMIN_PANEL_CHAT_ID) {
+        const adminKeyboard = {
+          keyboard: [
+            [{ text: 'Kutilayotgan to\'lovlar' }, { text: 'Reklama yuborish' }],
+          ],
+          resize_keyboard: true,
+        };
+        await sendTelegramMessage(
+          chatId,
+          '<b>Admin panel</b>\n\nQuyidagi tugmalardan birini tanlang:',
+          adminKeyboard
+        );
+        return res.sendStatus(200);
+      }
 
-          await sendTelegramMessage(
-            chatId,
-            '<b>FitBoom ga xush kelibsiz!</b>\n\n' +
-            'Ro\'yxatdan o\'tish uchun telefon raqamingizni ulashing.\n\n' +
-            'Quyidagi tugmani bosing:',
-            keyboard
-          );
+      if (chatId === ADMIN_PANEL_CHAT_ID && message.text === 'Kutilayotgan to\'lovlar') {
+        try {
+          const pendingPayments = await storage.getAllPendingCreditPayments();
+          
+          if (pendingPayments.length === 0) {
+            await sendTelegramMessage(chatId, 'Kutilayotgan to\'lovlar yo\'q.');
+            return res.sendStatus(200);
+          }
+
+          await sendTelegramMessage(chatId, `<b>Kutilayotgan to'lovlar: ${pendingPayments.length} ta</b>`);
+          
+          let chunk = '';
+          for (const payment of pendingPayments) {
+            const user = await storage.getUser(payment.userId);
+            const statusText = payment.status === 'partial' ? 'Qisman' : 'Kutilmoqda';
+            const remaining = payment.remainingAmount > 0 ? payment.remainingAmount : payment.price;
+            
+            let entry = `<b>${user?.name || 'Noma\'lum'}</b>\n`;
+            entry += `Tel: ${user?.phone || '-'}\n`;
+            entry += `Paket: ${payment.credits} kalit\n`;
+            entry += `Narx: ${payment.price.toLocaleString()} so'm\n`;
+            if (payment.status === 'partial') {
+              entry += `Qoldiq: ${remaining.toLocaleString()} so'm\n`;
+            }
+            entry += `Holat: ${statusText}\n`;
+            entry += `Sana: ${new Date(payment.createdAt).toLocaleDateString('uz-UZ')}\n`;
+            entry += `─────────────\n`;
+
+            if ((chunk + entry).length > 3500) {
+              await sendTelegramMessage(chatId, chunk);
+              chunk = '';
+            }
+            chunk += entry;
+          }
+          if (chunk) {
+            await sendTelegramMessage(chatId, chunk);
+          }
+        } catch (err) {
+          console.error(`[Admin] Error fetching pending payments:`, err);
+          await sendTelegramMessage(chatId, 'Xatolik yuz berdi.');
         }
+        return res.sendStatus(200);
+      }
+
+      if (chatId === ADMIN_PANEL_CHAT_ID && message.text === 'Reklama yuborish') {
+        adminBroadcastMode.set(chatId, true);
+        await sendTelegramMessage(chatId, 
+          '<b>Reklama rejimi yoqildi!</b>\n\n' +
+          'Endi kerakli kontentni yuboring:\n' +
+          '- Matn\n' +
+          '- Rasm\n' +
+          '- Video\n' +
+          '- Fayl\n' +
+          '- Havolalar\n\n' +
+          'Bekor qilish uchun /admin yuboring.'
+        );
+        return res.sendStatus(200);
+      }
+
+      if (message.text?.startsWith('/start')) {
+        const keyboard = {
+          keyboard: [
+            [{ text: 'Telefon raqamni ulashish', request_contact: true }]
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        };
+
+        await sendTelegramMessage(
+          chatId,
+          '<b>FitBoom ga xush kelibsiz!</b>\n\n' +
+          'Ro\'yxatdan o\'tish uchun telefon raqamingizni ulashing.\n\n' +
+          'Quyidagi tugmani bosing:',
+          keyboard
+        );
       } else if (message.contact) {
         const contact = message.contact;
         const phoneNumber = contact.phone_number.startsWith('+') 
@@ -669,69 +729,6 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
 
     await answerCallbackQuery(callbackQuery.id, 'Yangi summani kiriting');
     console.log(`[Callback] Amount change initiated for payment ${paymentId}`);
-  }
-  else if (data === 'admin_pending') {
-    console.log(`[Callback] Admin requesting pending payments`);
-    
-    try {
-      const pendingPayments = await storage.getAllPendingCreditPayments();
-      
-      if (pendingPayments.length === 0) {
-        await sendTelegramMessage(chatId, 'Kutilayotgan to\'lovlar yo\'q.');
-        await answerCallbackQuery(callbackQuery.id, 'Kutilayotgan to\'lovlar yo\'q');
-        return;
-      }
-
-      await sendTelegramMessage(chatId, `<b>Kutilayotgan to'lovlar: ${pendingPayments.length} ta</b>`);
-      
-      let chunk = '';
-      for (const payment of pendingPayments) {
-        const user = await storage.getUser(payment.userId);
-        const statusText = payment.status === 'partial' ? 'Qisman' : 'Kutilmoqda';
-        const remaining = payment.remainingAmount > 0 ? payment.remainingAmount : payment.price;
-        
-        let entry = `<b>${user?.name || 'Noma\'lum'}</b>\n`;
-        entry += `Tel: ${user?.phone || '-'}\n`;
-        entry += `Paket: ${payment.credits} kalit\n`;
-        entry += `Narx: ${payment.price.toLocaleString()} so'm\n`;
-        if (payment.status === 'partial') {
-          entry += `Qoldiq: ${remaining.toLocaleString()} so'm\n`;
-        }
-        entry += `Holat: ${statusText}\n`;
-        entry += `Sana: ${new Date(payment.createdAt).toLocaleDateString('uz-UZ')}\n`;
-        entry += `─────────────\n`;
-
-        if ((chunk + entry).length > 3500) {
-          await sendTelegramMessage(chatId, chunk);
-          chunk = '';
-        }
-        chunk += entry;
-      }
-      if (chunk) {
-        await sendTelegramMessage(chatId, chunk);
-      }
-      await answerCallbackQuery(callbackQuery.id);
-    } catch (err) {
-      console.error(`[Callback] Error fetching pending payments:`, err);
-      await answerCallbackQuery(callbackQuery.id, 'Xatolik yuz berdi');
-    }
-  }
-  else if (data === 'admin_broadcast') {
-    console.log(`[Callback] Admin starting broadcast mode`);
-    adminBroadcastMode.set(chatId, true);
-    
-    await sendTelegramMessage(chatId, 
-      '<b>Reklama rejimi yoqildi!</b>\n\n' +
-      'Endi kerakli kontentni yuboring:\n' +
-      '- Matn\n' +
-      '- Rasm\n' +
-      '- Video\n' +
-      '- Fayl\n' +
-      '- Link\n\n' +
-      'Yuborgan xabaringiz barcha bot foydalanuvchilariga nusxalanadi.\n\n' +
-      '<i>Bekor qilish uchun /start bosing</i>'
-    );
-    await answerCallbackQuery(callbackQuery.id, 'Reklama rejimi yoqildi');
   }
   else {
     console.log(`[Callback] Unknown callback data: ${data}`);
