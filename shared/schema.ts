@@ -7,7 +7,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   telegramId: text("telegram_id").unique(),
   phone: text("phone").unique(),
-  chatId: integer("chat_id"),
+  chatId: text("chat_id"),
   name: text("name"),
   age: integer("age"),
   gender: text("gender"),

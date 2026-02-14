@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, registerHealthCheck } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
-import { setTelegramWebhook } from "./telegram";
+import { setupTelegramWebhook } from "./telegram";
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message, err.stack);
@@ -89,7 +89,7 @@ app.use((req, res, next) => {
     if (domain) {
       const webhookUrl = domain.startsWith('http') ? `${domain}/api/telegram/webhook` : `https://${domain}/api/telegram/webhook`;
       log(`Setting Telegram webhook to: ${webhookUrl}`);
-      await setTelegramWebhook(webhookUrl);
+      await setupTelegramWebhook(webhookUrl);
     }
   });
 })();
