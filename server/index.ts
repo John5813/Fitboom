@@ -79,10 +79,12 @@ app.use((req, res, next) => {
   }, async () => {
     log(`serving on port ${port}`);
     
-    const publicDomain = "fitboom--replituchun012.replit.app";
-    const domain = process.env.PUBLIC_DOMAIN || 
-                   (process.env.REPLIT_SLUG && process.env.REPLIT_OWNER ? `${process.env.REPLIT_SLUG}.${process.env.REPLIT_OWNER}.replit.app` : publicDomain) ||
-                   process.env.REPLIT_DEV_DOMAIN;
+    const PRODUCTION_DOMAIN = "fitboom--replituchun012.replit.app";
+    const isProduction = process.env.NODE_ENV === 'production';
+    const domain = isProduction 
+      ? PRODUCTION_DOMAIN 
+      : (process.env.REPLIT_DEV_DOMAIN || PRODUCTION_DOMAIN);
+    console.log(`[Webhook] Environment: ${process.env.NODE_ENV}, Using domain: ${domain}`);
     
     if (domain) {
       const webhookUrl = domain.startsWith('http') ? `${domain}/api/telegram/webhook` : `https://${domain}/api/telegram/webhook`;
