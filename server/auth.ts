@@ -33,6 +33,7 @@ export function setupAuth(app: Express) {
     throw new Error("SESSION_SECRET environment variable is required in production");
   }
 
+  // DATABASE_URL tekshirish
   if (!process.env.DATABASE_URL) {
     console.error("⚠️ DATABASE_URL environment variable bo'sh!");
     console.error("PostgreSQL database manzilini sozlang.");
