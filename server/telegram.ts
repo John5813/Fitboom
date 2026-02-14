@@ -427,23 +427,50 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
 
 async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage: IStorage) {
   const data = callbackQuery.data;
-  if (!data) return;
+  if (!data) {
+    console.log('[Callback] No data in callback query, skipping');
+    return;
+  }
 
   const chatId = callbackQuery.message?.chat.id;
   const messageId = callbackQuery.message?.message_id;
   
-  if (!chatId || !messageId) return;
+  if (!chatId || !messageId) {
+    console.log('[Callback] Missing chatId or messageId:', { chatId, messageId });
+    return;
+  }
+
+  console.log(`[Callback] Processing: ${data}, chatId: ${chatId}, messageId: ${messageId}`);
 
   if (data.startsWith('pay_approve_')) {
     const paymentId = data.replace('pay_approve_', '');
-    const payment = await storage.getCreditPayment(paymentId);
+    console.log(`[Callback] Approving payment: ${paymentId}`);
+    
+    let payment;
+    try {
+      payment = await storage.getCreditPayment(paymentId);
+      console.log(`[Callback] Payment found:`, payment ? `credits=${payment.credits}, status=${payment.status}` : 'null');
+    } catch (err) {
+      console.error(`[Callback] DB error getting payment:`, err);
+      await answerCallbackQuery(callbackQuery.id, 'Bazada xatolik');
+      return;
+    }
     
     if (!payment) {
       await answerCallbackQuery(callbackQuery.id, 'To\'lov topilmadi');
       return;
     }
 
-    const user = await storage.getUser(payment.userId);
+    let user;
+    try {
+      user = await storage.getUser(payment.userId);
+      console.log(`[Callback] User found:`, user ? `name=${user.name}, credits=${user.credits}` : 'null');
+    } catch (err) {
+      console.error(`[Callback] DB error getting user:`, err);
+      await answerCallbackQuery(callbackQuery.id, 'Bazada xatolik');
+      return;
+    }
+
     if (!user) {
       await answerCallbackQuery(callbackQuery.id, 'Foydalanuvchi topilmadi');
       return;
@@ -460,8 +487,16 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
       expiryDate.setDate(expiryDate.getDate() + 30);
     }
     
-    await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiryDate);
-    await storage.updateCreditPayment(paymentId, { status: 'approved' } as any);
+    try {
+      await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiryDate);
+      console.log(`[Callback] Credits updated: ${user.credits} -> ${newCredits}`);
+      await storage.updateCreditPayment(paymentId, { status: 'approved' } as any);
+      console.log(`[Callback] Payment status -> approved`);
+    } catch (err) {
+      console.error(`[Callback] DB error updating credits/payment:`, err);
+      await answerCallbackQuery(callbackQuery.id, 'Yangilashda xatolik');
+      return;
+    }
 
     await editMessageReplyMarkup(chatId, messageId);
     await sendTelegramMessage(chatId, 
@@ -479,33 +514,56 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
     }
 
     await answerCallbackQuery(callbackQuery.id, 'Tasdiqlandi');
+    console.log(`[Callback] Approval complete for payment ${paymentId}`);
   }
   else if (data.startsWith('pay_reject_')) {
     const paymentId = data.replace('pay_reject_', '');
-    const payment = await storage.getCreditPayment(paymentId);
+    console.log(`[Callback] Rejecting payment: ${paymentId}`);
+    
+    let payment;
+    try {
+      payment = await storage.getCreditPayment(paymentId);
+    } catch (err) {
+      console.error(`[Callback] DB error getting payment:`, err);
+      await answerCallbackQuery(callbackQuery.id, 'Bazada xatolik');
+      return;
+    }
     
     if (!payment) {
       await answerCallbackQuery(callbackQuery.id, 'To\'lov topilmadi');
       return;
     }
 
-    await storage.updateCreditPayment(paymentId, { status: 'rejected' } as any);
+    try {
+      await storage.updateCreditPayment(paymentId, { status: 'rejected' } as any);
+      console.log(`[Callback] Payment status -> rejected`);
+    } catch (err) {
+      console.error(`[Callback] DB error rejecting payment:`, err);
+      await answerCallbackQuery(callbackQuery.id, 'Yangilashda xatolik');
+      return;
+    }
     
     await editMessageReplyMarkup(chatId, messageId);
     await sendTelegramMessage(chatId, `To'lov rad etildi.`);
 
-    const user = await storage.getUser(payment.userId);
-    if (user?.chatId) {
-      await sendTelegramMessage(user.chatId,
-        `Sizning to'lovingiz rad etildi.\n\n` +
-        `Iltimos, to'g'ri chek yuborishga harakat qiling yoki qo'llab-quvvatlash xizmatiga murojaat qiling.`
-      );
+    try {
+      const user = await storage.getUser(payment.userId);
+      if (user?.chatId) {
+        await sendTelegramMessage(user.chatId,
+          `Sizning to'lovingiz rad etildi.\n\n` +
+          `Iltimos, to'g'ri chek yuborishga harakat qiling yoki qo'llab-quvvatlash xizmatiga murojaat qiling.`
+        );
+      }
+    } catch (err) {
+      console.error(`[Callback] Error notifying user about rejection:`, err);
     }
 
     await answerCallbackQuery(callbackQuery.id, 'Rad etildi');
+    console.log(`[Callback] Rejection complete for payment ${paymentId}`);
   }
   else if (data.startsWith('pay_change_')) {
     const paymentId = data.replace('pay_change_', '');
+    console.log(`[Callback] Change amount for payment: ${paymentId}`);
     
     pendingAmountChanges.set(`amount_${chatId}`, paymentId);
     
@@ -515,6 +573,11 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
     );
 
     await answerCallbackQuery(callbackQuery.id, 'Yangi summani kiriting');
+    console.log(`[Callback] Amount change initiated for payment ${paymentId}`);
+  }
+  else {
+    console.log(`[Callback] Unknown callback data: ${data}`);
+    await answerCallbackQuery(callbackQuery.id);
   }
 }
 
