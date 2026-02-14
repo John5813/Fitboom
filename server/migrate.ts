@@ -1,17 +1,16 @@
-import pg from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { migrate } from "drizzle-orm/neon-serverless/migrator";
+import ws from "ws";
 
-const { Pool } = pg;
+neonConfig.webSocketConstructor = ws;
 
-const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL is not set");
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is not set");
 }
 
-const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
-const db = drizzle(pool);
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle({ client: pool });
 
 async function runMigrations() {
   console.log("Running migrations...");
