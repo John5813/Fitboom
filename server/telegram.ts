@@ -266,9 +266,10 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
 
   try {
     if (data.startsWith('pay_approve_')) {
-      const paymentId = data.replace('pay_approve_', '');
+      const paymentId = data.replace('pay_approve_', '').trim();
       const payment = await storage.getCreditPayment(paymentId);
       if (!payment) {
+        console.log(`[Telegram] Payment not found for ID: "${paymentId}" (length: ${paymentId.length})`);
         await answerCallbackQuery(callbackQuery.id, "To'lov topilmadi");
         return;
       }
@@ -299,9 +300,10 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
       await answerCallbackQuery(callbackQuery.id, 'Tasdiqlandi!');
 
     } else if (data.startsWith('pay_reject_')) {
-      const paymentId = data.replace('pay_reject_', '');
+      const paymentId = data.replace('pay_reject_', '').trim();
       const payment = await storage.getCreditPayment(paymentId);
       if (!payment) {
+        console.log(`[Telegram] Payment not found for rejection ID: "${paymentId}"`);
         await answerCallbackQuery(callbackQuery.id, "To'lov topilmadi");
         return;
       }
@@ -325,9 +327,10 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
       await answerCallbackQuery(callbackQuery.id, 'Rad etildi');
 
     } else if (data.startsWith('pay_amount_')) {
-      const paymentId = data.replace('pay_amount_', '');
+      const paymentId = data.replace('pay_amount_', '').trim();
       const payment = await storage.getCreditPayment(paymentId);
       if (!payment) {
+        console.log(`[Telegram] Payment not found for amount change ID: "${paymentId}"`);
         await answerCallbackQuery(callbackQuery.id, "To'lov topilmadi");
         return;
       }
@@ -567,8 +570,8 @@ export async function sendPaymentReceiptToAdmin(storage: IStorage, paymentId: st
   }
   const inlineKeyboard = {
     inline_keyboard: [
-      [{ text: 'Tasdiqlash', callback_data: `pay_approve_${paymentId}` }, { text: 'Rad etish', callback_data: `pay_reject_${paymentId}` }],
-      [{ text: "Summani o'zgartirish", callback_data: `pay_amount_${paymentId}` }]
+      [{ text: 'Tasdiqlash', callback_data: `pay_approve_${paymentId.trim()}` }, { text: 'Rad etish', callback_data: `pay_reject_${paymentId.trim()}` }],
+      [{ text: "Summani o'zgartirish", callback_data: `pay_amount_${paymentId.trim()}` }]
     ]
   };
   const adminIds = getAdminChatIds();

@@ -770,17 +770,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
-      const user = await storage.getUser(req.user!.id);
-      const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`;
+    const user = await storage.getUser(req.user!.id);
+    const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`.trim();
 
-      await sendPaymentReceiptToAdmin(
-        storage,
-        payment.id,
-        fullReceiptUrl,
-        user,
-        creditsNum,
-        priceNum
-      );
+    await sendPaymentReceiptToAdmin(
+      storage,
+      payment.id.trim(),
+      fullReceiptUrl,
+      user,
+      creditsNum,
+      priceNum
+    );
 
       res.json({ success: true, message: "Chek yuborildi" });
     } catch (error: any) {
@@ -820,11 +820,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
 
       const user = await storage.getUser(req.user!.id);
-      const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`;
+      const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`.trim();
 
       await sendPaymentReceiptToAdmin(
         storage,
-        paymentId,
+        paymentId.trim(),
         fullReceiptUrl,
         user,
         payment.credits,
