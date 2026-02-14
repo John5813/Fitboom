@@ -4,6 +4,20 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { setTelegramWebhook } from "./telegram";
 
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message, err.stack);
+  setTimeout(() => process.exit(1), 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('SIGTERM', () => {
+  console.log('[SERVER] SIGTERM received, shutting down...');
+  process.exit(0);
+});
+
 const app = express();
 
 app.use(express.json());
@@ -47,24 +61,16 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
+    console.error('[EXPRESS ERROR]', err.message, err.stack);
     res.status(status).json({ message });
-    throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
@@ -73,8 +79,6 @@ app.use((req, res, next) => {
   }, async () => {
     log(`serving on port ${port}`);
     
-    // Webhook URL should work in both dev and production
-    // Replit app domain format: fitboom--replituchun012.replit.app
     const publicDomain = "fitboom--replituchun012.replit.app";
     const domain = process.env.PUBLIC_DOMAIN || 
                    (process.env.REPLIT_SLUG && process.env.REPLIT_OWNER ? `${process.env.REPLIT_SLUG}.${process.env.REPLIT_OWNER}.replit.app` : publicDomain) ||
