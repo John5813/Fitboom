@@ -450,6 +450,12 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           ? contact.phone_number 
           : `+${contact.phone_number}`;
 
+        // Save chatId when user shares contact
+        const existingUser = await storage.getUserByPhone(phoneNumber);
+        if (existingUser) {
+          await storage.updateUser(existingUser.id, { chatId: chatId });
+        }
+
         const lastCodeTime = userLastCodeTime.get(telegramUserId);
         if (lastCodeTime && Date.now() - lastCodeTime < CODE_REQUEST_COOLDOWN_MS) {
           const remainingSeconds = Math.ceil((CODE_REQUEST_COOLDOWN_MS - (Date.now() - lastCodeTime)) / 1000);
