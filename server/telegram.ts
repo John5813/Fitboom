@@ -181,10 +181,21 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
   app.post('/api/telegram/webhook', async (req, res) => {
     try {
       const update: TelegramUpdate = req.body;
+      console.log('[Telegram] Webhook received update:', JSON.stringify(update).slice(0, 300));
 
       if (update.callback_query) {
-        console.log('[Telegram] Callback query received:', update.callback_query.data);
-        await handleCallbackQuery(update.callback_query, storage);
+        console.log('[Telegram] Callback query received:', update.callback_query.data, 'from chat:', update.callback_query.message?.chat.id);
+        try {
+          await handleCallbackQuery(update.callback_query, storage);
+          console.log('[Telegram] Callback query processed successfully:', update.callback_query.data);
+        } catch (callbackError) {
+          console.error('[Telegram] Error processing callback query:', callbackError);
+          try {
+            await answerCallbackQuery(update.callback_query.id, 'Xatolik yuz berdi');
+          } catch (answerError) {
+            console.error('[Telegram] Error answering callback query:', answerError);
+          }
+        }
         return res.sendStatus(200);
       }
       
