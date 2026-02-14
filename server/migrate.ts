@@ -24,11 +24,11 @@ async function runMigrations() {
       console.log("Skipping migrations in development or per SKIP_MIGRATIONS flag.");
     }
     process.exit(0);
-  } catch (error) {
-    console.error("Migration failed:", error);
+  } catch (err: any) {
+    console.error("Migration failed:", err);
     // In many Replit environments, the tables already exist. 
     // If it's a "relation already exists" error, we can potentially ignore it
-    if (error.message && error.message.includes("already exists")) {
+    if (err.message && err.message.includes("already exists")) {
       console.log("Relation already exists, treating as success.");
       process.exit(0);
     }
