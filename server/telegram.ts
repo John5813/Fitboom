@@ -377,31 +377,34 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
 
           await sendTelegramMessage(chatId, `<b>Kutilayotgan to'lovlar: ${pendingPayments.length} ta</b>`);
           
-          let chunk = '';
           for (const payment of pendingPayments) {
             const user = await storage.getUser(payment.userId);
             const statusText = payment.status === 'partial' ? 'Qisman' : 'Kutilmoqda';
             const remaining = payment.remainingAmount > 0 ? payment.remainingAmount : payment.price;
             
-            let entry = `<b>${user?.name || 'Noma\'lum'}</b>\n`;
-            entry += `Tel: ${user?.phone || '-'}\n`;
-            entry += `Paket: ${payment.credits} kalit\n`;
-            entry += `Narx: ${payment.price.toLocaleString()} so'm\n`;
+            let text = `<b>${user?.name || 'Noma\'lum'}</b>\n`;
+            text += `Tel: ${user?.phone || '-'}\n`;
+            text += `Paket: ${payment.credits} kalit\n`;
+            text += `Narx: ${payment.price.toLocaleString()} so'm\n`;
             if (payment.status === 'partial') {
-              entry += `Qoldiq: ${remaining.toLocaleString()} so'm\n`;
+              text += `Qoldiq: ${remaining.toLocaleString()} so'm\n`;
             }
-            entry += `Holat: ${statusText}\n`;
-            entry += `Sana: ${new Date(payment.createdAt).toLocaleDateString('uz-UZ')}\n`;
-            entry += `─────────────\n`;
+            text += `Holat: ${statusText}\n`;
+            text += `Sana: ${new Date(payment.createdAt).toLocaleDateString('uz-UZ')}`;
 
-            if ((chunk + entry).length > 3500) {
-              await sendTelegramMessage(chatId, chunk);
-              chunk = '';
-            }
-            chunk += entry;
-          }
-          if (chunk) {
-            await sendTelegramMessage(chatId, chunk);
+            const buttons = {
+              inline_keyboard: [
+                [
+                  { text: 'Tasdiqlash', callback_data: `pay_approve_${payment.id}` },
+                  { text: 'Rad etish', callback_data: `pay_reject_${payment.id}` },
+                ],
+                [
+                  { text: 'Summani o\'zgartirish', callback_data: `pay_amount_${payment.id}` },
+                ],
+              ],
+            };
+
+            await sendTelegramMessage(chatId, text, buttons);
           }
         } catch (err) {
           console.error(`[Admin] Error fetching pending payments:`, err);
