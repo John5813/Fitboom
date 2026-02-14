@@ -10,7 +10,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
-import { setupTelegramWebhook, sendPaymentReceiptToAdmin } from "./telegram";
+import { setupTelegramBot, sendPaymentReceiptToAdmin } from "./telegram";
 
 export function registerHealthCheck(app: Express) {
   app.get('/api/health', (_req, res) => {
@@ -1572,7 +1572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  setupTelegramWebhook(app, storage);
+  setupTelegramBot(app, storage);
 
   // DANGER: Delete all users (admin only) - ENDPOINT DISABLED FOR SAFETY
   // app.delete("/api/admin/users/delete-all", requireAdmin, async (req, res) => {

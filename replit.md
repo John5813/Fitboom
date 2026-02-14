@@ -38,6 +38,7 @@ Development uses Vite, and production builds static assets served by Express.
 - **Data Fetching**: React Query for caching, refetching, and optimistic updates.
 - **Error Handling**: Global error boundaries, React Query error states, toast notifications, HTTP status codes.
 - **Security**: Bcrypt password hashing, secure session management, Zod for input validation, role-based authorization, Telegram authentication security features (rate limiting, code expiry, attempt throttling).
+- **Telegram Bot**: Completely rewritten (Feb 2026). Bot token stored in secrets (not hardcoded). Login codes stored in PostgreSQL `login_codes` table (persistent across restarts). Webhook URL auto-detected from REPLIT_DOMAINS/REPLIT_DEV_DOMAIN environment variables. Exported functions: `setupTelegramBot`, `setupTelegramWebhook`, `notifyProfileCompleted`, `sendPaymentReceiptToAdmin`.
 
 ## External Dependencies
 

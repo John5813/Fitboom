@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, registerHealthCheck } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
-import { setupTelegramWebhook } from "./telegram";
+import { setupTelegramWebhook } from './telegram';
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message, err.stack);
@@ -79,17 +79,6 @@ app.use((req, res, next) => {
   }, async () => {
     log(`serving on port ${port}`);
     
-    const PRODUCTION_DOMAIN = "fitboom--replituchun012.replit.app";
-    const isProduction = process.env.NODE_ENV === 'production';
-    const domain = isProduction 
-      ? PRODUCTION_DOMAIN 
-      : (process.env.REPLIT_DEV_DOMAIN || PRODUCTION_DOMAIN);
-    console.log(`[Webhook] Environment: ${process.env.NODE_ENV}, Using domain: ${domain}`);
-    
-    if (domain) {
-      const webhookUrl = domain.startsWith('http') ? `${domain}/api/telegram/webhook` : `https://${domain}/api/telegram/webhook`;
-      log(`Setting Telegram webhook to: ${webhookUrl}`);
-      await setupTelegramWebhook(webhookUrl);
-    }
+    await setupTelegramWebhook();
   });
 })();

@@ -171,7 +171,19 @@ export const creditPayments = pgTable("credit_payments", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const loginCodes = pgTable("login_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(),
+  telegramId: text("telegram_id").notNull(),
+  chatId: text("chat_id").notNull(),
+  phone: text("phone").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertCreditPaymentSchema = createInsertSchema(creditPayments).omit({ id: true, createdAt: true });
+export const insertLoginCodeSchema = createInsertSchema(loginCodes).omit({ id: true, createdAt: true });
 export const insertGymVisitSchema = createInsertSchema(gymVisits).omit({ id: true, visitDate: true });
 export const insertGymPaymentSchema = createInsertSchema(gymPayments).omit({ id: true, paymentDate: true });
 
@@ -199,3 +211,5 @@ export type InsertGymPayment = z.infer<typeof insertGymPaymentSchema>;
 export type GymPayment = typeof gymPayments.$inferSelect;
 export type InsertCreditPayment = z.infer<typeof insertCreditPaymentSchema>;
 export type CreditPayment = typeof creditPayments.$inferSelect;
+export type InsertLoginCode = z.infer<typeof insertLoginCodeSchema>;
+export type LoginCode = typeof loginCodes.$inferSelect;

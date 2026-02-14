@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -67,6 +67,12 @@ export interface IStorage {
   getActiveCreditPayment(userId: string): Promise<CreditPayment | undefined>;
   getAllPendingCreditPayments(): Promise<CreditPayment[]>;
   getUsersWithChatId(): Promise<User[]>;
+  createLoginCode(data: InsertLoginCode): Promise<LoginCode>;
+  getLoginCodeByCode(code: string): Promise<LoginCode | undefined>;
+  deleteLoginCode(code: string): Promise<void>;
+  deleteExpiredLoginCodes(): Promise<void>;
+  getLastLoginCodeTime(telegramId: string): Promise<Date | null>;
+  incrementLoginCodeAttempts(code: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -521,6 +527,41 @@ export class DatabaseStorage implements IStorage {
   async getUsersWithChatId(): Promise<User[]> {
     return await db.select().from(users)
       .where(sql`chat_id IS NOT NULL`);
+  }
+
+  async createLoginCode(data: InsertLoginCode): Promise<LoginCode> {
+    const [created] = await db.insert(loginCodes).values(data).returning();
+    return created;
+  }
+
+  async getLoginCodeByCode(code: string): Promise<LoginCode | undefined> {
+    const [found] = await db.select().from(loginCodes).where(eq(loginCodes.code, code));
+    return found || undefined;
+  }
+
+  async deleteLoginCode(code: string): Promise<void> {
+    await db.delete(loginCodes).where(eq(loginCodes.code, code));
+  }
+
+  async deleteExpiredLoginCodes(): Promise<void> {
+    await db.delete(loginCodes).where(sql`expires_at < NOW()`);
+  }
+
+  async incrementLoginCodeAttempts(code: string): Promise<number> {
+    const [updated] = await db.update(loginCodes)
+      .set({ attempts: sql`attempts + 1` })
+      .where(eq(loginCodes.code, code))
+      .returning();
+    return updated ? updated.attempts : 0;
+  }
+
+  async getLastLoginCodeTime(telegramId: string): Promise<Date | null> {
+    const [result] = await db.select({ createdAt: loginCodes.createdAt })
+      .from(loginCodes)
+      .where(eq(loginCodes.telegramId, telegramId))
+      .orderBy(sql`created_at DESC`)
+      .limit(1);
+    return result ? result.createdAt : null;
   }
 }
 
