@@ -211,8 +211,8 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
     if (data.startsWith('pay_approve_')) {
       const paymentId = data.replace('pay_approve_', '');
       const payment = await storage.getCreditPayment(paymentId);
-      if (payment && payment.status === 'pending') {
-        await storage.updateCreditPayment(paymentId, { status: 'approved' });
+      if (payment && (payment.status === 'pending' || payment.status === 'partial')) {
+        await storage.updateCreditPayment(paymentId, { status: 'approved', remainingAmount: 0 });
         const user = await storage.getUser(payment.userId);
         if (user) {
           await storage.updateUserCredits(user.id, user.credits + payment.credits);
@@ -290,11 +290,20 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
         });
         pendingAmountChanges.delete(pendingKey);
         await sendMessage(chatId, `Muvaffaqiyatli o'zgartirildi!\n\nYangi kiritilgan: ${newAmount.toLocaleString()} so'm\nQoldiq: ${remainingAmount.toLocaleString()} so'm`);
+        const user = await storage.getUser(payment.userId);
         if (remainingAmount === 0) {
-          const user = await storage.getUser(payment.userId);
           if (user) {
             await storage.updateUserCredits(user.id, user.credits + payment.credits);
-            if (user.chatId) await sendMessage(user.chatId, `To'lovingiz tasdiqlandi! Balansingiz: ${user.credits + payment.credits} ta kalit.`);
+            if (user.chatId) await sendMessage(user.chatId, `<b>To'lovingiz tasdiqlandi!</b>\n\nBalansingiz: ${user.credits + payment.credits} ta kalit.`);
+          }
+        } else {
+          if (user && user.chatId) {
+            await sendMessage(user.chatId,
+              `<b>To'lovingiz qisman qabul qilindi.</b>\n\n` +
+              `Siz ${newAmount.toLocaleString()} so'm to'ladingiz.\n` +
+              `Qoldiq summa: <b>${remainingAmount.toLocaleString()} so'm</b>\n\n` +
+              `Iltimos, qoldiq summani to'lab, chekni ilovadan yuboring.`
+            );
           }
         }
       }
@@ -427,8 +436,16 @@ export async function notifyProfileCompleted(user: any) {
   }
 }
 
-export async function sendPaymentReceiptToAdmin(storage: IStorage, paymentId: string, receiptUrl: string, user: any, credits: number, price: number) {
-  const caption = `<b>Yangi to'lov!</b>\n\nMijoz: ${user.name}\nTel: ${user.phone}\nPaket: ${credits} kalit\nSumma: ${price.toLocaleString()} so'm`;
+export async function sendPaymentReceiptToAdmin(storage: IStorage, paymentId: string, receiptUrl: string, user: any, credits: number, price: number, isRemainingPayment: boolean = false) {
+  const payment = await storage.getCreditPayment(paymentId);
+  const remainingAmount = payment?.remainingAmount || 0;
+  
+  let caption: string;
+  if (isRemainingPayment) {
+    caption = `<b>Qoldiq to'lov cheki!</b>\n\nMijoz: ${user.name}\nTel: ${user.phone}\nPaket: ${credits} kalit\nQoldiq summa: ${remainingAmount.toLocaleString()} so'm`;
+  } else {
+    caption = `<b>Yangi to'lov!</b>\n\nMijoz: ${user.name}\nTel: ${user.phone}\nPaket: ${credits} kalit\nSumma: ${price.toLocaleString()} so'm`;
+  }
   const inlineKeyboard = {
     inline_keyboard: [
       [{ text: 'Tasdiqlash', callback_data: `pay_approve_${paymentId}` }, { text: 'Rad etish', callback_data: `pay_reject_${paymentId}` }],

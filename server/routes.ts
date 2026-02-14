@@ -765,7 +765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credits: creditsNum,
         price: priceNum,
         status: 'pending',
-        remainingAmount: 0,
+        remainingAmount: priceNum,
       });
 
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
@@ -828,7 +828,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fullReceiptUrl,
         user,
         payment.credits,
-        payment.remainingAmount
+        payment.remainingAmount,
+        true
       );
 
       res.json({ success: true, message: "Qoldiq chek yuborildi" });
