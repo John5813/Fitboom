@@ -190,7 +190,14 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   }
 }
 
-const ADMIN_PANEL_CHAT_ID = 5304482470;
+function getAdminChatIds(): string[] {
+  const adminIds = process.env.ADMIN_IDS || '';
+  return adminIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
+}
+
+function isAdmin(chatId: string): boolean {
+  return getAdminChatIds().includes(chatId);
+}
 
 export function setupTelegramBot(app: Express, storage: IStorage) {
   app.post('/api/telegram/webhook', async (req, res) => {
@@ -255,7 +262,7 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
       const chatId = message.chat.id.toString();
       const telegramUserId = message.from.id.toString();
 
-      if (adminBroadcastMode.has(chatId) && chatId === ADMIN_PANEL_CHAT_ID.toString()) {
+      if (adminBroadcastMode.has(chatId) && isAdmin(chatId)) {
         if (message.text === '/admin') {
           adminBroadcastMode.delete(chatId);
         } else {
@@ -263,17 +270,17 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
           const usersWithChat = await storage.getUsersWithChatId();
           let sent = 0;
           let failed = 0;
-          await sendTelegramMessage(chatId, `Reklama yuborilmoqda... (${usersWithChat.length} ta foydalanuvchi)`);
-          for (const user of usersWithChat) {
-            if (user.chatId && user.chatId !== ADMIN_PANEL_CHAT_ID.toString()) {
-              try {
-                const result = await copyMessage(user.chatId, chatId, message.message_id);
-                if (result?.ok) sent++; else failed++;
-              } catch { failed++; }
-              await new Promise(r => setTimeout(r, 50));
-            }
+          const adminChatIds = getAdminChatIds();
+          const recipients = usersWithChat.filter(u => u.chatId && !adminChatIds.includes(u.chatId));
+          await sendTelegramMessage(chatId, `Reklama yuborilmoqda... (${recipients.length} ta foydalanuvchi)`);
+          for (const user of recipients) {
+            try {
+              const result = await copyMessage(user.chatId!, chatId, message.message_id);
+              if (result?.ok) sent++; else failed++;
+            } catch { failed++; }
+            await new Promise(r => setTimeout(r, 50));
           }
-          await sendTelegramMessage(chatId, `Reklama yuborildi!\n\nYuborildi: ${sent}\nXatolik: ${failed}\nJami: ${usersWithChat.length}`);
+          await sendTelegramMessage(chatId, `Reklama yuborildi!\n\nYuborildi: ${sent}\nXatolik: ${failed}\nJami: ${recipients.length}`);
         }
         return res.sendStatus(200);
       }
@@ -307,16 +314,19 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
         return res.sendStatus(200);
       }
 
-      if (message.text === '/admin' && chatId === ADMIN_PANEL_CHAT_ID.toString()) {
+      if (message.text === '/admin' && isAdmin(chatId)) {
         const adminKeyboard = {
-          keyboard: [[{ text: 'Kutilayotgan to\'lovlar' }, { text: 'Reklama yuborish' }]],
+          keyboard: [
+            [{ text: 'Kutilayotgan to\'lovlar' }],
+            [{ text: 'Reklama yuborish' }],
+          ],
           resize_keyboard: true,
         };
         await sendTelegramMessage(chatId, '<b>Admin panel</b>\n\nQuyidagi tugmalardan birini tanlang:', adminKeyboard);
         return res.sendStatus(200);
       }
 
-      if (chatId === ADMIN_PANEL_CHAT_ID.toString() && message.text === 'Kutilayotgan to\'lovlar') {
+      if (isAdmin(chatId) && message.text === 'Kutilayotgan to\'lovlar') {
         const pendingPayments = await storage.getAllPendingCreditPayments();
         if (pendingPayments.length === 0) {
           await sendTelegramMessage(chatId, 'Kutilayotgan to\'lovlar yo\'q.');
@@ -334,13 +344,17 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
         return res.sendStatus(200);
       }
 
-      if (chatId === ADMIN_PANEL_CHAT_ID.toString() && message.text === 'Reklama yuborish') {
+      if (isAdmin(chatId) && message.text === 'Reklama yuborish') {
         adminBroadcastMode.set(chatId, true);
         await sendTelegramMessage(chatId, '<b>Reklama rejimi yoqildi!</b>\n\nKontent yuboring. Bekor qilish uchun /admin yuboring.');
         return res.sendStatus(200);
       }
 
       if (message.text?.startsWith('/start')) {
+        const existingUser = await storage.getUserByTelegramId(telegramUserId);
+        if (existingUser && (!existingUser.chatId || existingUser.chatId !== chatId)) {
+          await storage.updateUser(existingUser.id, { chatId });
+        }
         const keyboard = { keyboard: [[{ text: 'Telefon raqamni ulashish', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true };
         await sendTelegramMessage(chatId, '<b>FitBoom ga xush kelibsiz!</b>\n\nTelefon raqamingizni ulashing:', keyboard);
       } else if (message.contact) {
@@ -376,7 +390,7 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
       const user = await storage.getUserByTelegramId(loginData.telegramId);
       if (!user) return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
       loginCodes.delete(code.toUpperCase());
-      req.login(user, (err) => {
+      req.login(user as any, (err) => {
         if (err) return res.status(500).json({ message: 'Tizimga kirishda xatolik' });
         res.json(user);
       });
@@ -403,5 +417,8 @@ export async function setupTelegramWebhook(webhookUrl: string) {
 export async function sendPaymentReceiptToAdmin(storage: IStorage, paymentId: string, receiptUrl: string, user: any, credits: number, price: number) {
   const caption = `<b>Yangi to'lov!</b>\n\nMijoz: ${user.name}\nTel: ${user.phone}\nPaket: ${credits} kalit\nSumma: ${price.toLocaleString()} so'm`;
   const inlineKeyboard = { inline_keyboard: [[{ text: 'Tasdiqlash', callback_data: `pay_approve_${paymentId}` }, { text: 'Rad etish', callback_data: `pay_reject_${paymentId}` }], [{ text: 'Summani o\'zgartirish', callback_data: `pay_amount_${paymentId}` }]] };
-  return await sendTelegramPhoto(ADMIN_PANEL_CHAT_ID, receiptUrl, caption, inlineKeyboard);
+  const adminIds = getAdminChatIds();
+  for (const adminId of adminIds) {
+    await sendTelegramPhoto(adminId, receiptUrl, caption, inlineKeyboard);
+  }
 }

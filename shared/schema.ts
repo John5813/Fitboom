@@ -139,7 +139,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 }).extend({
   phone: z.string().regex(/^\+998\d{9}$/, "Telefon raqami +998XXXXXXXXX formatida bo'lishi kerak").optional(),
   telegramId: z.string().optional(),
-  chatId: z.number().optional(), // Added chatId here
+  chatId: z.string().optional(),
   name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak").optional(),
   age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak").optional(),
   gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }).optional(),
