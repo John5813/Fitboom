@@ -10,7 +10,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
     <div className="min-h-screen overflow-y-auto">
       {/* Hero Section */}
       <div className="relative min-h-screen flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-600 via-orange-700 to-gray-900" />
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-400 via-sky-600 to-gray-900" />
 
         <div className="relative z-10 text-center px-6 max-w-2xl">
           <h1 className="font-display font-bold text-4xl md:text-5xl text-white mb-4">
