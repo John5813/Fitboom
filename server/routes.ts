@@ -12,6 +12,15 @@ import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramWebhook, sendPaymentReceiptToAdmin } from "./telegram";
 
+export function registerHealthCheck(app: Express) {
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+  app.post('/api/health', (_req, res) => {
+    res.json({ status: 'ok', method: 'POST', timestamp: new Date().toISOString() });
+  });
+}
+
 function getTashkentNow(): Date {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
