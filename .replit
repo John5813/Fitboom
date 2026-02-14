@@ -9,6 +9,7 @@ channel = "stable-25_05"
 deploymentTarget = "gce"
 build = ["npm", "run", "build"]
 run = ["bash", "-c", "NODE_ENV=production node dist/index.js"]
+publicDir = "dist/public"
 
 [[ports]]
 localPort = 5000
