@@ -65,6 +65,8 @@ export interface IStorage {
   updateCreditPayment(id: string, updateData: Partial<InsertCreditPayment>): Promise<CreditPayment | undefined>;
   getPendingCreditPayments(userId: string): Promise<CreditPayment[]>;
   getActiveCreditPayment(userId: string): Promise<CreditPayment | undefined>;
+  getAllPendingCreditPayments(): Promise<CreditPayment[]>;
+  getUsersWithChatId(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -508,6 +510,17 @@ export class DatabaseStorage implements IStorage {
       ));
     const partial = results.find(p => p.status === 'partial');
     return partial || undefined;
+  }
+
+  async getAllPendingCreditPayments(): Promise<CreditPayment[]> {
+    return await db.select().from(creditPayments)
+      .where(sql`status IN ('pending', 'partial')`)
+      .orderBy(creditPayments.createdAt);
+  }
+
+  async getUsersWithChatId(): Promise<User[]> {
+    return await db.select().from(users)
+      .where(sql`chat_id IS NOT NULL`);
   }
 }
 

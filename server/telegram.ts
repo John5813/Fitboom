@@ -61,6 +61,13 @@ interface TelegramMessage {
   };
   text?: string;
   contact?: TelegramContact;
+  photo?: any[];
+  video?: any;
+  document?: any;
+  animation?: any;
+  audio?: any;
+  voice?: any;
+  caption?: string;
 }
 
 interface TelegramCallbackQuery {
@@ -77,6 +84,9 @@ interface TelegramUpdate {
 }
 
 const pendingAmountChanges = new Map<string, string>();
+const adminBroadcastMode = new Map<number, boolean>();
+
+const APP_URL = "https://fitboom--replituchun012.replit.app";
 
 async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -155,6 +165,26 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   }
 }
 
+async function copyMessage(fromChatId: number, messageId: number, toChatId: number) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/copyMessage`;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: toChatId,
+        from_chat_id: fromChatId,
+        message_id: messageId,
+      }),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error copying message to ${toChatId}:`, error);
+    return null;
+  }
+}
+
 async function editMessageReplyMarkup(chatId: number, messageId: number, replyMarkup?: any) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`;
   try {
@@ -206,6 +236,44 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       const message = update.message;
       const chatId = message.chat.id;
       const telegramUserId = message.from.id.toString();
+
+      if (adminBroadcastMode.has(chatId) && chatId === ADMIN_PANEL_CHAT_ID) {
+        if (message.text?.startsWith('/')) {
+          adminBroadcastMode.delete(chatId);
+        } else {
+        adminBroadcastMode.delete(chatId);
+        
+        const usersWithChat = await storage.getUsersWithChatId();
+        let sent = 0;
+        let failed = 0;
+        
+        await sendTelegramMessage(chatId, `Reklama yuborilmoqda... (${usersWithChat.length} ta foydalanuvchi)`);
+        
+        for (const user of usersWithChat) {
+          if (user.chatId && user.chatId !== ADMIN_PANEL_CHAT_ID) {
+            try {
+              const result = await copyMessage(chatId, message.message_id, user.chatId);
+              if (result?.ok) {
+                sent++;
+              } else {
+                failed++;
+              }
+            } catch {
+              failed++;
+            }
+            await new Promise(r => setTimeout(r, 50));
+          }
+        }
+        
+        await sendTelegramMessage(chatId, 
+          `Reklama yuborildi!\n\n` +
+          `Yuborildi: ${sent}\n` +
+          `Xatolik: ${failed}\n` +
+          `Jami: ${usersWithChat.length}`
+        );
+        }
+        return res.sendStatus(200);
+      }
 
       const pendingKey = `amount_${chatId}`;
       if (pendingAmountChanges.has(pendingKey) && message.text) {
@@ -284,21 +352,35 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
       }
 
       if (message.text?.startsWith('/start')) {
-        const keyboard = {
-          keyboard: [
-            [{ text: '📱 Telefon raqamni ulashish', request_contact: true }]
-          ],
-          resize_keyboard: true,
-          one_time_keyboard: true,
-        };
+        if (chatId === ADMIN_PANEL_CHAT_ID) {
+          const adminKeyboard = {
+            inline_keyboard: [
+              [{ text: 'Kutilayotgan to\'lovlar', callback_data: 'admin_pending' }],
+              [{ text: 'Reklama yuborish', callback_data: 'admin_broadcast' }],
+            ],
+          };
+          await sendTelegramMessage(
+            chatId,
+            '<b>Admin panel</b>\n\nQuyidagi tugmalardan birini tanlang:',
+            adminKeyboard
+          );
+        } else {
+          const keyboard = {
+            keyboard: [
+              [{ text: 'Telefon raqamni ulashish', request_contact: true }]
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          };
 
-        await sendTelegramMessage(
-          chatId,
-          '🏋️ <b>FitBoom ga xush kelibsiz!</b>\n\n' +
-          'Ro\'yxatdan o\'tish uchun telefon raqamingizni ulashing.\n\n' +
-          'Quyidagi tugmani bosing:',
-          keyboard
-        );
+          await sendTelegramMessage(
+            chatId,
+            '<b>FitBoom ga xush kelibsiz!</b>\n\n' +
+            'Ro\'yxatdan o\'tish uchun telefon raqamingizni ulashing.\n\n' +
+            'Quyidagi tugmani bosing:',
+            keyboard
+          );
+        }
       } else if (message.contact) {
         const contact = message.contact;
         const phoneNumber = contact.phone_number.startsWith('+') 
@@ -310,7 +392,7 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
           const remainingSeconds = Math.ceil((CODE_REQUEST_COOLDOWN_MS - (Date.now() - lastCodeTime)) / 1000);
           await sendTelegramMessage(
             chatId,
-            `⏳ Iltimos kuting!\n\nYangi kod olish uchun ${remainingSeconds} soniya kutishingiz kerak.`
+            `Iltimos kuting!\n\nYangi kod olish uchun ${remainingSeconds} soniya kutishingiz kerak.`
           );
           return res.sendStatus(200);
         }
@@ -322,6 +404,10 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
             telegramId: telegramUserId,
             phone: phoneNumber,
           });
+        }
+
+        if (!user.chatId || user.chatId !== chatId) {
+          await storage.updateUser(user.id, { chatId } as any);
         }
 
         const loginCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -337,17 +423,26 @@ export function setupTelegramWebhook(app: Express, storage: IStorage) {
         userLastCodeTime.set(telegramUserId, Date.now());
 
         const welcomeText = user.profileCompleted
-          ? '👋 <b>Xush kelibsiz!</b>\n\n'
-          : '✅ <b>Tabriklaymiz!</b>\n\n' + 'Siz muvaffaqiyatli ro\'yxatdan o\'tdingiz!\n\n';
+          ? '<b>Xush kelibsiz!</b>\n\n'
+          : '<b>Tabriklaymiz!</b>\n\n' + 'Siz muvaffaqiyatli ro\'yxatdan o\'tdingiz!\n\n';
+
+        const loginUrl = `${APP_URL}/telegram-login`;
+
+        const inlineKeyboard = {
+          inline_keyboard: [
+            [{ text: 'Ilovaga qaytish', url: loginUrl }],
+          ],
+        };
 
         await sendTelegramMessage(
           chatId,
           welcomeText +
           `Ilovaga qayting va bu kodni kiriting:\n\n<code>${loginCode}</code>\n\n` +
           '<b>Diqqat:</b>\n' +
-          '• Kod 5 daqiqa amal qiladi\n' +
-          '• Bu kodni hech kimga bermang!\n' +
-          '• Faqat 3 marta urinish huquqingiz bor'
+          '- Kod 5 daqiqa amal qiladi\n' +
+          '- Bu kodni hech kimga bermang!\n' +
+          '- Faqat 3 marta urinish huquqingiz bor',
+          inlineKeyboard
         );
 
         console.log(`[Telegram Auth] Code generated for user ${telegramUserId}: ${loginCode}`);
@@ -574,6 +669,69 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
 
     await answerCallbackQuery(callbackQuery.id, 'Yangi summani kiriting');
     console.log(`[Callback] Amount change initiated for payment ${paymentId}`);
+  }
+  else if (data === 'admin_pending') {
+    console.log(`[Callback] Admin requesting pending payments`);
+    
+    try {
+      const pendingPayments = await storage.getAllPendingCreditPayments();
+      
+      if (pendingPayments.length === 0) {
+        await sendTelegramMessage(chatId, 'Kutilayotgan to\'lovlar yo\'q.');
+        await answerCallbackQuery(callbackQuery.id, 'Kutilayotgan to\'lovlar yo\'q');
+        return;
+      }
+
+      await sendTelegramMessage(chatId, `<b>Kutilayotgan to'lovlar: ${pendingPayments.length} ta</b>`);
+      
+      let chunk = '';
+      for (const payment of pendingPayments) {
+        const user = await storage.getUser(payment.userId);
+        const statusText = payment.status === 'partial' ? 'Qisman' : 'Kutilmoqda';
+        const remaining = payment.remainingAmount > 0 ? payment.remainingAmount : payment.price;
+        
+        let entry = `<b>${user?.name || 'Noma\'lum'}</b>\n`;
+        entry += `Tel: ${user?.phone || '-'}\n`;
+        entry += `Paket: ${payment.credits} kalit\n`;
+        entry += `Narx: ${payment.price.toLocaleString()} so'm\n`;
+        if (payment.status === 'partial') {
+          entry += `Qoldiq: ${remaining.toLocaleString()} so'm\n`;
+        }
+        entry += `Holat: ${statusText}\n`;
+        entry += `Sana: ${new Date(payment.createdAt).toLocaleDateString('uz-UZ')}\n`;
+        entry += `─────────────\n`;
+
+        if ((chunk + entry).length > 3500) {
+          await sendTelegramMessage(chatId, chunk);
+          chunk = '';
+        }
+        chunk += entry;
+      }
+      if (chunk) {
+        await sendTelegramMessage(chatId, chunk);
+      }
+      await answerCallbackQuery(callbackQuery.id);
+    } catch (err) {
+      console.error(`[Callback] Error fetching pending payments:`, err);
+      await answerCallbackQuery(callbackQuery.id, 'Xatolik yuz berdi');
+    }
+  }
+  else if (data === 'admin_broadcast') {
+    console.log(`[Callback] Admin starting broadcast mode`);
+    adminBroadcastMode.set(chatId, true);
+    
+    await sendTelegramMessage(chatId, 
+      '<b>Reklama rejimi yoqildi!</b>\n\n' +
+      'Endi kerakli kontentni yuboring:\n' +
+      '- Matn\n' +
+      '- Rasm\n' +
+      '- Video\n' +
+      '- Fayl\n' +
+      '- Link\n\n' +
+      'Yuborgan xabaringiz barcha bot foydalanuvchilariga nusxalanadi.\n\n' +
+      '<i>Bekor qilish uchun /start bosing</i>'
+    );
+    await answerCallbackQuery(callbackQuery.id, 'Reklama rejimi yoqildi');
   }
   else {
     console.log(`[Callback] Unknown callback data: ${data}`);
