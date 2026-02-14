@@ -213,10 +213,6 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
   const messageId = callbackQuery.message?.message_id;
 
   try {
-    if (messageId) {
-      await removeInlineKeyboard(chatId, messageId);
-    }
-
     if (data.startsWith('pay_approve_')) {
       const paymentId = data.replace('pay_approve_', '');
       const payment = await storage.getCreditPayment(paymentId);
@@ -255,6 +251,14 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
   } catch (err) {
     console.error('[Telegram] Callback error:', err);
     await answerCallbackQuery(callbackQuery.id, 'Xatolik yuz berdi');
+  }
+
+  try {
+    if (messageId) {
+      await removeInlineKeyboard(chatId, messageId);
+    }
+  } catch (e) {
+    console.log('[Telegram] Could not remove inline keyboard:', e);
   }
 }
 
