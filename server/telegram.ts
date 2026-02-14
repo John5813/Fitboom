@@ -118,10 +118,6 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   return telegramApi('answerCallbackQuery', { callback_query_id: callbackQueryId, text });
 }
 
-async function removeInlineKeyboard(chatId: number | string, messageId: number) {
-  return telegramApi('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: JSON.stringify({ inline_keyboard: [] }) });
-}
-
 function getAdminChatIds(): string[] {
   const adminIds = process.env.ADMIN_IDS || '';
   return adminIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
@@ -210,7 +206,6 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
 async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage: IStorage) {
   const data = callbackQuery.data || '';
   const chatId = callbackQuery.message?.chat.id.toString() || '';
-  const messageId = callbackQuery.message?.message_id;
 
   try {
     if (data.startsWith('pay_approve_')) {
@@ -251,14 +246,6 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
   } catch (err) {
     console.error('[Telegram] Callback error:', err);
     await answerCallbackQuery(callbackQuery.id, 'Xatolik yuz berdi');
-  }
-
-  try {
-    if (messageId) {
-      await removeInlineKeyboard(chatId, messageId);
-    }
-  } catch (e) {
-    console.log('[Telegram] Could not remove inline keyboard:', e);
   }
 }
 
