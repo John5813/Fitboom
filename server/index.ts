@@ -73,9 +73,13 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     
     // Webhook URL should work in both dev and production
-    const domain = process.env.REPLIT_DEV_DOMAIN || process.env.PUBLIC_DOMAIN || process.env.REPLIT_SLUG + "." + process.env.REPLIT_OWNER + ".repl.co";
+    // Replit app domain format: fitboom--replituchun012.replit.app
+    const domain = process.env.PUBLIC_DOMAIN || 
+                   (process.env.REPLIT_SLUG && process.env.REPLIT_OWNER ? `${process.env.REPLIT_SLUG}.${process.env.REPLIT_OWNER}.replit.app` : null) ||
+                   process.env.REPLIT_DEV_DOMAIN;
+    
     if (domain) {
-      const webhookUrl = `https://${domain}/api/telegram/webhook`;
+      const webhookUrl = domain.startsWith('http') ? `${domain}/api/telegram/webhook` : `https://${domain}/api/telegram/webhook`;
       log(`Setting Telegram webhook to: ${webhookUrl}`);
       await setTelegramWebhook(webhookUrl);
     }

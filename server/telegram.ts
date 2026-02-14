@@ -1,8 +1,8 @@
 import type { Express } from 'express';
 import type { IStorage } from './storage';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME;
+const TELEGRAM_BOT_TOKEN = "8525615025:AAGVyfcMWf65ocmimVYl5LbXKXadCyT6X5M";
+const TELEGRAM_BOT_USERNAME = "Fitboom_bot"; // Taxminiy username, foydalanuvchi keyinroq to'g'irlashi mumkin
 
 interface LoginCodeData {
   telegramId: string;
