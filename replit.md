@@ -57,5 +57,9 @@ Development uses Vite, and production builds static assets served by Express.
 - **Type Safety**: TypeScript, Zod (runtime validation), Drizzle-Zod.
 - **Development Utilities**: `tsx`, Replit-specific plugins.
 
-### Image Assets
-- Static assets (hero images, gym photos, thumbnails) are stored in `/attached_assets/generated_images/`.
+### Image & File Storage
+- **Replit Object Storage** (Google Cloud Storage) is used for persistent file storage. All uploaded images (gym photos, receipts) are stored in the cloud bucket and survive deployments/restarts.
+- Upload endpoints (`/api/upload-images`, `/api/upload-image`) use multer memory storage and save to Object Storage under `images/` prefix.
+- Receipt uploads save to Object Storage under `receipts/` prefix.
+- Serving endpoints (`/api/images/:filename`, `/api/receipts/:filename`) read from Object Storage with fallback to local `uploads/` directory for backwards compatibility.
+- Static assets (hero images, thumbnails) are in `/attached_assets/generated_images/`.
