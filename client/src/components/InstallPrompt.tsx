@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Download } from "lucide-react";
+import { X, Download, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -10,8 +10,11 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const promptRef = useRef<BeforeInstallPromptEvent | null>(null);
+
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   useEffect(() => {
     const isStandalone =
@@ -67,32 +70,104 @@ export default function InstallPrompt() {
 
   const handleInstall = async () => {
     if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === "accepted") {
-        localStorage.setItem("fitboom-app-installed", "true");
-        setShowBanner(false);
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === "accepted") {
+          localStorage.setItem("fitboom-app-installed", "true");
+          setShowBanner(false);
+        }
+      } catch (e) {
+        console.log("Install prompt error:", e);
       }
       setDeferredPrompt(null);
+    } else if (isIOS) {
+      setShowIOSGuide(true);
     } else {
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isIOS) {
-        alert(
-          'Ilovani o\'rnatish uchun:\n\n1. Safari brauzerida oching\n2. Pastdagi "Ulashish" tugmasini bosing\n3. "Bosh ekranga qo\'shish" ni tanlang'
-        );
-      } else {
-        alert(
-          'Ilovani o\'rnatish uchun:\n\n1. Chrome brauzerida oching\n2. Menyuni oching (3 nuqta)\n3. "Ilovani o\'rnatish" ni tanlang'
-        );
-      }
+      setShowIOSGuide(true);
     }
   };
 
   const handleDismiss = () => {
     setDismissed(true);
     setShowBanner(false);
+    setShowIOSGuide(false);
     localStorage.setItem("fitboom-install-dismissed", Date.now().toString());
   };
+
+  if (showIOSGuide) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+        onClick={handleDismiss}
+        data-testid="ios-install-guide"
+      >
+        <div
+          className="bg-card border-t rounded-t-lg p-5 w-full max-w-md animate-in slide-in-from-bottom-5 duration-300"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-base">Ilovani o'rnatish</h3>
+            <Button size="icon" variant="ghost" onClick={handleDismiss} data-testid="button-close-ios-guide">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {isIOS ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">1</div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Safari brauzerida oching</p>
+                  <p className="text-xs text-muted-foreground">Bu sahifani Safari da oching</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">2</div>
+                <div className="flex-1 flex items-center gap-2">
+                  <div>
+                    <p className="text-sm font-medium">Ulashish tugmasini bosing</p>
+                    <p className="text-xs text-muted-foreground">Pastdagi <Share className="w-3 h-3 inline" /> belgisini bosing</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">3</div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">"Bosh ekranga qo'shish" ni tanlang</p>
+                  <p className="text-xs text-muted-foreground">Pastga suring va "Add to Home Screen" bosing</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">1</div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Chrome brauzerida oching</p>
+                  <p className="text-xs text-muted-foreground">Bu sahifani Chrome da oching</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">2</div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Menyuni oching</p>
+                  <p className="text-xs text-muted-foreground">Yuqori o'ngdagi 3 nuqtani bosing</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">3</div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">"Ilovani o'rnatish" ni tanlang</p>
+                  <p className="text-xs text-muted-foreground">"Install app" yoki "Add to Home screen" bosing</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (!showBanner || dismissed) return null;
 

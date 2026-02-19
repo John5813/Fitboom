@@ -306,12 +306,23 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
       await storage.updateCreditPayment(paymentId, { status: 'approved', remainingAmount: 0 });
       const user = await storage.getUser(payment.userId);
       if (user) {
-        await storage.updateUserCredits(user.id, user.credits + payment.credits);
+        const newCredits = user.credits + payment.credits;
+        const now = new Date();
+        let expiryDate: Date;
+        if (user.creditExpiryDate && new Date(user.creditExpiryDate) > now) {
+          expiryDate = new Date(user.creditExpiryDate);
+        } else {
+          expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
+        }
+        await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiryDate);
         if (user.chatId) {
+          const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           await sendMessage(user.chatId,
             `<b>To'lovingiz tasdiqlandi!</b>\n\n` +
             `Hisobingizga ${payment.credits} ta kalit qo'shildi.\n` +
-            `Hozirgi balansingiz: ${user.credits + payment.credits} ta kalit.`
+            `Hozirgi balansingiz: ${newCredits} ta kalit.\n` +
+            `Muddat: ${daysLeft} kun qoldi.`
           );
         }
       }
@@ -393,8 +404,18 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
         const user = await storage.getUser(payment.userId);
         if (remainingAmount === 0) {
           if (user) {
-            await storage.updateUserCredits(user.id, user.credits + payment.credits);
-            if (user.chatId) await sendMessage(user.chatId, `<b>To'lovingiz tasdiqlandi!</b>\n\nBalansingiz: ${user.credits + payment.credits} ta kalit.`);
+            const newCredits = user.credits + payment.credits;
+            const now = new Date();
+            let expiryDate: Date;
+            if (user.creditExpiryDate && new Date(user.creditExpiryDate) > now) {
+              expiryDate = new Date(user.creditExpiryDate);
+            } else {
+              expiryDate = new Date();
+              expiryDate.setDate(expiryDate.getDate() + 30);
+            }
+            await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiryDate);
+            const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            if (user.chatId) await sendMessage(user.chatId, `<b>To'lovingiz tasdiqlandi!</b>\n\nBalansingiz: ${newCredits} ta kalit.\nMuddat: ${daysLeft} kun qoldi.`);
           }
           if (origMsgId) {
             await updatePaymentMessage(chatId, origMsgId, payment, user, 'TASDIQLANDI (to\'liq to\'landi)', isPhoto);
