@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramBot, sendPaymentReceiptToAdmin } from "./telegram";
+import { objectStorageClient } from "./replit_integrations/object_storage";
 
 export function registerHealthCheck(app: Express) {
   app.get('/api/health', (_req, res) => {
@@ -56,6 +57,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   app.use('/uploads', express.static(uploadsDir));
 
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  function getOSBucket() {
+    if (!bucketId) throw new Error("Object Storage bucket not configured");
+    return objectStorageClient.bucket(bucketId);
+  }
+
   app.get('/api/tashkent-time', (req, res) => {
     const now = getTashkentNow();
     res.json({
@@ -66,23 +73,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Multer sozlamalari - disk saqlash
-  const multerStorage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-      cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-      cb(null, uniqueName);
-    }
-  });
-
   const upload = multer({
-    storage: multerStorage,
+    storage: multer.memoryStorage(),
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB
+      fileSize: 5 * 1024 * 1024,
     },
-    fileFilter: (req, file, cb) => {
+    fileFilter: (_req, file, cb) => {
       if (file.mimetype.startsWith('image/')) {
         cb(null, true);
       } else {
@@ -91,7 +87,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rasm yuklash endpoint
+  async function uploadToObjectStorage(file: Express.Multer.File): Promise<string> {
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+    const bucket = getOSBucket();
+    const blob = bucket.file(`images/${uniqueName}`);
+    await blob.save(file.buffer, {
+      contentType: file.mimetype,
+      metadata: { cacheControl: 'public, max-age=31536000' },
+    });
+    return `/api/images/${uniqueName}`;
+  }
+
   app.post("/api/upload-images", requireAuth, upload.array('images', 10), async (req, res) => {
     try {
       if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
@@ -99,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const files = req.files as Express.Multer.File[];
-      const imageUrls = files.map(file => `/api/images/${file.filename}`);
+      const imageUrls = await Promise.all(files.map(f => uploadToObjectStorage(f)));
 
       res.json({ imageUrls });
     } catch (error: any) {
@@ -108,16 +114,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Eski rasm yuklash endpointini saqlab qolamiz muvofiqlik uchun
   app.post("/api/upload-image", requireAuth, upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "Fayl topilmadi" });
       }
 
-      // URL yaratish
-      const imageUrl = `/api/images/${req.file.filename}`;
-
+      const imageUrl = await uploadToObjectStorage(req.file);
       res.json({ imageUrl });
     } catch (error: any) {
       console.error("Rasm yuklash xatosi:", error);
@@ -125,31 +128,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rasmni olish endpoint
   app.get("/api/images/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
-      const filePath = path.join(uploadsDir, filename);
+      const bucket = getOSBucket();
+      const blob = bucket.file(`images/${filename}`);
 
-      // Faylni tekshirish
-      try {
-        await fs.access(filePath);
-      } catch {
-        return res.status(404).json({ error: "Rasm topilmadi" });
+      const [exists] = await blob.exists();
+      if (!exists) {
+        const localPath = path.join(uploadsDir, filename);
+        try {
+          await fs.access(localPath);
+          let contentType = 'image/jpeg';
+          if (filename.endsWith('.png')) contentType = 'image/png';
+          else if (filename.endsWith('.gif')) contentType = 'image/gif';
+          else if (filename.endsWith('.webp')) contentType = 'image/webp';
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
+          return res.sendFile(localPath);
+        } catch {
+          return res.status(404).json({ error: "Rasm topilmadi" });
+        }
       }
 
-      // Content-Type ni aniqlash
-      let contentType = 'image/jpeg';
-      if (filename.endsWith('.png')) contentType = 'image/png';
-      else if (filename.endsWith('.gif')) contentType = 'image/gif';
-      else if (filename.endsWith('.webp')) contentType = 'image/webp';
-
-      res.setHeader('Content-Type', contentType);
+      const [metadata] = await blob.getMetadata();
+      res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=31536000');
-      res.sendFile(filePath);
+      blob.createReadStream().pipe(res);
     } catch (error: any) {
       console.error("Rasm yuklab olish xatosi:", error);
       res.status(404).json({ error: "Rasm topilmadi" });
+    }
+  });
+
+  app.get("/api/receipts/:filename", async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      const bucket = getOSBucket();
+      const blob = bucket.file(`receipts/${filename}`);
+
+      const [exists] = await blob.exists();
+      if (!exists) {
+        const localPath = path.join(uploadsDir, 'receipts', filename);
+        try {
+          await fs.access(localPath);
+          return res.sendFile(localPath);
+        } catch {
+          return res.status(404).json({ error: "Chek topilmadi" });
+        }
+      }
+
+      const [metadata] = await blob.getMetadata();
+      res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+      blob.createReadStream().pipe(res);
+    } catch (error: any) {
+      console.error("Chek yuklab olish xatosi:", error);
+      res.status(404).json({ error: "Chek topilmadi" });
     }
   });
 
@@ -730,17 +764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const receiptUpload = multer({
-    storage: multer.diskStorage({
-      destination: async (_req, _file, cb) => {
-        const uploadDir = path.join(process.cwd(), 'uploads', 'receipts');
-        await fs.mkdir(uploadDir, { recursive: true });
-        cb(null, uploadDir);
-      },
-      filename: (_req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-        cb(null, uniqueName);
-      },
-    }),
+    storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
   });
 
@@ -758,7 +782,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Chek rasmi yuborilmadi" });
       }
 
-      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const bucket = getOSBucket();
+      const blob = bucket.file(`receipts/${uniqueName}`);
+      await blob.save(req.file.buffer, {
+        contentType: req.file.mimetype,
+      });
+      const receiptUrl = `/api/receipts/${uniqueName}`;
 
       const payment = await storage.createCreditPayment({
         userId: req.user!.id,
@@ -816,7 +846,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Chek rasmi yuborilmadi" });
       }
 
-      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      const rUniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const rBucket = getOSBucket();
+      const rBlob = rBucket.file(`receipts/${rUniqueName}`);
+      await rBlob.save(req.file.buffer, { contentType: req.file.mimetype });
+      const receiptUrl = `/api/receipts/${rUniqueName}`;
       await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
 
       const user = await storage.getUser(req.user!.id);
