@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { IStorage } from './storage';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'Fitboom_bot';
+const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'uzfitboom_bot';
 
 const CODE_EXPIRY_MS = 5 * 60 * 1000;
 const CODE_REQUEST_COOLDOWN_MS = 60 * 1000;
@@ -61,7 +61,7 @@ function getAppUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {
     return `https://${process.env.REPLIT_DEV_DOMAIN}`;
   }
-  return 'https://fitboom--replituchun012.replit.app';
+  return 'https://fitboom.replit.app';
 }
 
 function getWebhookUrl(): string {
@@ -72,7 +72,7 @@ function getWebhookUrl(): string {
   if (process.env.REPLIT_DEV_DOMAIN) {
     return `https://${process.env.REPLIT_DEV_DOMAIN}/api/telegram/webhook`;
   }
-  return 'https://fitboom--replituchun012.replit.app/api/telegram/webhook';
+  return 'https://fitboom.replit.app/api/telegram/webhook';
 }
 
 async function telegramApi(method: string, body: Record<string, any>) {
