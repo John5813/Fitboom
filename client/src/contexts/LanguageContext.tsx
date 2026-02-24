@@ -104,7 +104,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     "nav.home": "Asosiy",
     "nav.gyms": "Zallar",
-    "nav.classes": "Darslar",
+    "nav.classes": "Video darslar",
     "nav.bookings": "Bronlar",
     "nav.scanner": "Skaner",
     
