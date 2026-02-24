@@ -543,6 +543,10 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
 }
 
 export async function setupTelegramWebhook() {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Telegram] Skipping webhook setup in development mode to avoid overriding production webhook');
+    return;
+  }
   const webhookUrl = getWebhookUrl();
   console.log(`[Telegram] Setting webhook to: ${webhookUrl}`);
   const result = await telegramApi('setWebhook', {
