@@ -858,25 +858,94 @@ export default function AdminGymsPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Kategoriyalar</p>
-                    <p className="font-semibold">{selectedGym.categories?.join(', ') || 'Yo\'q'}</p>
+                    <Label>Zal nomi</Label>
+                    <Input
+                      value={gymForm.name}
+                      onChange={(e) => setGymForm({...gymForm, name: e.target.value})}
+                      data-testid="input-edit-gym-name"
+                    />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Kredit</p>
-                    <Badge variant="secondary" className="font-semibold px-3 py-1">
-                      {selectedGym.credits} kredit
-                    </Badge>
+                    <Label>Manzil (Google Maps havolasi)</Label>
+                    <Input
+                      value={gymForm.address}
+                      onChange={(e) => handleLocationLinkChange(e.target.value)}
+                      placeholder="https://maps.app.goo.gl/..."
+                      data-testid="input-edit-gym-address"
+                    />
+                    {isResolvingUrl && <p className="text-xs text-muted-foreground mt-1 animate-pulse">Koordinatalar aniqlanmoqda...</p>}
+                    {gymForm.latitude && gymForm.longitude && (
+                      <p className="text-xs text-green-600 mt-1">Lat: {gymForm.latitude}, Lng: {gymForm.longitude}</p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Kredit (kalit)</Label>
+                      <Input
+                        type="number"
+                        value={gymForm.credits}
+                        onChange={(e) => setGymForm({...gymForm, credits: e.target.value})}
+                        data-testid="input-edit-gym-credits"
+                      />
+                    </div>
+                    <div>
+                      <Label>Ish vaqti</Label>
+                      <Input
+                        value={gymForm.hours}
+                        onChange={(e) => setGymForm({...gymForm, hours: e.target.value})}
+                        placeholder="09:00 - 22:00"
+                        data-testid="input-edit-gym-hours"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ish vaqti</p>
-                    <p className="font-semibold">{selectedGym.hours}</p>
+                    <Label>Tavsif</Label>
+                    <Textarea
+                      value={gymForm.description}
+                      onChange={(e) => setGymForm({...gymForm, description: e.target.value})}
+                      rows={2}
+                      data-testid="input-edit-gym-description"
+                    />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Masofa</p>
-                    <p className="font-semibold">{selectedGym.distance}</p>
+                    <Label>Imkoniyatlar</Label>
+                    <Input
+                      value={gymForm.facilities}
+                      onChange={(e) => setGymForm({...gymForm, facilities: e.target.value})}
+                      placeholder="Wi-Fi, Dush, Sauna..."
+                      data-testid="input-edit-gym-facilities"
+                    />
                   </div>
+                  <div>
+                    <Label className="mb-2 block">Kategoriyalar</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {CATEGORIES.map((cat: Category) => (
+                        <button
+                          key={cat.name}
+                          type="button"
+                          onClick={() => toggleCategory(cat.name)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            gymForm.categories?.includes(cat.name)
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                          }`}
+                          data-testid={`category-toggle-${cat.name}`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleSaveEdit}
+                    disabled={updateGymMutation.isPending}
+                    data-testid="button-save-gym-edit"
+                  >
+                    {updateGymMutation.isPending ? 'Saqlanmoqda...' : 'O\'zgarishlarni saqlash'}
+                  </Button>
                 </div>
 
                 <div>
@@ -896,20 +965,6 @@ export default function AdminGymsPage() {
                     Haritada ko'rish
                   </Button>
                 </div>
-
-                {selectedGym.description && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tavsif</p>
-                    <p className="text-sm">{selectedGym.description}</p>
-                  </div>
-                )}
-
-                {selectedGym.facilities && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Imkoniyatlar</p>
-                    <p className="text-sm">{selectedGym.facilities}</p>
-                  </div>
-                )}
 
                 <div>
                   <Label>Zal rasmlari</Label>
