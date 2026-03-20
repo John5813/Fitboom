@@ -101,12 +101,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function uploadToObjectStorage(file: Express.Multer.File): Promise<string> {
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-    const bucket = getOSBucket();
-    const blob = bucket.file(`images/${uniqueName}`);
-    await blob.save(file.buffer, {
-      contentType: file.mimetype,
-      metadata: { cacheControl: 'public, max-age=31536000' },
-    });
+    if (bucketId) {
+      const blob = getOSBucket().file(`images/${uniqueName}`);
+      await blob.save(file.buffer, {
+        contentType: file.mimetype,
+        metadata: { cacheControl: 'public, max-age=31536000' },
+      });
+    } else {
+      const imagesDir = path.join(uploadsDir, 'images');
+      await fs.mkdir(imagesDir, { recursive: true });
+      await fs.writeFile(path.join(imagesDir, uniqueName), file.buffer);
+    }
     return `/api/images/${uniqueName}`;
   }
 
@@ -143,30 +148,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/images/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
-      const bucket = getOSBucket();
-      const blob = bucket.file(`images/${filename}`);
 
-      const [exists] = await blob.exists();
-      if (!exists) {
-        const localPath = path.join(uploadsDir, filename);
+      if (bucketId) {
         try {
-          await fs.access(localPath);
-          let contentType = 'image/jpeg';
-          if (filename.endsWith('.png')) contentType = 'image/png';
-          else if (filename.endsWith('.gif')) contentType = 'image/gif';
-          else if (filename.endsWith('.webp')) contentType = 'image/webp';
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Cache-Control', 'public, max-age=31536000');
-          return res.sendFile(localPath);
+          const blob = getOSBucket().file(`images/${filename}`);
+          const [exists] = await blob.exists();
+          if (exists) {
+            const [metadata] = await blob.getMetadata();
+            res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=31536000');
+            return blob.createReadStream().pipe(res);
+          }
         } catch {
-          return res.status(404).json({ error: "Rasm topilmadi" });
+          // Object Storage unavailable — fall through to local
         }
       }
 
-      const [metadata] = await blob.getMetadata();
-      res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=31536000');
-      blob.createReadStream().pipe(res);
+      const localPath = path.join(uploadsDir, 'images', filename);
+      try {
+        await fs.access(localPath);
+        let contentType = 'image/jpeg';
+        if (filename.endsWith('.png')) contentType = 'image/png';
+        else if (filename.endsWith('.gif')) contentType = 'image/gif';
+        else if (filename.endsWith('.webp')) contentType = 'image/webp';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        return res.sendFile(localPath);
+      } catch {
+        return res.status(404).json({ error: "Rasm topilmadi" });
+      }
     } catch (error: any) {
       console.error("Rasm yuklab olish xatosi:", error);
       res.status(404).json({ error: "Rasm topilmadi" });
