@@ -184,13 +184,24 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
       if (!code) return res.status(400).json({ message: 'Kod talab qilinadi' });
 
       const upperCode = code.toUpperCase();
+      const sess = req.session as any;
+
+      // Session-based counter for codes not found in DB (brute-force protection)
+      if (!sess.failedCodeAttempts) sess.failedCodeAttempts = 0;
+
       const loginData = await storage.getLoginCodeByCode(upperCode);
 
       if (!loginData) {
+        sess.failedCodeAttempts++;
+        if (sess.failedCodeAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+          sess.failedCodeAttempts = 0;
+          return res.status(400).json({ message: "Juda ko'p noto'g'ri urinishlar. Botdan yangi kod oling." });
+        }
         return res.status(400).json({ message: "Kod noto'g'ri yoki muddati o'tgan" });
       }
 
       if (new Date() > new Date(loginData.expiresAt)) {
+        await storage.incrementLoginCodeAttempts(upperCode);
         await storage.deleteLoginCode(upperCode);
         return res.status(400).json({ message: "Kod muddati o'tgan. Botdan yangi kod oling." });
       }
@@ -200,15 +211,16 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
         return res.status(400).json({ message: "Juda ko'p noto'g'ri urinishlar. Yangi kod oling." });
       }
 
+      // Increment for every valid (non-expired, non-blocked) attempt
+      await storage.incrementLoginCodeAttempts(upperCode);
+
       const user = await storage.getUserByTelegramId(loginData.telegramId);
       if (!user) {
-        await storage.incrementLoginCodeAttempts(upperCode);
         return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
       }
 
-      await storage.incrementLoginCodeAttempts(upperCode);
-
       await storage.deleteLoginCode(upperCode);
+      sess.failedCodeAttempts = 0;
 
       req.login(user as any, (err) => {
         if (err) {
