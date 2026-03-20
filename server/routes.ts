@@ -10,7 +10,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
-import { setupTelegramBot, sendPaymentReceiptToAdmin } from "./telegram";
+import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl } from "./telegram";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 
 export function registerHealthCheck(app: Express) {
@@ -801,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
     const user = await storage.getUser(req.user!.id);
-    const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`.trim();
+    const fullReceiptUrl = `${getAppUrl()}${receiptUrl}`.trim();
 
     await sendPaymentReceiptToAdmin(
       storage,
@@ -854,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
 
       const user = await storage.getUser(req.user!.id);
-      const fullReceiptUrl = `${req.protocol}://${req.get('host')}${receiptUrl}`.trim();
+      const fullReceiptUrl = `${getAppUrl()}${receiptUrl}`.trim();
 
       await sendPaymentReceiptToAdmin(
         storage,

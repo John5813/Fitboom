@@ -53,7 +53,7 @@ interface TelegramUpdate {
 const pendingAmountChanges = new Map<string, string>();
 const adminBroadcastMode = new Map<string, boolean>();
 
-function getAppUrl(): string {
+export function getAppUrl(): string {
   if (process.env.REPLIT_DOMAINS) {
     const domains = process.env.REPLIT_DOMAINS.split(',');
     if (domains.length > 0) return `https://${domains[0]}`;
