@@ -63,6 +63,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return objectStorageClient.bucket(bucketId);
   }
 
+  async function saveReceiptFile(file: Express.Multer.File, uniqueName: string): Promise<string> {
+    if (bucketId) {
+      const blob = getOSBucket().file(`receipts/${uniqueName}`);
+      await blob.save(file.buffer, { contentType: file.mimetype });
+    } else {
+      const localDir = path.join(uploadsDir, 'receipts');
+      await fs.mkdir(localDir, { recursive: true });
+      await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
+    }
+    return `/api/receipts/${uniqueName}`;
+  }
+
   app.get('/api/tashkent-time', (req, res) => {
     const now = getTashkentNow();
     res.json({
@@ -164,23 +176,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/receipts/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
-      const bucket = getOSBucket();
-      const blob = bucket.file(`receipts/${filename}`);
+      const localPath = path.join(uploadsDir, 'receipts', filename);
 
-      const [exists] = await blob.exists();
-      if (!exists) {
-        const localPath = path.join(uploadsDir, 'receipts', filename);
+      if (bucketId) {
         try {
-          await fs.access(localPath);
-          return res.sendFile(localPath);
+          const blob = getOSBucket().file(`receipts/${filename}`);
+          const [exists] = await blob.exists();
+          if (exists) {
+            const [metadata] = await blob.getMetadata();
+            res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+            return blob.createReadStream().pipe(res);
+          }
         } catch {
-          return res.status(404).json({ error: "Chek topilmadi" });
+          // Object Storage unavailable — fall through to local
         }
       }
 
-      const [metadata] = await blob.getMetadata();
-      res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
-      blob.createReadStream().pipe(res);
+      try {
+        await fs.access(localPath);
+        return res.sendFile(localPath);
+      } catch {
+        return res.status(404).json({ error: "Chek topilmadi" });
+      }
     } catch (error: any) {
       console.error("Chek yuklab olish xatosi:", error);
       res.status(404).json({ error: "Chek topilmadi" });
@@ -783,12 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
-      const bucket = getOSBucket();
-      const blob = bucket.file(`receipts/${uniqueName}`);
-      await blob.save(req.file.buffer, {
-        contentType: req.file.mimetype,
-      });
-      const receiptUrl = `/api/receipts/${uniqueName}`;
+      const receiptUrl = await saveReceiptFile(req.file, uniqueName);
 
       const payment = await storage.createCreditPayment({
         userId: req.user!.id,
@@ -847,10 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const rUniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
-      const rBucket = getOSBucket();
-      const rBlob = rBucket.file(`receipts/${rUniqueName}`);
-      await rBlob.save(req.file.buffer, { contentType: req.file.mimetype });
-      const receiptUrl = `/api/receipts/${rUniqueName}`;
+      const receiptUrl = await saveReceiptFile(req.file, rUniqueName);
       await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
 
       const user = await storage.getUser(req.user!.id);
