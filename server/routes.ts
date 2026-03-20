@@ -1535,9 +1535,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (bookingDateStr === tashkentDateStr) {
           const diffMinutes = currentMinutes - scheduledMinutes;
           
-          // Agar 15 minutdan oldin kelsa, hali erta - countdown ko'rsatish
-          if (diffMinutes < -15) {
-            const remainingMinutes = Math.abs(diffMinutes) - 15;
+          // Agar 40 minutdan oldin kelsa, hali erta - countdown ko'rsatish
+          if (diffMinutes < -40) {
+            const remainingMinutes = Math.abs(diffMinutes) - 40;
             
             return res.json({
               success: false,
@@ -1549,7 +1549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          // Agar 1 soatdan keyin kelsa (60+ minut o'tib ketgan), ulgirmadi
+          // Agar 60 minutdan keyin kelsa, ulgirmadi
           if (diffMinutes > 60) {
             await storage.updateBookingStatus(booking.id, 'missed');
             
