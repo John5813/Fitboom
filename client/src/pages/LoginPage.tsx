@@ -79,9 +79,18 @@ export default function LoginPage({ fromTelegram = false }: { fromTelegram?: boo
       }
     },
     onError: (error: any) => {
+      let description = "Kod noto'g'ri yoki muddati o'tgan";
+      try {
+        const raw = error.message || "";
+        const jsonStr = raw.includes(": ") ? raw.slice(raw.indexOf(": ") + 2) : raw;
+        const parsed = JSON.parse(jsonStr);
+        if (parsed?.message) description = parsed.message;
+      } catch {
+        if (error.message) description = error.message;
+      }
       toast({
         title: "Xatolik",
-        description: error.message || "Kod noto'g'ri yoki muddati o'tgan",
+        description,
         variant: "destructive",
       });
     },

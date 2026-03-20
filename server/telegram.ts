@@ -186,6 +186,12 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
       const upperCode = code.toUpperCase();
       const sess = req.session as any;
 
+      // Check active lockout before anything else
+      if (sess.codeLockedUntil && Date.now() < sess.codeLockedUntil) {
+        const waitSec = Math.ceil((sess.codeLockedUntil - Date.now()) / 1000);
+        return res.status(429).json({ message: `Bloklangan. ${waitSec} soniyadan keyin qayta urinib ko'ring.` });
+      }
+
       // Session-based counter for codes not found in DB (brute-force protection)
       if (!sess.failedCodeAttempts) sess.failedCodeAttempts = 0;
 
@@ -194,8 +200,9 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
       if (!loginData) {
         sess.failedCodeAttempts++;
         if (sess.failedCodeAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+          sess.codeLockedUntil = Date.now() + CODE_EXPIRY_MS; // lock for 5 minutes
           sess.failedCodeAttempts = 0;
-          return res.status(400).json({ message: "Juda ko'p noto'g'ri urinishlar. Botdan yangi kod oling." });
+          return res.status(429).json({ message: "Juda ko'p noto'g'ri urinishlar. 5 daqiqadan keyin yoki botdan yangi kod oling." });
         }
         return res.status(400).json({ message: "Kod noto'g'ri yoki muddati o'tgan" });
       }
@@ -221,6 +228,7 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
 
       await storage.deleteLoginCode(upperCode);
       sess.failedCodeAttempts = 0;
+      sess.codeLockedUntil = undefined;
 
       req.login(user as any, (err) => {
         if (err) {
