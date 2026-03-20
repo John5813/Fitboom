@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import type { IStorage } from './storage';
+import { generateFiscalReceiptPDF } from './pdfReceipt';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'uzfitboom_bot';
@@ -108,6 +109,35 @@ async function sendPhoto(chatId: number | string, photoUrl: string, caption: str
   const body: any = { chat_id: chatId, photo: photoUrl, caption, parse_mode: 'HTML' };
   if (replyMarkup) body.reply_markup = replyMarkup;
   return telegramApi('sendPhoto', body);
+}
+
+async function sendDocument(chatId: number | string, fileBuffer: Buffer, filename: string, caption?: string) {
+  const boundary = `----FormBoundary${Date.now()}`;
+  const parts: Buffer[] = [];
+
+  const addField = (name: string, value: string) => {
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+  };
+
+  addField('chat_id', String(chatId));
+  if (caption) addField('caption', caption);
+  addField('parse_mode', 'HTML');
+
+  parts.push(Buffer.from(
+    `--${boundary}\r\nContent-Disposition: form-data; name="document"; filename="${filename}"\r\nContent-Type: application/pdf\r\n\r\n`
+  ));
+  parts.push(fileBuffer);
+  parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+
+  const body = Buffer.concat(parts);
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+    body,
+  });
+  return res.json();
 }
 
 async function copyMessage(chatId: number | string, fromChatId: number | string, messageId: number) {
@@ -344,8 +374,27 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
             `<b>To'lovingiz tasdiqlandi!</b>\n\n` +
             `Hisobingizga ${payment.credits} ta kalit qo'shildi.\n` +
             `Hozirgi balansingiz: ${newCredits} ta kalit.\n` +
-            `Muddat: ${daysLeft} kun qoldi.`
+            `Muddat: ${daysLeft} kun qoldi.\n\n` +
+            `📄 Elektron fiskal chek quyida yuboriladi.`
           );
+          try {
+            const pdfBuffer = await generateFiscalReceiptPDF({
+              paymentId,
+              userName: user.name || 'Noma\'lum',
+              userPhone: user.phone || undefined,
+              credits: payment.credits,
+              totalAmount: payment.price || payment.credits * 15000,
+            });
+            const checkNo = paymentId.slice(0, 6).toUpperCase();
+            await sendDocument(
+              user.chatId,
+              pdfBuffer,
+              `fitboom-chek-${checkNo}.pdf`,
+              `🧾 <b>Elektron fiskal chek</b>\n${payment.credits} ta kalit uchun`
+            );
+          } catch (pdfErr) {
+            console.error('[PDF] Chek yaratishda xatolik:', pdfErr);
+          }
         }
       }
       if (messageId) {
