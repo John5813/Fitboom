@@ -392,7 +392,7 @@ export default function AdminGymsPage() {
     if (link.includes("maps.app.goo.gl") || link.includes("goo.gl") || link.includes("google.com/maps")) {
       setIsResolvingUrl(true);
       try {
-        const res = await apiRequest("POST", "/api/resolve-maps-url", { url: link });
+        const res = await apiRequest("/api/resolve-maps-url", "POST", { url: link });
         const coords = await res.json();
         if (coords.latitude && coords.longitude) {
           setGymForm(prev => ({
@@ -749,7 +749,7 @@ export default function AdminGymsPage() {
             variant="outline"
             onClick={async () => {
               try {
-                const res = await apiRequest("POST", "/api/fix-gym-coordinates", {});
+                const res = await apiRequest("/api/fix-gym-coordinates", "POST", {});
                 const data = await res.json();
                 const fixed = data.results?.filter((r: any) => r.status === "fixed").length || 0;
                 toast({
@@ -803,6 +803,7 @@ export default function AdminGymsPage() {
                         ...prev,
                         name: gym.name || '',
                         address: gym.address || '',
+                        locationLink: gym.address || '',
                         description: gym.description || '',
                         credits: String(gym.credits || ''),
                         categories: gym.categories || [],
