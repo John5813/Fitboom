@@ -475,7 +475,7 @@ export default function AdminGymsPage() {
       ...gymForm,
       credits: parseInt(gymForm.credits),
       categories: gymForm.categories,
-      imageUrl: gymForm.images?.[0] || gymForm.imageUrl
+      imageUrl: gymForm.imageUrl || gymForm.images?.[0]
     };
 
     createGymMutation.mutate(gymData);
@@ -973,18 +973,29 @@ export default function AdminGymsPage() {
                     {gymForm.images?.map((url, i) => (
                       <div key={i} className="relative aspect-video rounded-md overflow-hidden border group">
                         <img src={url} className="w-full h-full object-cover" />
-                        <button 
+                        <button
                           type="button"
-                          onClick={() => setGymForm({...gymForm, images: gymForm.images.filter((_, idx) => idx !== i)})}
+                          onClick={() => setGymForm(prev => ({
+                            ...prev,
+                            images: prev.images.filter((_, idx) => idx !== i),
+                            imageUrl: prev.imageUrl === url ? (prev.images.filter((_, idx) => idx !== i)[0] || "") : prev.imageUrl
+                          }))}
                           className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="w-3 h-3" />
                         </button>
-                        {i === 0 && (
+                        {url === gymForm.imageUrl && (
                           <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5">
                             Asosiy
                           </div>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setGymForm(prev => ({ ...prev, imageUrl: url }))}
+                          className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-medium"
+                        >
+                          Asosiy qilish
+                        </button>
                       </div>
                     ))}
                     <label className="border-2 border-dashed rounded-md aspect-video flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
