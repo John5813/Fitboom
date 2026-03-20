@@ -206,6 +206,8 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
         return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
       }
 
+      await storage.incrementLoginCodeAttempts(upperCode);
+
       await storage.deleteLoginCode(upperCode);
 
       req.login(user as any, (err) => {
@@ -543,8 +545,8 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
 }
 
 export async function setupTelegramWebhook() {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Telegram] Skipping webhook setup in development mode to avoid overriding production webhook');
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.log('[Telegram] Bot token not configured, skipping webhook setup');
     return;
   }
   const webhookUrl = getWebhookUrl();
