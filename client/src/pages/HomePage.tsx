@@ -9,6 +9,7 @@ import OnlineClassCard from "@/components/OnlineClassCard";
 import BookingCard from "@/components/BookingCard";
 import BottomNav from "@/components/BottomNav";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
+import PaymentMethodDialog from "@/components/PaymentMethodDialog";
 import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,6 +68,7 @@ export default function HomePage() {
 
   const [activeTab, setActiveTabState] = useState<'home' | 'gyms' | 'classes' | 'bookings' | 'scanner'>(getTabFromHash());
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
+  const [isPaymentMethodDialogOpen, setIsPaymentMethodDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -486,7 +488,7 @@ export default function HomePage() {
 
           <CreditBalance
             credits={creditsCountValue}
-            onPurchase={() => setIsPurchaseDialogOpen(true)}
+            onPurchase={() => setIsPaymentMethodDialogOpen(true)}
             creditExpiryDate={user?.creditExpiryDate}
           />
 
@@ -786,6 +788,11 @@ export default function HomePage() {
       </Dialog>
 
       <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as any)} onScanQR={() => setIsScannerOpen(true)} />
+      <PaymentMethodDialog
+        isOpen={isPaymentMethodDialogOpen}
+        onClose={() => setIsPaymentMethodDialogOpen(false)}
+        onSelectCardTransfer={() => setIsPurchaseDialogOpen(true)}
+      />
       <PurchaseCreditsDialog isOpen={isPurchaseDialogOpen} onClose={() => setIsPurchaseDialogOpen(false)} onPurchase={handlePurchase} />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
 
