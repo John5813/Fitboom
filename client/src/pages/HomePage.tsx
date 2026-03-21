@@ -468,19 +468,18 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {activeTab === 'home' && (
-        <div className="p-4 space-y-6">
-          <div className="flex items-center justify-between gap-2">
+        <div className="p-4 space-y-5">
+          <div className="flex items-center justify-between gap-2 pt-1">
             <div>
-              <h1 className="font-display font-bold text-3xl mb-2">{t('app.name')}</h1>
-              <p className="text-muted-foreground">{t('home.welcome')}</p>
+              <h1 className="font-display font-extrabold text-3xl leading-tight">
+                <span className="text-foreground">Fit</span><span className="text-yellow-400">Boom</span>
+              </h1>
+              <p className="text-muted-foreground text-sm mt-0.5">{t('home.welcome')}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-1">
               <LanguageSelector />
-              <Button variant="ghost" size="icon" onClick={() => setLocation('/settings')}>
+              <Button variant="ghost" size="icon" onClick={() => setLocation('/settings')} data-testid="button-settings">
                 <Settings className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setLocation('/profile')}>
-                <User className="w-5 h-5" />
               </Button>
             </div>
           </div>
@@ -492,12 +491,12 @@ export default function HomePage() {
           />
 
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-xl">{t('home.near_gyms')}</h2>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-display font-bold text-xl">{t('home.near_gyms')}</h2>
               <Link href="/map">
-                <Button variant="ghost" size="sm" className="text-primary">
-                  {t('home.view_all')}
-                </Button>
+                <span className="text-primary text-sm font-medium flex items-center gap-0.5 cursor-pointer hover:underline" data-testid="link-view-all-gyms">
+                  {t('home.view_all')} ›
+                </span>
               </Link>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
@@ -583,7 +582,13 @@ export default function HomePage() {
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm text-center py-4">{t('home.no_gyms_yet')}</p>
+              <div className="rounded-2xl border bg-card p-8 flex flex-col items-center gap-4">
+                <div className="relative w-24 h-24 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-blue-50 dark:bg-blue-950/30 rounded-full" />
+                  <MapPin className="w-10 h-10 text-red-500 relative z-10" />
+                </div>
+                <p className="text-muted-foreground text-sm text-center">{t('home.no_gyms_yet')}</p>
+              </div>
             )}
           </div>
         </div>

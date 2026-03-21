@@ -1,6 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { KeyRound, AlertTriangle, Clock, Plus } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CreditBalanceProps {
@@ -25,48 +24,49 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
   const isExpired = remainingDays !== null && remainingDays <= 0;
 
   return (
-    <Card className="glass-card border-2 border-transparent bg-gradient-to-r from-yellow-400 via-green-400 to-green-500 p-[2px]">
-      <div className="bg-background rounded-[calc(0.5rem-2px)]">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                isExpired ? 'bg-destructive/10' : isExpiringSoon ? 'bg-yellow-500/10' : 'bg-gradient-to-br from-yellow-400 to-green-500 bg-opacity-10'
-              }`}>
-                {isExpired ? (
-                  <AlertTriangle className="w-6 h-6 text-destructive" />
-                ) : isExpiringSoon ? (
-                  <AlertTriangle className="w-6 h-6 text-yellow-500" />
-                ) : (
-                  <KeyRound className="w-6 h-6 text-yellow-600" />
-                )}
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{t('profile.credits_title')}</p>
-                <p className="font-display font-bold text-2xl bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent" data-testid="credit-balance">{credits}</p>
-              {remainingDays !== null && credits > 0 && (
-                <div className={`flex items-center gap-1 mt-1 ${
-                  isExpired ? 'text-destructive' : isExpiringSoon ? 'text-yellow-600 dark:text-yellow-500' : ''
-                }`}>
-                  <Clock className="w-3 h-3" />
-                  <p className="text-xs font-medium" data-testid="text-remaining-days">
-                    {isExpired
-                      ? t('profile.expired_message')
-                      : isExpiringSoon
-                        ? `${t('profile.expiring_soon')} ${remainingDays} ${t('profile.days_left')}`
-                        : `${remainingDays} ${t('profile.days_left')}`}
-                  </p>
-                </div>
+    <div
+      className="rounded-2xl overflow-hidden shadow-lg"
+      style={{
+        background: isExpired
+          ? "linear-gradient(135deg, #ef4444, #b91c1c)"
+          : "linear-gradient(135deg, #4ade80, #16a34a, #166534)",
+      }}
+    >
+      <div className="flex items-center px-4 py-4 gap-3">
+        <div className="text-4xl select-none flex-shrink-0">🔑</div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-white/80 text-xs font-medium">{t("profile.credits_title")}</p>
+          <p className="text-white font-bold text-xl leading-tight" data-testid="credit-balance">
+            {t("profile.credits_title")}: <span className="text-2xl">{credits}</span>
+          </p>
+          {remainingDays !== null && credits > 0 && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {isExpired || isExpiringSoon ? (
+                <AlertTriangle className="w-3 h-3 text-yellow-300" />
+              ) : (
+                <Clock className="w-3 h-3 text-white/70" />
               )}
+              <p className="text-xs text-white/80" data-testid="text-remaining-days">
+                {isExpired
+                  ? t("profile.expired_message")
+                  : isExpiringSoon
+                  ? `${t("profile.expiring_soon")} ${remainingDays} ${t("profile.days_left")}`
+                  : `${remainingDays} ${t("profile.days_left")}`}
+              </p>
             </div>
-          </div>
-          <Button onClick={onPurchase} variant={isExpired || isExpiringSoon ? "default" : "outline"} size="sm" className="hover-elevate active-elevate-2">
-            <KeyRound className="w-4 h-4 mr-2" />
-            {isExpired ? t('profile.renew') : t('profile.topup')}
-          </Button>
+          )}
         </div>
-        </CardContent>
+
+        <Button
+          onClick={onPurchase}
+          size="sm"
+          className="flex-shrink-0 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold border-0 shadow-md px-4 rounded-xl"
+          data-testid="button-topup-credits"
+        >
+          {isExpired ? t("profile.renew") : t("profile.topup")}
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 }
