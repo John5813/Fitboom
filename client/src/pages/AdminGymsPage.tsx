@@ -76,6 +76,9 @@ export default function AdminGymsPage() {
     closedDays: [] as string[],
   });
 
+  const [pendingSlots, setPendingSlots] = useState<Array<{ dayOfWeek: string; startTime: string; endTime: string; capacity: string }>>([]);
+  const [newSlotForm, setNewSlotForm] = useState({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' });
+
   const [uploadingImages, setUploadingImages] = useState(false);
 
   const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,15 +275,32 @@ export default function AdminGymsPage() {
       const response = await apiRequest('/api/gyms', 'POST', data);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+      const gymId = data.gym?.id;
+      if (gymId && pendingSlots.length > 0) {
+        for (const slot of pendingSlots) {
+          try {
+            await apiRequest('/api/time-slots', 'POST', {
+              gymId,
+              dayOfWeek: slot.dayOfWeek,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              capacity: parseInt(slot.capacity),
+            });
+          } catch {}
+        }
+        queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
+      }
       toast({
         title: "Zal qo'shildi",
-        description: `${gymForm.name} muvaffaqiyatli qo'shildi.`,
+        description: `${gymForm.name} muvaffaqiyatli qo'shildi${pendingSlots.length > 0 ? ` (${pendingSlots.length} ta slot ham yaratildi)` : ''}.`,
       });
       setIsCreateDialogOpen(false);
       setCreatedGym(data.gym);
       setIsQRDialogOpen(true);
+      setPendingSlots([]);
+      setNewSlotForm({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' });
       setGymForm({
         name: '',
         address: '',
@@ -1670,7 +1690,103 @@ export default function AdminGymsPage() {
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Vaqt slotlari</Label>
+                {pendingSlots.length > 0 && (
+                  <Badge variant="secondary">{pendingSlots.length} ta slot</Badge>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Kun</Label>
+                  <Select
+                    value={newSlotForm.dayOfWeek}
+                    onValueChange={(v) => setNewSlotForm(prev => ({ ...prev, dayOfWeek: v }))}
+                  >
+                    <SelectTrigger className="h-8 text-sm" data-testid="select-slot-day">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WEEKDAYS.map((d) => (
+                        <SelectItem key={d.full} value={d.full}>{d.full}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Sig'im</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newSlotForm.capacity}
+                    onChange={(e) => setNewSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
+                    className="h-8 text-sm"
+                    placeholder="15"
+                    data-testid="input-slot-capacity"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Boshlanish</Label>
+                  <Input
+                    type="time"
+                    value={newSlotForm.startTime}
+                    onChange={(e) => setNewSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
+                    className="h-8 text-sm"
+                    data-testid="input-slot-start"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Tugash</Label>
+                  <Input
+                    type="time"
+                    value={newSlotForm.endTime}
+                    onChange={(e) => setNewSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
+                    className="h-8 text-sm"
+                    data-testid="input-slot-end"
+                  />
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                data-testid="button-add-slot"
+                onClick={() => {
+                  if (!newSlotForm.startTime || !newSlotForm.endTime || !newSlotForm.capacity) return;
+                  setPendingSlots(prev => [...prev, { ...newSlotForm }]);
+                  setNewSlotForm(prev => ({
+                    ...prev,
+                    startTime: newSlotForm.endTime,
+                    endTime: newSlotForm.endTime.replace(/(\d+):(\d+)/, (_, h, m) => `${String((parseInt(h) + 1) % 24).padStart(2, '0')}:${m}`),
+                  }));
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1" /> Slot qo'shish
+              </Button>
+              {pendingSlots.length > 0 && (
+                <div className="space-y-1 max-h-36 overflow-y-auto">
+                  {pendingSlots.map((slot, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-muted rounded px-2 py-1 text-xs">
+                      <span className="font-medium">{slot.dayOfWeek}</span>
+                      <span className="text-muted-foreground">{slot.startTime} – {slot.endTime}</span>
+                      <span>{slot.capacity} kishi</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingSlots(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-destructive hover:text-destructive/80 ml-1"
+                        data-testid={`button-remove-slot-${idx}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <Button
                 onClick={handleCreateGym}
                 disabled={createGymMutation.isPending || isResolvingUrl}
@@ -1681,7 +1797,7 @@ export default function AdminGymsPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setIsCreateDialogOpen(false)}
+                onClick={() => { setIsCreateDialogOpen(false); setPendingSlots([]); setNewSlotForm({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' }); }}
                 className="flex-1"
                 data-testid="button-cancel-gym"
               >
