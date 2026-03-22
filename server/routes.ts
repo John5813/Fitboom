@@ -713,7 +713,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sHour = startHour || 9;
       const eHour = endHour || 21;
       const cap = capacity || 15;
-      const daysList = days || ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+      const allRequestedDays = days || ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+      // Zal dam kunlarini avtomatik generatsiyadan chiqarish
+      const dayNameToNum: Record<string, number> = {
+        'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3,
+        'Payshanba': 4, 'Juma': 5, 'Shanba': 6,
+      };
+      const gymClosedDays = gym.closedDays || [];
+      const daysList = allRequestedDays.filter((d: string) => {
+        const num = dayNameToNum[d];
+        return num === undefined || !gymClosedDays.includes(String(num));
+      });
 
       await storage.deleteTimeSlotsForGym(gymId);
 
@@ -963,14 +973,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let noRefund = false;
       if (booking.scheduledStartTime && booking.date) {
         const [slotH, slotM] = booking.scheduledStartTime.split(':').map(Number);
-        const [year, month, day] = booking.date.split('-').map(Number);
-        // Toshkent UTC+5 bo'lgan slot boshlanishi vaqtini haqiqiy UTC ga aylantirish
-        const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
-        const nowUTC = Date.now();
-        const diffHours = (slotUTC - nowUTC) / 3600000;
-        // Agar 2 soatdan kam qolgan bo'lsa (shu jumladan o'tib ketgan bronlar ham)
-        if (diffHours < 2) {
-          noRefund = true;
+        // ISO datetime yoki oddiy YYYY-MM-DD formatni qo'llab-quvvatlash
+        const datePart = booking.date.split('T')[0];
+        const dateParts = datePart.split('-').map(Number);
+        const [year, month, day] = dateParts;
+        if (year && month && day && !isNaN(slotH) && !isNaN(slotM)) {
+          // Toshkent UTC+5 bo'lgan slot boshlanishi vaqtini haqiqiy UTC ga aylantirish
+          const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
+          const nowUTC = Date.now();
+          const diffHours = (slotUTC - nowUTC) / 3600000;
+          // Agar 2 soatdan kam qolgan bo'lsa (shu jumladan o'tib ketgan bronlar ham)
+          if (diffHours < 2) {
+            noRefund = true;
+          }
         }
       }
 
