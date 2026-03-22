@@ -18,12 +18,19 @@ The backend is an Express.js application written in TypeScript, implementing a R
 PostgreSQL, hosted via Neon serverless, serves as the primary database. Drizzle ORM is used for type-safe queries and migrations. The schema includes `users` (with `telegramId`, `creditBalance`, `isAdmin`, `profileImageUrl`), `gyms`, `onlineClasses`, `bookings`, `categories`, `adminSettings` (for secure password storage), `partnershipMessages` (for partner requests), and `timeSlots` (for gym scheduling with weekly pattern, capacity management, and rest day support). A repository pattern (`IStorage` interface) abstracts database operations for better maintainability and testability.
 
 ### Time Slot System
-- Weekly schedule pattern: Mon-Sat with hourly slots (09:00-21:00), Sunday is rest day
+- Weekly schedule pattern: Mon-Sat with hourly slots (09:00-21:00) by default
 - Each slot tracks capacity and availableSpots (default 15 per hour)
 - Auto-generate endpoint creates 72 slots (12 hours × 6 days) with one click
 - Booking decrements availableSpots; cancellation restores them
 - Admin and gym owner can manage slots via their respective panels
-- Server enforces Sunday rest day (blocks both slot creation and booking)
+- Each gym has `closedDays` (array of day-of-week numbers as strings: "0"=Sunday, "6"=Saturday)
+- Booking dialog dynamically filters available dates based on gym's closedDays (no more hardcoded Sunday block)
+
+### Booking Cancellation Policy
+- If cancelled ≥2 hours before scheduled start: credits are fully refunded
+- If cancelled <2 hours before start: booking is cancelled but no credit refund
+- Frontend pre-check warns user before they confirm late cancellation (window.confirm)
+- Server enforces the policy regardless of frontend; `noRefund: true` in response when no refund given
 
 ### Project Structure
 The project is organized as a monorepo:

@@ -50,6 +50,16 @@ export default function AdminGymsPage() {
   const [lastPaymentInfo, setLastPaymentInfo] = useState<{ amount: number; gymName: string } | null>(null);
   const { toast } = useToast();
 
+  const CLOSED_DAYS = [
+    { value: "1", label: "Du" },
+    { value: "2", label: "Se" },
+    { value: "3", label: "Ch" },
+    { value: "4", label: "Pa" },
+    { value: "5", label: "Ju" },
+    { value: "6", label: "Sh" },
+    { value: "0", label: "Ya" },
+  ];
+
   const [gymForm, setGymForm] = useState({
     name: '',
     address: '',
@@ -63,6 +73,7 @@ export default function AdminGymsPage() {
     locationLink: '',
     latitude: '',
     longitude: '',
+    closedDays: [] as string[],
   });
 
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -276,6 +287,7 @@ export default function AdminGymsPage() {
         locationLink: '',
         latitude: '',
         longitude: '',
+        closedDays: [],
       });
     },
     onError: (error: any) => {
@@ -434,6 +446,7 @@ export default function AdminGymsPage() {
       hours: gymForm.hours,
       latitude: gymForm.latitude,
       longitude: gymForm.longitude,
+      closedDays: gymForm.closedDays,
     };
 
     updateGymMutation.mutate({ id: selectedGym.id, data: updateData });
@@ -475,7 +488,8 @@ export default function AdminGymsPage() {
       ...gymForm,
       credits: parseInt(gymForm.credits),
       categories: gymForm.categories,
-      imageUrl: gymForm.imageUrl || gymForm.images?.[0]
+      imageUrl: gymForm.imageUrl || gymForm.images?.[0],
+      closedDays: gymForm.closedDays,
     };
 
     createGymMutation.mutate(gymData);
@@ -813,6 +827,7 @@ export default function AdminGymsPage() {
                         hours: gym.hours || '',
                         latitude: gym.latitude || '',
                         longitude: gym.longitude || '',
+                        closedDays: gym.closedDays || [],
                       }));
                     }}
                   >
@@ -900,6 +915,39 @@ export default function AdminGymsPage() {
                         data-testid="input-edit-gym-hours"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <Label>Dam kunlari</Label>
+                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                      {CLOSED_DAYS.map((d) => {
+                        const isChecked = gymForm.closedDays.includes(d.value);
+                        return (
+                          <button
+                            key={d.value}
+                            type="button"
+                            onClick={() => setGymForm(prev => ({
+                              ...prev,
+                              closedDays: isChecked
+                                ? prev.closedDays.filter(v => v !== d.value)
+                                : [...prev.closedDays, d.value]
+                            }))}
+                            className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                              isChecked
+                                ? 'bg-destructive text-destructive-foreground border-destructive'
+                                : 'bg-background text-foreground border-border hover:bg-muted'
+                            }`}
+                            data-testid={`button-edit-closed-day-${d.value}`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {gymForm.closedDays.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Tanlangan dam kunlari brondan chiqariladi
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>Tavsif</Label>
@@ -1439,6 +1487,40 @@ export default function AdminGymsPage() {
                   data-testid="input-gym-hours"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label>Dam kunlari</Label>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {CLOSED_DAYS.map((d) => {
+                  const isChecked = gymForm.closedDays.includes(d.value);
+                  return (
+                    <button
+                      key={d.value}
+                      type="button"
+                      onClick={() => setGymForm(prev => ({
+                        ...prev,
+                        closedDays: isChecked
+                          ? prev.closedDays.filter(v => v !== d.value)
+                          : [...prev.closedDays, d.value]
+                      }))}
+                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                        isChecked
+                          ? 'bg-destructive text-destructive-foreground border-destructive'
+                          : 'bg-background text-foreground border-border hover:bg-muted'
+                      }`}
+                      data-testid={`button-closed-day-${d.value}`}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {gymForm.closedDays.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tanlangan dam kunlari brondan chiqariladi
+                </p>
+              )}
             </div>
 
             <div>

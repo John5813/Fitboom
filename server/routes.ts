@@ -953,8 +953,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
       }
 
-      const newCredits = user.credits + gym.credits;
-      await storage.updateUserCredits(user.id, newCredits);
+      // 2-soatlik bekor qilish siyosati
+      let noRefund = false;
+      if (booking.scheduledStartTime && booking.date) {
+        const [slotH, slotM] = booking.scheduledStartTime.split(':').map(Number);
+        const [year, month, day] = booking.date.split('-').map(Number);
+        // Toshkent UTC+5 bo'lgan slot boshlanishi vaqtini haqiqiy UTC ga aylantirish
+        const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
+        const nowUTC = Date.now();
+        const diffHours = (slotUTC - nowUTC) / 3600000;
+        // Agar 2 soatdan kam qolgan bo'lsa (lekin hali o'tmagan bo'lsa)
+        if (diffHours < 2 && diffHours > -24) {
+          noRefund = true;
+        }
+      }
 
       if (booking.timeSlotId) {
         const timeSlot = await storage.getTimeSlot(booking.timeSlotId);
@@ -970,9 +982,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Bron o'chirilmadi" });
       }
 
+      if (noRefund) {
+        return res.json({
+          message: "Bron bekor qilindi. Boshlanishga 2 soatdan kam qolganligi sababli kredit qaytarilmadi.",
+          creditsRefunded: 0,
+          noRefund: true,
+        });
+      }
+
+      const newCredits = user.credits + gym.credits;
+      await storage.updateUserCredits(user.id, newCredits);
+
       res.json({
         message: "Bron bekor qilindi va kredit qaytarildi",
-        creditsRefunded: gym.credits
+        creditsRefunded: gym.credits,
+        noRefund: false,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1898,6 +1922,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageUrl: gym.imageUrl,
           images: gym.images || [],
           address: gym.address,
+          hours: gym.hours,
+          closedDays: gym.closedDays || [],
           totalEarnings: gym.totalEarnings || 0,
           currentDebt: gym.currentDebt || 0
         },

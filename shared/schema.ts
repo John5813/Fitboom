@@ -51,6 +51,7 @@ export const gyms = pgTable("gyms", {
   latitude: text("latitude"),
   longitude: text("longitude"),
   ownerAccessCode: text("owner_access_code").unique(),
+  closedDays: text("closed_days").array().notNull().default(sql`ARRAY[]::text[]`),
   totalEarnings: integer("total_earnings").notNull().default(0),
   currentDebt: integer("current_debt").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),

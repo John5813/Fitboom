@@ -291,29 +291,51 @@ export default function HomePage() {
         credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error('Bron bekor qilinmadi');
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Bron bekor qilinmadi');
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/time-slots'] });
-      toast({
-        title: "Bron bekor qilindi",
-        description: "Kalitingiz qaytarildi.",
-      });
+      if (data.noRefund) {
+        toast({
+          title: "Bron bekor qilindi",
+          description: "Vaqt 2 soatdan kam qolganligisababli kredit qaytarilmadi.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Bron bekor qilindi",
+          description: "Kalitingiz qaytarildi.",
+        });
+      }
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Xatolik",
-        description: "Bron bekor qilishda xatolik yuz berdi.",
+        description: error.message || "Bron bekor qilishda xatolik yuz berdi.",
         variant: "destructive",
       });
     },
   });
 
   const handleCancelBooking = (bookingId: string) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (booking?.scheduledStartTime && booking?.date) {
+      const [slotH, slotM] = booking.scheduledStartTime.split(':').map(Number);
+      const [year, month, day] = booking.date.split('-').map(Number);
+      const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
+      const diffHours = (slotUTC - Date.now()) / 3600000;
+      if (diffHours < 2 && diffHours > -24) {
+        const confirmed = window.confirm(
+          "Diqqat! Boshlanishga 2 soatdan kam vaqt qoldi.\n\nBronni bekor qilsangiz kredit qaytarilmaydi.\n\nDavom etasizmi?"
+        );
+        if (!confirmed) return;
+      }
+    }
     cancelBookingMutation.mutate(bookingId);
   };
 
@@ -877,13 +899,17 @@ export default function HomePage() {
                       ? new Date(tashkentTime.date + 'T12:00:00')
                       : new Date();
                     let dayOffset = 0;
+                    const gymClosedDays = selectedGymForBooking?.closedDays?.length
+                      ? selectedGymForBooking.closedDays
+                      : [];
                     while (dates.length < 7) {
                       const d = new Date(startDate);
                       d.setDate(startDate.getDate() + dayOffset);
-                      if (d.getDay() !== 0) {
+                      if (!gymClosedDays.includes(String(d.getDay()))) {
                         dates.push(d);
                       }
                       dayOffset++;
+                      if (dayOffset > 30) break;
                     }
                     return dates.map((date) => {
                       const y = date.getFullYear();

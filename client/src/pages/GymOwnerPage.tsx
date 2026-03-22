@@ -23,6 +23,8 @@ interface GymOwnerData {
     imageUrl?: string;
     images?: string[];
     address?: string;
+    hours?: string;
+    closedDays?: string[];
     totalEarnings: number;
     currentDebt: number;
   };
@@ -433,6 +435,24 @@ export default function GymOwnerPage() {
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-gym-address">
                     {gym.address}
                   </p>
+                )}
+                {gym.hours && (
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    <Clock className="inline w-3 h-3 mr-1" />
+                    {gym.hours}
+                  </p>
+                )}
+                {gym.closedDays && gym.closedDays.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {['Ya','Du','Se','Ch','Pa','Ju','Sh'].map((label, i) =>
+                      gym.closedDays!.includes(String(i)) ? (
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-medium" data-testid={`text-closed-day-${i}`}>
+                          {label}
+                        </span>
+                      ) : null
+                    )}
+                    <span className="text-[10px] text-muted-foreground self-center">dam kunlari</span>
+                  </div>
                 )}
               </div>
             </div>
