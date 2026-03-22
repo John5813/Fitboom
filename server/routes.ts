@@ -314,8 +314,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Gym routes
   app.get("/api/gyms", async (req, res) => {
     try {
-      const gyms = await storage.getGyms();
-      res.json({ gyms });
+      const [gyms, avgRatings] = await Promise.all([
+        storage.getGyms(),
+        storage.getGymAverageRatings(),
+      ]);
+      const ratingsMap = new Map(avgRatings.map(r => [r.gymId, r]));
+      const gymsWithRatings = gyms.map(gym => ({
+        ...gym,
+        avgRating: ratingsMap.get(gym.id)?.average ?? null,
+        ratingCount: ratingsMap.get(gym.id)?.count ?? 0,
+      }));
+      res.json({ gyms: gymsWithRatings });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch gyms" });
     }
@@ -589,6 +598,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete gym" });
+    }
+  });
+
+  // Gym rating routes
+  app.post("/api/gyms/:id/rate", requireAuth, async (req, res) => {
+    try {
+      const gymId = req.params.id;
+      const userId = req.user!.id;
+      const { bookingId, rating } = req.body;
+
+      if (!bookingId || typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "bookingId va 1-5 oralig'idagi reyting talab qilinadi" });
+      }
+
+      const gym = await storage.getGym(gymId);
+      if (!gym) return res.status(404).json({ error: "Zal topilmadi" });
+
+      const booking = await storage.getBooking(bookingId);
+      if (!booking) return res.status(404).json({ error: "Bron topilmadi" });
+      if (booking.userId !== userId) return res.status(403).json({ error: "Bu bron sizniki emas" });
+      if (!booking.isCompleted && booking.status !== 'completed') {
+        return res.status(400).json({ error: "Faqat yakunlangan bronlarga baho berish mumkin" });
+      }
+
+      const existing = await storage.getGymRatingByBooking(bookingId);
+      if (existing) return res.status(409).json({ error: "Bu bron uchun baho allaqachon berilgan" });
+
+      const gymRating = await storage.createGymRating({
+        userId,
+        gymId,
+        bookingId,
+        rating: Math.round(rating),
+      });
+
+      res.json({ gymRating });
+    } catch (err: any) {
+      console.error("Rate gym error:", err);
+      res.status(500).json({ error: "Baho berishda xatolik" });
+    }
+  });
+
+  app.get("/api/gyms/:id/rating", async (req, res) => {
+    try {
+      const ratings = await storage.getGymRatings(req.params.id);
+      const count = ratings.length;
+      const average = count > 0
+        ? Math.round((ratings.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10
+        : null;
+      res.json({ average, count, ratings });
+    } catch (err) {
+      res.status(500).json({ error: "Reyting olishda xatolik" });
+    }
+  });
+
+  app.get("/api/gyms/:id/ratings-admin", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const ratings = await storage.getGymRatings(req.params.id);
+      res.json({ ratings });
+    } catch (err) {
+      res.status(500).json({ error: "Reyting olishda xatolik" });
+    }
+  });
+
+  app.get("/api/my-ratings", requireAuth, async (req, res) => {
+    try {
+      const ratings = await storage.getUserRatings(req.user!.id);
+      res.json({ ratings });
+    } catch (err) {
+      res.status(500).json({ error: "Reytinglarni olishda xatolik" });
     }
   });
 

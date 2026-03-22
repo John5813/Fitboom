@@ -339,6 +339,36 @@ export default function HomePage() {
     cancelBookingMutation.mutate(bookingId);
   };
 
+  const { data: myRatingsData } = useQuery<{ ratings: { bookingId: string; rating: number }[] }>({
+    queryKey: ['/api/my-ratings'],
+    enabled: !!user,
+  });
+
+  const myRatingsMap = new Map(
+    (myRatingsData?.ratings || []).map(r => [r.bookingId, r.rating])
+  );
+
+  const rateGymMutation = useMutation({
+    mutationFn: async ({ bookingId, gymId, rating }: { bookingId: string; gymId: string; rating: number }) => {
+      const { apiRequest } = await import('@/lib/queryClient');
+      return apiRequest('POST', `/api/gyms/${gymId}/rate`, { bookingId, rating });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-ratings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+      toast({ title: "Rahmat!", description: "Bahoyingiz qabul qilindi." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Xatolik", description: err.message || "Baho berishda xatolik.", variant: "destructive" });
+    },
+  });
+
+  const handleRateGym = (bookingId: string, rating: number) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+    rateGymMutation.mutate({ bookingId, gymId: booking.gymId, rating });
+  };
+
   const handleBookGym = (gymId: string) => {
     const gym = gyms.find(g => g.id === gymId);
     if (gym) {
@@ -660,6 +690,8 @@ export default function HomePage() {
                   longitude={gym.longitude ?? undefined}
                   description={gym.description ?? undefined}
                   facilities={gym.facilities ?? undefined}
+                  avgRating={(gym as any).avgRating ?? null}
+                  ratingCount={(gym as any).ratingCount ?? 0}
                   onBook={handleBookGym}
                 />
               ))}
@@ -731,6 +763,9 @@ export default function HomePage() {
                     latitude={gym?.latitude ?? undefined}
                     longitude={gym?.longitude ?? undefined}
                     gymAddress={gym?.address ?? undefined}
+                    isCompleted={booking.isCompleted || booking.status === 'completed'}
+                    existingRating={myRatingsMap.get(booking.id) ?? null}
+                    onRate={handleRateGym}
                     onScanQR={() => handleScanQR(booking.id)}
                     onCancel={handleCancelBooking}
                   />
@@ -761,6 +796,9 @@ export default function HomePage() {
                     latitude={gym?.latitude ?? undefined}
                     longitude={gym?.longitude ?? undefined}
                     gymAddress={gym?.address ?? undefined}
+                    isCompleted={booking.isCompleted || booking.status === 'completed'}
+                    existingRating={myRatingsMap.get(booking.id) ?? null}
+                    onRate={handleRateGym}
                     onScanQR={() => handleScanQR(booking.id)}
                     onCancel={handleCancelBooking}
                   />

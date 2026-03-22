@@ -15,7 +15,17 @@ The frontend uses React 18 with TypeScript, Vite for bundling, and Wouter for ro
 The backend is an Express.js application written in TypeScript, implementing a RESTful API design. Authentication is session-based using Passport.js (Local Strategy), with routes for user authentication, gyms, classes, bookings, and categories. All routes are protected by authentication middleware, with additional admin-only routes for specific functionalities. Telegram Bot authentication has been integrated as the primary login method, handling user registration, login, and profile completion flows.
 
 ### Database Architecture
-PostgreSQL, hosted via Neon serverless, serves as the primary database. Drizzle ORM is used for type-safe queries and migrations. The schema includes `users` (with `telegramId`, `creditBalance`, `isAdmin`, `profileImageUrl`), `gyms`, `onlineClasses`, `bookings`, `categories`, `adminSettings` (for secure password storage), `partnershipMessages` (for partner requests), and `timeSlots` (for gym scheduling with weekly pattern, capacity management, and rest day support). A repository pattern (`IStorage` interface) abstracts database operations for better maintainability and testability.
+PostgreSQL, hosted via Neon serverless, serves as the primary database. Drizzle ORM is used for type-safe queries and migrations. The schema includes `users` (with `telegramId`, `creditBalance`, `isAdmin`, `profileImageUrl`), `gyms`, `onlineClasses`, `bookings`, `categories`, `adminSettings` (for secure password storage), `partnershipMessages` (for partner requests), `timeSlots` (for gym scheduling with weekly pattern, capacity management, and rest day support), and `gymRatings` (1-5 star ratings per booking, unique per booking, with user/gym references). A repository pattern (`IStorage` interface) abstracts database operations for better maintainability and testability.
+
+### Gym Rating System
+- `gymRatings` table: id, userId, gymId, bookingId (UNIQUE), rating (1-5), createdAt
+- Only allowed on completed bookings (isCompleted=true or status='completed')
+- One rating per booking enforced at DB level (UNIQUE constraint on bookingId)
+- `GET /api/gyms` includes `avgRating` (null if none) and `ratingCount` for each gym
+- `POST /api/gyms/:id/rate` — authenticated, validates booking ownership + completion
+- `GET /api/my-ratings` — returns user's ratings keyed by bookingId
+- GymCard shows star + average rating in photo overlay and detail dialog
+- BookingCard shows "Baho bering" button for completed unrated bookings; star display for already-rated
 
 ### Time Slot System
 - Weekly schedule pattern: Mon-Sat with hourly slots (09:00-21:00) by default

@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -73,6 +73,11 @@ export interface IStorage {
   deleteExpiredLoginCodes(): Promise<void>;
   getLastLoginCodeTime(telegramId: string): Promise<Date | null>;
   incrementLoginCodeAttempts(code: string): Promise<number>;
+  createGymRating(data: InsertGymRating): Promise<GymRating>;
+  getGymRatingByBooking(bookingId: string): Promise<GymRating | undefined>;
+  getGymRatings(gymId: string): Promise<GymRating[]>;
+  getUserRatings(userId: string): Promise<GymRating[]>;
+  getGymAverageRatings(): Promise<{ gymId: string; average: number; count: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -562,6 +567,40 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`created_at DESC`)
       .limit(1);
     return result ? result.createdAt : null;
+  }
+
+  async createGymRating(data: InsertGymRating): Promise<GymRating> {
+    const [created] = await db.insert(gymRatings).values(data).returning();
+    return created;
+  }
+
+  async getGymRatingByBooking(bookingId: string): Promise<GymRating | undefined> {
+    const [rating] = await db.select().from(gymRatings).where(eq(gymRatings.bookingId, bookingId));
+    return rating || undefined;
+  }
+
+  async getGymRatings(gymId: string): Promise<GymRating[]> {
+    return await db.select().from(gymRatings).where(eq(gymRatings.gymId, gymId));
+  }
+
+  async getUserRatings(userId: string): Promise<GymRating[]> {
+    return await db.select().from(gymRatings).where(eq(gymRatings.userId, userId));
+  }
+
+  async getGymAverageRatings(): Promise<{ gymId: string; average: number; count: number }[]> {
+    const rows = await db
+      .select({
+        gymId: gymRatings.gymId,
+        average: sql<number>`ROUND(AVG(${gymRatings.rating})::numeric, 1)`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(gymRatings)
+      .groupBy(gymRatings.gymId);
+    return rows.map(r => ({
+      gymId: r.gymId,
+      average: Number(r.average),
+      count: Number(r.count),
+    }));
   }
 }
 

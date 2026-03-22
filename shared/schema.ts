@@ -183,10 +183,20 @@ export const loginCodes = pgTable("login_codes", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const gymRatings = pgTable("gym_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  gymId: varchar("gym_id").notNull(),
+  bookingId: varchar("booking_id").notNull().unique(),
+  rating: integer("rating").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertCreditPaymentSchema = createInsertSchema(creditPayments).omit({ id: true, createdAt: true });
 export const insertLoginCodeSchema = createInsertSchema(loginCodes).omit({ id: true, createdAt: true });
 export const insertGymVisitSchema = createInsertSchema(gymVisits).omit({ id: true, visitDate: true });
 export const insertGymPaymentSchema = createInsertSchema(gymPayments).omit({ id: true, paymentDate: true });
+export const insertGymRatingSchema = createInsertSchema(gymRatings).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -214,3 +224,5 @@ export type InsertCreditPayment = z.infer<typeof insertCreditPaymentSchema>;
 export type CreditPayment = typeof creditPayments.$inferSelect;
 export type InsertLoginCode = z.infer<typeof insertLoginCodeSchema>;
 export type LoginCode = typeof loginCodes.$inferSelect;
+export type InsertGymRating = z.infer<typeof insertGymRatingSchema>;
+export type GymRating = typeof gymRatings.$inferSelect;

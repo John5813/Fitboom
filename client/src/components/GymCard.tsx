@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, ExternalLink, ChevronLeft, ChevronRight, Info, CalendarCheck, ImageIcon } from "lucide-react";
+import { MapPin, Clock, ExternalLink, ChevronLeft, ChevronRight, Info, CalendarCheck, ImageIcon, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -20,6 +20,8 @@ interface GymCardProps {
   longitude?: string;
   description?: string;
   facilities?: string;
+  avgRating?: number | null;
+  ratingCount?: number;
   onBook: (id: string) => void;
 }
 
@@ -37,6 +39,8 @@ export default function GymCard({
   longitude,
   description,
   facilities,
+  avgRating,
+  ratingCount = 0,
   onBook
 }: GymCardProps) {
   const { t } = useLanguage();
@@ -117,6 +121,13 @@ export default function GymCard({
                 <Clock className="w-3.5 h-3.5 flex-shrink-0" />
                 {hours}
               </span>
+              {avgRating != null && (
+                <span className="text-yellow-400 text-sm flex items-center gap-1" data-testid={`text-rating-${id}`}>
+                  <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                  {avgRating.toFixed(1)}
+                  <span className="text-white/60 text-xs">({ratingCount})</span>
+                </span>
+              )}
             </div>
             <p className="text-white/70 text-sm mt-1">{category}</p>
           </div>
@@ -200,6 +211,13 @@ export default function GymCard({
                   <Clock className="w-3.5 h-3.5" />
                   {hours}
                 </span>
+                {avgRating != null && (
+                  <span className="text-sm flex items-center gap-1 text-yellow-500" data-testid={`text-rating-detail-${id}`}>
+                    <Star className="w-3.5 h-3.5 fill-yellow-500" />
+                    {avgRating.toFixed(1)}
+                    <span className="text-muted-foreground text-xs">({ratingCount} baho)</span>
+                  </span>
+                )}
               </div>
 
               {typeof distance === 'number' && (
