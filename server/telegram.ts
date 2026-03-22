@@ -755,9 +755,13 @@ export function setupCreditExpiryScheduler(storage: IStorage): void {
 
   // Keyingi 09:00 Toshkent vaqtida va har kuni takrorlanadi
   setTimeout(() => {
-    sendCreditExpiryReminders(storage);
+    sendCreditExpiryReminders(storage).catch(err =>
+      console.error('[CreditReminder] Scheduled run error:', err)
+    );
     setInterval(() => {
-      sendCreditExpiryReminders(storage);
+      sendCreditExpiryReminders(storage).catch(err =>
+        console.error('[CreditReminder] Interval run error:', err)
+      );
     }, 24 * 60 * 60 * 1000);
   }, msUntilFirst);
 }
