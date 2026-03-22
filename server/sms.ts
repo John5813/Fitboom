@@ -1,5 +1,4 @@
-const DEVSMS_LOGIN = process.env.DEVSMS_LOGIN || '';
-const DEVSMS_PASSWORD = process.env.DEVSMS_PASSWORD || '';
+const DEVSMS_API_KEY = process.env.DEVSMS_API_KEY || '';
 
 interface SmsOtpEntry {
   code: string;
@@ -34,8 +33,8 @@ export async function sendSmsCode(phone: string): Promise<{ success: boolean; me
     return { success: false, message: `Iltimos ${wait} soniya kuting`, cooldown: wait };
   }
 
-  if (!DEVSMS_LOGIN || !DEVSMS_PASSWORD) {
-    console.error('[SMS] DEVSMS_LOGIN yoki DEVSMS_PASSWORD sozlanmagan');
+  if (!DEVSMS_API_KEY) {
+    console.error('[SMS] DEVSMS_API_KEY sozlanmagan');
     return { success: false, message: 'SMS xizmati sozlanmagan' };
   }
 
@@ -43,23 +42,32 @@ export async function sendSmsCode(phone: string): Promise<{ success: boolean; me
   const text = `FitBoom tasdiqlash kodi: ${code}. Hech kimga bermang.`;
 
   try {
-    const body = JSON.stringify([{ phone: normalized, text }]);
-    const url = `https://api.devsms.uz/api/?login=${encodeURIComponent(DEVSMS_LOGIN)}&password=${encodeURIComponent(DEVSMS_PASSWORD)}&data=${encodeURIComponent(body)}`;
+    const response = await fetch('https://devsms.uz/api/send_sms.php', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DEVSMS_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: normalized,
+        message: text,
+        from: '4546',
+      }),
+    });
 
-    const response = await fetch(url, { method: 'GET' });
-    const result = await response.text();
-    console.log('[SMS] devsms.uz javobi:', result);
+    const resultText = await response.text();
+    console.log('[SMS] devsms.uz javobi:', resultText);
 
-    const json = JSON.parse(result);
-    const status = Array.isArray(json) ? json[0]?.status : json?.status;
+    let json: any = {};
+    try { json = JSON.parse(resultText); } catch {}
 
-    if (status !== 'ok' && status !== 'success' && status !== '1' && status !== 1) {
-      console.error('[SMS] Xatolik:', result);
-      return { success: false, message: "SMS yuborishda xatolik yuz berdi" };
+    if (!response.ok || json.success === false) {
+      console.error('[SMS] Xatolik:', resultText);
+      return { success: false, message: json.message || 'SMS yuborishda xatolik yuz berdi' };
     }
   } catch (err) {
     console.error('[SMS] Tarmoq xatoligi:', err);
-    return { success: false, message: "SMS yuborishda xatolik yuz berdi" };
+    return { success: false, message: 'SMS yuborishda xatolik yuz berdi' };
   }
 
   smsOtpStore.set(normalized, { code, expiresAt: Date.now() + OTP_EXPIRY_MS, attempts: 0 });
