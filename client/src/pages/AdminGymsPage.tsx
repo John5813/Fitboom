@@ -78,6 +78,8 @@ export default function AdminGymsPage() {
 
   const [pendingSlots, setPendingSlots] = useState<Array<{ dayOfWeek: string; startTime: string; endTime: string; capacity: string }>>([]);
   const [newSlotForm, setNewSlotForm] = useState({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' });
+  const [autoSlotForm, setAutoSlotForm] = useState({ startTime: '09:00', endTime: '21:00', capacity: '15' });
+  const [autoSelectedDays, setAutoSelectedDays] = useState<string[]>([]);
 
   const [uploadingImages, setUploadingImages] = useState(false);
 
@@ -301,6 +303,8 @@ export default function AdminGymsPage() {
       setIsQRDialogOpen(true);
       setPendingSlots([]);
       setNewSlotForm({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' });
+      setAutoSelectedDays([]);
+      setAutoSlotForm({ startTime: '09:00', endTime: '21:00', capacity: '15' });
       setGymForm({
         name: '',
         address: '',
@@ -1690,98 +1694,226 @@ export default function AdminGymsPage() {
               />
             </div>
 
-            <div className="border rounded-lg p-4 space-y-3">
+            <div className="border rounded-lg p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-semibold">Vaqt slotlari</Label>
                 {pendingSlots.length > 0 && (
                   <Badge variant="secondary">{pendingSlots.length} ta slot</Badge>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Kun</Label>
-                  <Select
-                    value={newSlotForm.dayOfWeek}
-                    onValueChange={(v) => setNewSlotForm(prev => ({ ...prev, dayOfWeek: v }))}
-                  >
-                    <SelectTrigger className="h-8 text-sm" data-testid="select-slot-day">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WEEKDAYS.map((d) => (
-                        <SelectItem key={d.full} value={d.full}>{d.full}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Sig'im</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newSlotForm.capacity}
-                    onChange={(e) => setNewSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
-                    className="h-8 text-sm"
-                    placeholder="15"
-                    data-testid="input-slot-capacity"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Boshlanish</Label>
-                  <Input
-                    type="time"
-                    value={newSlotForm.startTime}
-                    onChange={(e) => setNewSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
-                    className="h-8 text-sm"
-                    data-testid="input-slot-start"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Tugash</Label>
-                  <Input
-                    type="time"
-                    value={newSlotForm.endTime}
-                    onChange={(e) => setNewSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
-                    className="h-8 text-sm"
-                    data-testid="input-slot-end"
-                  />
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                data-testid="button-add-slot"
-                onClick={() => {
-                  if (!newSlotForm.startTime || !newSlotForm.endTime || !newSlotForm.capacity) return;
-                  setPendingSlots(prev => [...prev, { ...newSlotForm }]);
-                  setNewSlotForm(prev => ({
-                    ...prev,
-                    startTime: newSlotForm.endTime,
-                    endTime: newSlotForm.endTime.replace(/(\d+):(\d+)/, (_, h, m) => `${String((parseInt(h) + 1) % 24).padStart(2, '0')}:${m}`),
-                  }));
-                }}
-              >
-                <Plus className="w-4 h-4 mr-1" /> Slot qo'shish
-              </Button>
-              {pendingSlots.length > 0 && (
-                <div className="space-y-1 max-h-36 overflow-y-auto">
-                  {pendingSlots.map((slot, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-muted rounded px-2 py-1 text-xs">
-                      <span className="font-medium">{slot.dayOfWeek}</span>
-                      <span className="text-muted-foreground">{slot.startTime} – {slot.endTime}</span>
-                      <span>{slot.capacity} kishi</span>
-                      <button
-                        type="button"
-                        onClick={() => setPendingSlots(prev => prev.filter((_, i) => i !== idx))}
-                        className="text-destructive hover:text-destructive/80 ml-1"
-                        data-testid={`button-remove-slot-${idx}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+
+              {/* Auto-generate section */}
+              <div className="bg-muted/50 rounded-md p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Avtomatik to'ldirish</p>
+                <div className="flex flex-wrap gap-1">
+                  {WEEKDAYS.map((d) => (
+                    <button
+                      key={d.full}
+                      type="button"
+                      onClick={() => setAutoSelectedDays(prev =>
+                        prev.includes(d.full) ? prev.filter(x => x !== d.full) : [...prev, d.full]
+                      )}
+                      className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                        autoSelectedDays.includes(d.full)
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-foreground border-border hover:bg-muted'
+                      }`}
+                      data-testid={`button-auto-day-${d.short}`}
+                    >
+                      {d.short}
+                    </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setAutoSelectedDays(WEEKDAYS.slice(0, 5).map(d => d.full))}
+                    className="px-2 py-1 rounded text-xs border border-dashed border-border hover:bg-muted transition-colors"
+                    data-testid="button-auto-select-weekdays"
+                  >
+                    Du–Ju
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoSelectedDays(WEEKDAYS.map(d => d.full))}
+                    className="px-2 py-1 rounded text-xs border border-dashed border-border hover:bg-muted transition-colors"
+                    data-testid="button-auto-select-all"
+                  >
+                    Hammasi
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-xs">Boshlanish</Label>
+                    <Input
+                      type="time"
+                      value={autoSlotForm.startTime}
+                      onChange={(e) => setAutoSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="h-8 text-sm"
+                      data-testid="input-auto-start"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Tugash</Label>
+                    <Input
+                      type="time"
+                      value={autoSlotForm.endTime}
+                      onChange={(e) => setAutoSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
+                      className="h-8 text-sm"
+                      data-testid="input-auto-end"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Sig'im</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={autoSlotForm.capacity}
+                      onChange={(e) => setAutoSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
+                      className="h-8 text-sm"
+                      placeholder="15"
+                      data-testid="input-auto-capacity"
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full"
+                  disabled={autoSelectedDays.length === 0}
+                  data-testid="button-auto-fill-slots"
+                  onClick={() => {
+                    const startH = parseInt(autoSlotForm.startTime.split(':')[0]);
+                    const endH = parseInt(autoSlotForm.endTime.split(':')[0]);
+                    if (startH >= endH || !autoSlotForm.capacity) return;
+                    const generated: Array<{ dayOfWeek: string; startTime: string; endTime: string; capacity: string }> = [];
+                    for (const day of autoSelectedDays) {
+                      for (let h = startH; h < endH; h++) {
+                        generated.push({
+                          dayOfWeek: day,
+                          startTime: `${h.toString().padStart(2, '0')}:00`,
+                          endTime: `${(h + 1).toString().padStart(2, '0')}:00`,
+                          capacity: autoSlotForm.capacity,
+                        });
+                      }
+                    }
+                    setPendingSlots(prev => [...prev, ...generated]);
+                  }}
+                >
+                  <Clock className="w-4 h-4 mr-1" />
+                  {autoSelectedDays.length > 0
+                    ? `${autoSelectedDays.length} kun × ${Math.max(0, parseInt(autoSlotForm.endTime) - parseInt(autoSlotForm.startTime))} soat = ${autoSelectedDays.length * Math.max(0, parseInt(autoSlotForm.endTime.split(':')[0]) - parseInt(autoSlotForm.startTime.split(':')[0]))} slot yaratish`
+                    : 'Kunlarni tanlang'}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex-1 border-t" />
+                <span>yoki qo'lda qo'shing</span>
+                <div className="flex-1 border-t" />
+              </div>
+
+              {/* Manual entry */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Kun</Label>
+                    <Select
+                      value={newSlotForm.dayOfWeek}
+                      onValueChange={(v) => setNewSlotForm(prev => ({ ...prev, dayOfWeek: v }))}
+                    >
+                      <SelectTrigger className="h-8 text-sm" data-testid="select-slot-day">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WEEKDAYS.map((d) => (
+                          <SelectItem key={d.full} value={d.full}>{d.full}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Sig'im</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newSlotForm.capacity}
+                      onChange={(e) => setNewSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
+                      className="h-8 text-sm"
+                      placeholder="15"
+                      data-testid="input-slot-capacity"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Boshlanish</Label>
+                    <Input
+                      type="time"
+                      value={newSlotForm.startTime}
+                      onChange={(e) => setNewSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="h-8 text-sm"
+                      data-testid="input-slot-start"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Tugash</Label>
+                    <Input
+                      type="time"
+                      value={newSlotForm.endTime}
+                      onChange={(e) => setNewSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
+                      className="h-8 text-sm"
+                      data-testid="input-slot-end"
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  data-testid="button-add-slot"
+                  onClick={() => {
+                    if (!newSlotForm.startTime || !newSlotForm.endTime || !newSlotForm.capacity) return;
+                    setPendingSlots(prev => [...prev, { ...newSlotForm }]);
+                    setNewSlotForm(prev => ({
+                      ...prev,
+                      startTime: newSlotForm.endTime,
+                      endTime: newSlotForm.endTime.replace(/(\d+):(\d+)/, (_, h, m) => `${String((parseInt(h) + 1) % 24).padStart(2, '0')}:${m}`),
+                    }));
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Slot qo'shish
+                </Button>
+              </div>
+
+              {/* Pending slots list */}
+              {pendingSlots.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Qo'shilgan slotlar:</p>
+                    <button
+                      type="button"
+                      onClick={() => setPendingSlots([])}
+                      className="text-xs text-destructive hover:underline"
+                      data-testid="button-clear-slots"
+                    >
+                      Barchasini o'chirish
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {pendingSlots.map((slot, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-muted rounded px-2 py-1 text-xs">
+                        <span className="font-medium w-24 truncate">{slot.dayOfWeek}</span>
+                        <span className="text-muted-foreground">{slot.startTime} – {slot.endTime}</span>
+                        <span>{slot.capacity} kishi</span>
+                        <button
+                          type="button"
+                          onClick={() => setPendingSlots(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-destructive hover:text-destructive/80 ml-1"
+                          data-testid={`button-remove-slot-${idx}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1797,7 +1929,7 @@ export default function AdminGymsPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => { setIsCreateDialogOpen(false); setPendingSlots([]); setNewSlotForm({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' }); }}
+                onClick={() => { setIsCreateDialogOpen(false); setPendingSlots([]); setNewSlotForm({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' }); setAutoSelectedDays([]); setAutoSlotForm({ startTime: '09:00', endTime: '21:00', capacity: '15' }); }}
                 className="flex-1"
                 data-testid="button-cancel-gym"
               >
