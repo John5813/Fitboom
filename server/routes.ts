@@ -1671,6 +1671,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mavjud phone-login userga Telegram akkaunt bog'lash
+  app.post('/api/telegram/link-account', requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) return res.status(400).json({ message: 'Kod talab qilinadi' });
+
+      const upperCode = code.toUpperCase().trim();
+      const sess = req.session as any;
+
+      if (sess.codeLockedUntil && Date.now() < sess.codeLockedUntil) {
+        const waitSec = Math.ceil((sess.codeLockedUntil - Date.now()) / 1000);
+        return res.status(429).json({ message: `Bloklangan. ${waitSec} soniyadan keyin qayta urinib ko'ring.` });
+      }
+
+      if (!sess.linkFailedAttempts) sess.linkFailedAttempts = 0;
+
+      const loginData = await storage.getLoginCodeByCode(upperCode);
+
+      if (!loginData) {
+        sess.linkFailedAttempts++;
+        if (sess.linkFailedAttempts >= 5) {
+          sess.codeLockedUntil = Date.now() + 5 * 60 * 1000;
+          sess.linkFailedAttempts = 0;
+          return res.status(429).json({ message: "Juda ko'p noto'g'ri urinishlar. 5 daqiqadan keyin qayta urinib ko'ring." });
+        }
+        return res.status(400).json({ message: "Kod noto'g'ri yoki muddati o'tgan" });
+      }
+
+      if (new Date() > new Date(loginData.expiresAt)) {
+        await storage.deleteLoginCode(upperCode);
+        return res.status(400).json({ message: "Kod muddati o'tgan. Botdan yangi kod oling." });
+      }
+
+      const currentUser = req.user as any;
+
+      // Agar bu telegramId boshqa userda ro'yxatdan o'tgan bo'lsa — ruxsat bermaymiz
+      const existingTgUser = await storage.getUserByTelegramId(loginData.telegramId);
+      if (existingTgUser && existingTgUser.id !== currentUser.id) {
+        await storage.deleteLoginCode(upperCode);
+        return res.status(409).json({ message: "Bu Telegram akkaunt boshqa foydalanuvchiga bog'langan" });
+      }
+
+      await storage.updateUser(currentUser.id, {
+        telegramId: loginData.telegramId,
+        chatId: loginData.chatId,
+      });
+
+      await storage.deleteLoginCode(upperCode);
+      sess.linkFailedAttempts = 0;
+      sess.codeLockedUntil = undefined;
+
+      res.json({ success: true, message: "Telegram muvaffaqiyatli bog'landi" });
+    } catch (err: any) {
+      console.error('[Telegram] link-account error:', err);
+      res.status(500).json({ message: 'Server xatoligi' });
+    }
+  });
+
   // Telegram bot ulangan-ulmaganligi tekshirish
   app.get('/api/check-telegram-linked', requireAuth, async (req, res) => {
     try {

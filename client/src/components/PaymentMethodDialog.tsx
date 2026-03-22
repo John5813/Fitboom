@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
-import { Send, ExternalLink } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Send, ExternalLink, ChevronLeft } from "lucide-react";
 
 interface PaymentMethodDialogProps {
   isOpen: boolean;
@@ -12,15 +13,45 @@ interface PaymentMethodDialogProps {
   onSelectCardTransfer: () => void;
 }
 
+type TelegramStep = "info" | "code-input";
+
 export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTransfer }: PaymentMethodDialogProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [showTelegramRequired, setShowTelegramRequired] = useState(false);
+  const [telegramStep, setTelegramStep] = useState<TelegramStep>("info");
+  const [linkCode, setLinkCode] = useState("");
 
   const { data: telegramStatus, refetch: refetchTelegramStatus } = useQuery<{ linked: boolean; botUrl: string }>({
     queryKey: ['/api/check-telegram-linked'],
     enabled: isOpen,
     staleTime: 30000,
+  });
+
+  const linkAccountMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const res = await apiRequest('/api/telegram/link-account', 'POST', { code });
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/check-telegram-linked'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: "Telegram bog'landi!", description: "Endi to'lovni davom ettirishingiz mumkin." });
+      setShowTelegramRequired(false);
+      setTelegramStep("info");
+      setLinkCode("");
+      onClose();
+      onSelectCardTransfer();
+    },
+    onError: (error: any) => {
+      let msg = "Kod noto'g'ri yoki muddati o'tgan";
+      try {
+        const raw = error.message || "";
+        const idx = raw.indexOf(": ");
+        const parsed = JSON.parse(idx >= 0 ? raw.slice(idx + 2) : raw);
+        if (parsed?.message) msg = parsed.message;
+      } catch {}
+      toast({ title: "Xatolik", description: msg, variant: "destructive" });
+    },
   });
 
   const handleClick = () => {
@@ -34,9 +65,11 @@ export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTrans
   };
 
   const handleCardTransfer = async () => {
-    await refetchTelegramStatus();
-    const linked = telegramStatus?.linked ?? !!(user as any)?.chatId;
+    const result = await refetchTelegramStatus();
+    const linked = result.data?.linked;
     if (!linked) {
+      setTelegramStep("info");
+      setLinkCode("");
       setShowTelegramRequired(true);
       return;
     }
@@ -47,21 +80,22 @@ export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTrans
   const handleOpenBot = () => {
     const botUrl = telegramStatus?.botUrl || 'https://t.me/uzfitboom_bot?start=auth';
     window.open(botUrl, '_blank');
+    setTelegramStep("code-input");
   };
 
-  const handleBotConnected = async () => {
-    const result = await refetchTelegramStatus();
-    if (result.data?.linked) {
-      setShowTelegramRequired(false);
-      onClose();
-      onSelectCardTransfer();
-    } else {
-      toast({
-        title: "Telegram hali ulanmagan",
-        description: "Botdan /start bosib, telefon raqamingizni ulang",
-        variant: "destructive",
-      });
+  const handleLinkSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkCode || linkCode.length < 6) {
+      toast({ title: "Xatolik", description: "Kodni to'liq kiriting", variant: "destructive" });
+      return;
     }
+    linkAccountMutation.mutate(linkCode);
+  };
+
+  const handleCloseTelegram = () => {
+    setShowTelegramRequired(false);
+    setTelegramStep("info");
+    setLinkCode("");
   };
 
   const methods = [
@@ -114,7 +148,6 @@ export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTrans
               To'lov usulini tanlang
             </DialogTitle>
           </DialogHeader>
-
           <div className="px-4 pb-6 space-y-3">
             {methods.map((method) => (
               <button
@@ -131,49 +164,97 @@ export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTrans
         </DialogContent>
       </Dialog>
 
-      {/* Telegram bot ulanish kerak dialogi */}
-      <Dialog open={showTelegramRequired} onOpenChange={(open) => { if (!open) setShowTelegramRequired(false); }}>
+      {/* Telegram bog'lash dialogi */}
+      <Dialog open={showTelegramRequired} onOpenChange={(open) => { if (!open) handleCloseTelegram(); }}>
         <DialogContent className="w-[92vw] max-w-[380px] p-0 rounded-3xl border-none shadow-xl" data-testid="dialog-telegram-required">
-          <div className="p-6 text-center space-y-5">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-              <Send className="text-blue-500" size={28} />
-            </div>
+          <div className="p-6 space-y-5">
 
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Telegram bot kerak</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Kartaga o'tkazish orqali to'lov qilish uchun avval <strong>@uzfitboom_bot</strong> ga ulanishingiz kerak.
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Botda <strong>/start</strong> bosib, telefon raqamingizni ulang. Keyin bu yerga qayting.
-              </p>
-            </div>
+            {/* INFO qadami */}
+            {telegramStep === "info" && (
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                  <Send className="text-blue-500" size={28} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Telegram bot kerak</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Kartaga o'tkazish uchun avval <strong>@uzfitboom_bot</strong> ga ulanishingiz kerak.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Botga o'ting, <strong>/start</strong> bosing va bot bergan <strong>maxsus kodni</strong> keyingi qadamda kiriting.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleOpenBot}
+                    className="w-full h-11 rounded-2xl bg-blue-500 hover:bg-blue-600 font-semibold gap-2"
+                    data-testid="button-open-telegram-bot"
+                  >
+                    <ExternalLink size={16} />
+                    Telegram botni ochish
+                  </Button>
+                  <button
+                    onClick={handleCloseTelegram}
+                    className="text-sm text-gray-400 hover:text-gray-600 w-full py-1"
+                    data-testid="button-cancel-telegram"
+                  >
+                    Bekor qilish
+                  </button>
+                </div>
+              </div>
+            )}
 
-            <div className="space-y-3">
-              <Button
-                onClick={handleOpenBot}
-                className="w-full h-11 rounded-2xl bg-blue-500 hover:bg-blue-600 font-semibold gap-2"
-                data-testid="button-open-telegram-bot"
-              >
-                <ExternalLink size={16} />
-                Telegram botni ochish
-              </Button>
-              <Button
-                onClick={handleBotConnected}
-                variant="outline"
-                className="w-full h-11 rounded-2xl font-semibold"
-                data-testid="button-check-telegram-linked"
-              >
-                Ulandim, davom etish
-              </Button>
-              <button
-                onClick={() => setShowTelegramRequired(false)}
-                className="text-sm text-gray-400 hover:text-gray-600 w-full py-1"
-                data-testid="button-cancel-telegram"
-              >
-                Bekor qilish
-              </button>
-            </div>
+            {/* KOD KIRITISH qadami */}
+            {telegramStep === "code-input" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setTelegramStep("info")}
+                    className="text-gray-400 hover:text-gray-600"
+                    data-testid="button-back-telegram-step"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+                  <h3 className="text-lg font-bold text-gray-900">Botdan kodni kiriting</h3>
+                </div>
+
+                <div className="bg-blue-50 rounded-2xl p-4 text-sm text-blue-700">
+                  <p>Telegram botda <strong>/start</strong> bosib, kelgan <strong>kirish kodini</strong> shu yerga kiriting.</p>
+                </div>
+
+                <form onSubmit={handleLinkSubmit} className="space-y-3">
+                  <Input
+                    type="text"
+                    placeholder="XXXXXXXX"
+                    value={linkCode}
+                    onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+                    autoFocus
+                    className="text-center text-2xl font-mono tracking-widest h-14 rounded-2xl border-2"
+                    maxLength={8}
+                    data-testid="input-telegram-link-code"
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-11 rounded-2xl bg-blue-500 hover:bg-blue-600 font-semibold"
+                    disabled={linkAccountMutation.isPending}
+                    data-testid="button-submit-link-code"
+                  >
+                    {linkAccountMutation.isPending ? "Tekshirilmoqda..." : "Tasdiqlash va davom etish"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleOpenBot}
+                    className="w-full h-9 rounded-2xl text-sm text-blue-600 gap-1"
+                    data-testid="button-reopen-bot"
+                  >
+                    <ExternalLink size={14} />
+                    Botni qayta ochish
+                  </Button>
+                </form>
+              </div>
+            )}
+
           </div>
         </DialogContent>
       </Dialog>
