@@ -2,7 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, registerHealthCheck } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
-import { setupTelegramWebhook } from './telegram';
+import { setupTelegramWebhook, setupCreditExpiryScheduler } from './telegram';
+import { storage } from './storage';
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message, err.stack);
@@ -80,5 +81,6 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     
     await setupTelegramWebhook();
+    setupCreditExpiryScheduler(storage);
   });
 })();

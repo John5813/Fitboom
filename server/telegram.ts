@@ -661,6 +661,101 @@ export async function notifyProfileCompleted(user: any) {
   }
 }
 
+// In-memory deduplication: "YYYY-MM-DD-userId-5d" or "YYYY-MM-DD-userId-1d"
+const sentExpiryReminders = new Set<string>();
+
+function getTashkentDateStrLocal(): string {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const tashkent = new Date(utc + 5 * 3600000);
+  const y = tashkent.getFullYear();
+  const m = String(tashkent.getMonth() + 1).padStart(2, '0');
+  const d = String(tashkent.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export async function sendCreditExpiryReminders(storage: IStorage): Promise<void> {
+  try {
+    const todayStr = getTashkentDateStrLocal();
+    const allUsers = await storage.getUsersWithChatId();
+    const now = new Date();
+
+    for (const user of allUsers) {
+      if (!user.chatId || user.credits <= 0 || !user.creditExpiryDate) continue;
+
+      const expiryDate = new Date(user.creditExpiryDate);
+      if (expiryDate <= now) continue;
+
+      const diffMs = expiryDate.getTime() - now.getTime();
+      const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      if (daysLeft !== 5 && daysLeft !== 1) continue;
+
+      const dedupeKey = `${todayStr}-${user.id}-${daysLeft}d`;
+      if (sentExpiryReminders.has(dedupeKey)) continue;
+
+      const expiryUzDate = expiryDate.toLocaleDateString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        timeZone: 'Asia/Tashkent',
+      });
+
+      const emoji = daysLeft === 1 ? '🚨' : '⚠️';
+      const urgency = daysLeft === 1 ? 'ertaga' : '5 kunda';
+
+      const text =
+        `${emoji} <b>Kredit muddati tugaydi!</b>\n\n` +
+        `Salom, ${user.name || 'Foydalanuvchi'}!\n\n` +
+        `Sizning <b>${user.credits} ta kalitingiz</b> muddati <b>${urgency} tugaydi</b>.\n` +
+        `📅 Muddat: <b>${expiryUzDate}</b>\n\n` +
+        `Kreditlaringiz yo'qolishidan oldin zalga tashrif buyuring yoki yangi paket sotib oling!`;
+
+      const result = await sendMessage(user.chatId, text, {
+        inline_keyboard: [[{
+          text: '🏋️ Zalga bron qilish',
+          url: getAppUrl(),
+        }]],
+      });
+
+      if (result?.ok) {
+        sentExpiryReminders.add(dedupeKey);
+        console.log(`[CreditReminder] Sent ${daysLeft}-day reminder to ${user.name || user.id}`);
+      }
+    }
+
+    // Eski kalitlarni o'chirish (xotira tejash)
+    for (const key of sentExpiryReminders) {
+      if (!key.startsWith(todayStr)) {
+        sentExpiryReminders.delete(key);
+      }
+    }
+  } catch (err) {
+    console.error('[CreditReminder] Error:', err);
+  }
+}
+
+export function setupCreditExpiryScheduler(storage: IStorage): void {
+  const getMsUntilNext0900Tashkent = (): number => {
+    const now = new Date();
+    // 09:00 Tashkent (UTC+5) = 04:00 UTC
+    const next04utc = new Date(now);
+    next04utc.setUTCHours(4, 0, 0, 0);
+    if (next04utc.getTime() <= now.getTime()) {
+      next04utc.setUTCDate(next04utc.getUTCDate() + 1);
+    }
+    return next04utc.getTime() - now.getTime();
+  };
+
+  const msUntilFirst = getMsUntilNext0900Tashkent();
+  console.log(`[CreditReminder] Scheduler started: first run in ${Math.round(msUntilFirst / 60000)} minutes`);
+
+  setTimeout(() => {
+    sendCreditExpiryReminders(storage);
+    setInterval(() => {
+      sendCreditExpiryReminders(storage);
+    }, 24 * 60 * 60 * 1000);
+  }, msUntilFirst);
+}
+
 export async function sendPaymentReceiptToAdmin(storage: IStorage, paymentId: string, receiptUrl: string, user: any, credits: number, price: number, isRemainingPayment: boolean = false) {
   const payment = await storage.getCreditPayment(paymentId);
   const remainingAmount = payment?.remainingAmount || 0;
