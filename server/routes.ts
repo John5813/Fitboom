@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const average = count > 0
         ? Math.round((ratings.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10
         : null;
-      res.json({ average, count, ratings });
+      res.json({ average, count });
     } catch (err) {
       res.status(500).json({ error: "Reyting olishda xatolik" });
     }
