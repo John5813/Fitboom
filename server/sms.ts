@@ -39,7 +39,6 @@ export async function sendSmsCode(phone: string): Promise<{ success: boolean; me
   }
 
   const code = generateOtp();
-  const text = `FitBoom tasdiqlash kodi: ${code}. Hech kimga bermang.`;
 
   try {
     const response = await fetch('https://devsms.uz/api/send_sms.php', {
@@ -50,9 +49,10 @@ export async function sendSmsCode(phone: string): Promise<{ success: boolean; me
       },
       body: JSON.stringify({
         phone: normalized,
-        message: text,
-        from: '4546',
         type: 'universal_otp',
+        template_type: 1,
+        service_name: 'FitBoom',
+        otp_code: code,
       }),
     });
 
