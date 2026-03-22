@@ -1706,11 +1706,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const currentUser = req.user as any;
 
-      // Agar bu telegramId boshqa userda ro'yxatdan o'tgan bo'lsa — ruxsat bermaymiz
+      // Agar bu telegramId boshqa userda ro'yxatdan o'tgan bo'lsa —
+      // eski userdan Telegram ma'lumotlarini olib, joriy userga o'tkazamiz
       const existingTgUser = await storage.getUserByTelegramId(loginData.telegramId);
       if (existingTgUser && existingTgUser.id !== currentUser.id) {
-        await storage.deleteLoginCode(upperCode);
-        return res.status(409).json({ message: "Bu Telegram akkaunt boshqa foydalanuvchiga bog'langan" });
+        // Eski Telegram-only userdan telegramId ni olib tashlaymiz
+        await storage.updateUser(existingTgUser.id, { telegramId: null as any, chatId: null as any });
       }
 
       await storage.updateUser(currentUser.id, {

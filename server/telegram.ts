@@ -573,12 +573,32 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
       ? message.contact.phone_number
       : `+${message.contact.phone_number}`;
 
-    const existingUser = await storage.getUserByPhone(phoneNumber);
-    if (existingUser) await storage.updateUser(existingUser.id, { chatId });
+    // Avval telefon raqami bo'yicha userni qidirish (SMS orqali ro'yxatdan o'tgan bo'lishi mumkin)
+    const phoneUser = await storage.getUserByPhone(phoneNumber);
+    // Telegram ID bo'yicha userni qidirish
+    const tgUser = await storage.getUserByTelegramId(telegramUserId);
 
-    let user = await storage.getUserByTelegramId(telegramUserId);
-    if (!user) user = await storage.createUser({ telegramId: telegramUserId, phone: phoneNumber });
-    if (!user.chatId || user.chatId !== chatId) await storage.updateUser(user.id, { chatId });
+    let user: typeof phoneUser;
+
+    if (phoneUser) {
+      // Shu telefon bilan allaqachon user bor — unga Telegram ma'lumotlarini qo'shamiz
+      user = phoneUser;
+      await storage.updateUser(user.id, { chatId, telegramId: telegramUserId });
+      // Agar alohida Telegram user ham bo'lsa va ular bir xil user emasligini tekshiramiz
+      if (tgUser && tgUser.id !== user.id) {
+        // Eski Telegram-only userni tozalaymiz (telegramId ni olib tashlaymiz)
+        await storage.updateUser(tgUser.id, { telegramId: null as any, chatId: null as any });
+      }
+    } else if (tgUser) {
+      // Telefon yo'q, lekin Telegram user bor — unga telefon va chatId qo'shamiz
+      user = tgUser;
+      if (!user.chatId || user.chatId !== chatId) {
+        await storage.updateUser(user.id, { chatId, phone: phoneNumber });
+      }
+    } else {
+      // Hech qanday user topilmadi — yangi user yaratamiz
+      user = await storage.createUser({ telegramId: telegramUserId, phone: phoneNumber, chatId });
+    }
 
     const lastCodeTime = await storage.getLastLoginCodeTime(telegramUserId);
     if (lastCodeTime) {
