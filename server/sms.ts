@@ -52,6 +52,7 @@ export async function sendSmsCode(phone: string): Promise<{ success: boolean; me
         phone: normalized,
         message: text,
         from: '4546',
+        type: 'universal_otp',
       }),
     });
 

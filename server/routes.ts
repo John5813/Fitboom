@@ -1637,7 +1637,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (normalized.length < 9) return res.status(400).json({ message: "Telefon raqami noto'g'ri" });
 
       const result = await sendSmsCode(phone);
-      if (!result.success) return res.status(429).json({ message: result.message, cooldown: result.cooldown });
+      if (!result.success) {
+        const status = result.cooldown ? 429 : 400;
+        return res.status(status).json({ message: result.message, cooldown: result.cooldown });
+      }
       res.json({ success: true, message: result.message });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Xatolik yuz berdi" });
