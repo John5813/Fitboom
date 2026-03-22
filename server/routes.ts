@@ -12,6 +12,7 @@ import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl } from "./telegram";
 import { objectStorageClient } from "./replit_integrations/object_storage";
+import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 
 export function registerHealthCheck(app: Express) {
   app.get('/api/health', (_req, res) => {
@@ -1623,6 +1624,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // SMS kirish endpointlari
+  app.post('/api/sms/send', async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ message: "Telefon raqami talab qilinadi" });
+
+      const normalized = normalizePhone(phone);
+      if (normalized.length < 9) return res.status(400).json({ message: "Telefon raqami noto'g'ri" });
+
+      const result = await sendSmsCode(phone);
+      if (!result.success) return res.status(429).json({ message: result.message, cooldown: result.cooldown });
+      res.json({ success: true, message: result.message });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Xatolik yuz berdi" });
+    }
+  });
+
+  app.post('/api/sms/verify', async (req, res) => {
+    try {
+      const { phone, code } = req.body;
+      if (!phone || !code) return res.status(400).json({ message: "Telefon va kod talab qilinadi" });
+
+      const result = verifySmsCode(phone, code);
+      if (!result.success) return res.status(400).json({ message: result.message });
+
+      const normalizedPhone = '+' + normalizePhone(phone);
+
+      let user = await storage.getUserByPhone(normalizedPhone);
+      if (!user) {
+        user = await storage.createUser({ phone: normalizedPhone });
+      }
+
+      req.login(user as any, async (err) => {
+        if (err) return res.status(500).json({ message: "Tizimga kirishda xatolik" });
+        res.json({ success: true, profileCompleted: user!.profileCompleted, user });
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Xatolik yuz berdi" });
+    }
+  });
+
+  // Telegram bot ulangan-ulmaganligi tekshirish
+  app.get('/api/check-telegram-linked', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const fullUser = await storage.getUser(user.id);
+      res.json({ linked: !!(fullUser?.chatId), botUrl: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME || 'uzfitboom_bot'}?start=auth` });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
   });
 
