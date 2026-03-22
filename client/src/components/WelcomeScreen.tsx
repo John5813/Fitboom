@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Dumbbell, MapPin, Video, KeyRound, Clock, Users, QrCode, Shield, Star, TrendingUp } from "lucide-react";
+import { Dumbbell, KeyRound, QrCode, Video, MapPin, ArrowRight, Zap, Users, Trophy } from "lucide-react";
 
 interface WelcomeScreenProps {
   onStart: () => void;
@@ -7,287 +7,236 @@ interface WelcomeScreenProps {
 
 export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
   return (
-    <div className="min-h-screen overflow-y-auto">
-      {/* Hero Section */}
-      <div className="relative min-h-screen flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-400 via-sky-600 to-gray-900" />
+    <div className="min-h-screen overflow-y-auto bg-background">
 
-        <div className="relative z-10 text-center px-6 max-w-2xl">
-          <h1 className="font-display font-bold text-4xl md:text-5xl text-white mb-4">
-            FitBoom ga xush kelibsiz
-          </h1>
-          <p className="text-white/90 text-lg mb-8">
-            Bir kredit tizimi orqali shaharning eng yaxshi sport zallariga kirish imkoniyati
-          </p>
+      {/* ═══ HERO ═══ */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 py-20">
 
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
-              <Dumbbell className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-white text-sm">Koʻplab sport zallari</p>
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950" />
+        <div className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 80% 60% at 50% -10%, #f97316 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 100%, #0ea5e9 0%, transparent 60%)",
+          }}
+        />
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-lg text-center space-y-8">
+
+          {/* Logo badge */}
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+              <Dumbbell className="w-7 h-7 text-white" />
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-2">
-                <KeyRound className="w-6 h-6 text-white" />
-              </div>
-              <p className="text-white text-sm">Kalit tizimi</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
-              <Video className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-white text-sm">Online darslar</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-md p-4 border border-white/20">
-              <MapPin className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-white text-sm">Qulay joylashuv</p>
-            </div>
+            <span className="text-3xl font-extrabold tracking-tight text-white">
+              Fit<span className="text-orange-400">Boom</span>
+            </span>
           </div>
 
-          <Button 
-            onClick={onStart}
-            size="lg"
-            className="w-full bg-accent text-accent-foreground border border-accent-border hover-elevate active-elevate-2"
-            data-testid="button-start"
-          >
-            Boshlash
-          </Button>
-
-          {/* Scroll indicator */}
-          <div className="mt-8 animate-bounce">
-            <p className="text-white/70 text-sm mb-2">Pastga aylantiring</p>
-            <div className="w-6 h-10 border-2 border-white/50 rounded-full mx-auto flex items-start justify-center p-2">
-              <div className="w-1 h-3 bg-white/70 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <div className="bg-background py-16 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-display font-bold text-3xl mb-4">FitBoom nima?</h2>
-            <p className="text-muted-foreground text-lg">
-              Sport hayotingizni yanada qulay va arzon qilish uchun yaratilgan platforma
+          {/* Headline */}
+          <div className="space-y-4">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight tracking-tight">
+              Sport zallariga<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
+                bir kalit bilan
+              </span>
+            </h1>
+            <p className="text-gray-400 text-lg leading-relaxed max-w-sm mx-auto">
+              Toshkent bo'ylab eng yaxshi fitness zallarini bir joyda toping, bron qiling va kiring.
             </p>
           </div>
 
-          {/* Main Features */}
-          <div className="space-y-12">
-            {/* Credit System */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                <KeyRound className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-xl mb-3">🔑 Kalit Tizimi</h3>
-                <p className="text-muted-foreground mb-4">
-                  Bir marta kalit sotib olib, turli sport zallariga kiring. 6, 13 yoki 24 kalit paketlari mavjud. Barcha kalitlar 30 kun amal qiladi.
-                </p>
-                
-                {/* Key tiers explanation */}
-                <div className="space-y-3 bg-card border rounded-lg p-4">
-                  <h4 className="font-semibold text-sm mb-2">Kalit talablari:</h4>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <span className="text-green-600 dark:text-green-400 font-bold text-sm">1</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Oddiy sport zallari</p>
-                      <p className="text-xs text-muted-foreground">Gym, fitness markazlari</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">2</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">O'rta daraja sport zallari</p>
-                      <p className="text-xs text-muted-foreground">Yoga, boks, pilates studiyalari</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <span className="text-purple-600 dark:text-purple-400 font-bold text-sm">3</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Premium sport markazlari</p>
-                      <p className="text-xs text-muted-foreground">Suzish havzalari, sauna, massaj xizmatlari</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                      <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">4+</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Elite va maxsus tadbirlar</p>
-                      <p className="text-xs text-muted-foreground">Ot sporti, golf, maxsus sport tadbirlari</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Gyms */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Dumbbell className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xl mb-2">🏋️ Sport Zallari</h3>
-                <p className="text-muted-foreground">
-                  Shaharning turli sport zallarini ko'ring va qidiring. Gym, Yoga, Boks, Suzish, Pilates va boshqa kategoriyalar. Haritada eng yaqin zallarni topib, kalit bilan bron qiling.
-                </p>
-              </div>
-            </div>
-
-            {/* QR Code */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <QrCode className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xl mb-2">📱 QR Kod Tizimi</h3>
-                <p className="text-muted-foreground">
-                  Bronlashdan keyin QR kod oling. Zalga kirishda QR kodni skanerlang. Tez va xavfsiz kirish tizimi.
-                </p>
-              </div>
-            </div>
-
-            {/* Video Courses */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Video className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xl mb-2">🎥 Video Kurslar</h3>
-                <p className="text-muted-foreground">
-                  Onlayn fitnes darsliklari to'plamlari. Professional ustozlar bilan uyda mashq qilish imkoniyati.
-                </p>
-              </div>
-            </div>
-
-            {/* Profile Management */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Users className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xl mb-2">👤 Profil Boshqaruvi</h3>
-                <p className="text-muted-foreground">
-                  Telegram orqali qulay ro'yxatdan o'tish. Bronlar tarixi va kalit balansi hamda muddat kuzatuvi.
-                </p>
-              </div>
-            </div>
-
-            {/* For Gym Owners */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Shield className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xl mb-2">🏢 Zal Egalari Uchun</h3>
-                <p className="text-muted-foreground">
-                  O'z zalingizni boshqarish paneli. Mehmonlar va daromad statistikasi hamda to'lovlar tarixi.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Benefits Section */}
-          <div className="mt-16 bg-card rounded-lg p-8 border">
-            <h3 className="font-bold text-2xl mb-6 text-center">Afzalliklar</h3>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Star className="w-6 h-6 text-primary" />
-                </div>
-                <h4 className="font-semibold mb-2">Tejamkorlik</h4>
-                <p className="text-sm text-muted-foreground">
-                  Bir kalit bilan ko'plab sport zallariga kirish
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Clock className="w-6 h-6 text-primary" />
-                </div>
-                <h4 className="font-semibold mb-2">Qulay</h4>
-                <p className="text-sm text-muted-foreground">
-                  Istalgan vaqt, istalgan joyda sport qiling
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <TrendingUp className="w-6 h-6 text-primary" />
-                </div>
-                <h4 className="font-semibold mb-2">Moslashuvchan</h4>
-                <p className="text-sm text-muted-foreground">
-                  Turli sport turlari va zallarni sinab ko'ring
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* How it works */}
-          <div className="mt-16">
-            <h3 className="font-bold text-2xl mb-8 text-center">Qanday ishlaydi?</h3>
-            <div className="space-y-6">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                  1
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-1">Ro'yxatdan o'ting</h4>
-                  <p className="text-muted-foreground text-sm">Telegram orqali tez va oson ro'yxatdan o'ting</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                  2
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-1">Kalit sotib oling</h4>
-                  <p className="text-muted-foreground text-sm">O'zingizga mos paketni tanlang va to'lang</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                  3
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-1">Zalni bron qiling</h4>
-                  <p className="text-muted-foreground text-sm">Haritadan yoki ro'yxatdan sport zalini tanlang va bron qiling</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                  4
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-1">QR kodni skanerlang</h4>
-                  <p className="text-muted-foreground text-sm">Zalga borib, QR kodni ko'rsating va mashg'ulotni boshlang</p>
-                </div>
-              </div>
-            </div>
+          {/* Stat pills */}
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            {[
+              { icon: <MapPin className="w-3.5 h-3.5" />, label: "Toshkent bo'ylab" },
+              { icon: <Zap className="w-3.5 h-3.5" />, label: "Tezkor bron" },
+              { icon: <QrCode className="w-3.5 h-3.5" />, label: "QR kirish" },
+            ].map((s) => (
+              <span
+                key={s.label}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/80 text-xs font-medium backdrop-blur-sm"
+              >
+                {s.icon}
+                {s.label}
+              </span>
+            ))}
           </div>
 
           {/* CTA */}
-          <div className="mt-16 text-center">
-            <Button 
-              onClick={onStart}
-              size="lg"
-              className="bg-accent text-accent-foreground border border-accent-border hover-elevate"
-            >
-              Hozir Boshlash
-            </Button>
-            <p className="text-sm text-muted-foreground mt-4">
-              Sport hayotingizni yangi bosqichga olib chiqing!
-            </p>
+          <Button
+            onClick={onStart}
+            size="lg"
+            data-testid="button-start"
+            className="w-full max-w-xs mx-auto h-14 rounded-2xl text-base font-bold bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white border-0 shadow-lg shadow-orange-500/40 gap-2 transition-all duration-200"
+          >
+            Boshlash
+            <ArrowRight className="w-5 h-5" />
+          </Button>
+
+          <p className="text-gray-600 text-sm">
+            Ro'yxatdan o'tish bepul · 30 soniyada tayyor
+          </p>
+        </div>
+      </section>
+
+      {/* ═══ 3 ASOSIY AFZALLIK ═══ */}
+      <section className="py-16 px-6 bg-background">
+        <div className="max-w-2xl mx-auto space-y-10">
+
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-extrabold text-foreground">Nima beradi?</h2>
+            <p className="text-muted-foreground">Bir platformada hamma narsa</p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                icon: <KeyRound className="w-6 h-6 text-orange-500" />,
+                bg: "bg-orange-50 dark:bg-orange-950/40",
+                title: "Kalit tizimi",
+                desc: "6, 13 yoki 24 ta kalit sotib oling — har kalit bitta zalga kirish. Turli zallarni sinab ko'ring, bitta obunaga bog'lanmang.",
+              },
+              {
+                icon: <Dumbbell className="w-6 h-6 text-blue-500" />,
+                bg: "bg-blue-50 dark:bg-blue-950/40",
+                title: "Ko'plab sport zallari",
+                desc: "Gym, yoga, boks, pilates, suzish havzalari va boshqa zallar. Haritadan eng yaqinini toping va bron qiling.",
+              },
+              {
+                icon: <Video className="w-6 h-6 text-violet-500" />,
+                bg: "bg-violet-50 dark:bg-violet-950/40",
+                title: "Online darslar",
+                desc: "Kalit bilan professional ustozlarning video kurslarini ham oling. Uyda ham, zalda ham mashq qiling.",
+              },
+            ].map((f) => (
+              <div
+                key={f.title}
+                className="flex items-start gap-4 p-5 rounded-2xl border border-border bg-card shadow-sm"
+              >
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${f.bg}`}>
+                  {f.icon}
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground mb-1">{f.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* ═══ QANDAY ISHLAYDI ═══ */}
+      <section className="py-16 px-6 bg-muted/40 dark:bg-muted/10">
+        <div className="max-w-2xl mx-auto space-y-10">
+
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-extrabold text-foreground">Qanday ishlaydi?</h2>
+            <p className="text-muted-foreground">4 qadam — hammasi shu</p>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              {
+                num: "01",
+                title: "Ro'yxatdan o'ting",
+                desc: "Telegram yoki telefon raqam orqali — 30 soniyada tayyor.",
+                color: "text-orange-500",
+                border: "border-orange-500/30 bg-orange-500/5",
+              },
+              {
+                num: "02",
+                title: "Kalit sotib oling",
+                desc: "O'zingizga mos paketni tanlang va to'liq raqamga o'tkazing.",
+                color: "text-blue-500",
+                border: "border-blue-500/30 bg-blue-500/5",
+              },
+              {
+                num: "03",
+                title: "Zalni bron qiling",
+                desc: "Haritadan yaqin zalni toping, qulay vaqtni tanlang va bir bosim bilan band qiling.",
+                color: "text-violet-500",
+                border: "border-violet-500/30 bg-violet-500/5",
+              },
+              {
+                num: "04",
+                title: "QR bilan kiring",
+                desc: "Zalga borib telefoningizni ko'rsating — QR kod skanerlangan va kirish ochiq.",
+                color: "text-emerald-500",
+                border: "border-emerald-500/30 bg-emerald-500/5",
+              },
+            ].map((step) => (
+              <div
+                key={step.num}
+                className={`flex items-start gap-4 p-4 rounded-2xl border ${step.border}`}
+              >
+                <span className={`text-2xl font-extrabold tracking-tighter flex-shrink-0 ${step.color}`}>
+                  {step.num}
+                </span>
+                <div>
+                  <h4 className="font-bold text-foreground">{step.title}</h4>
+                  <p className="text-muted-foreground text-sm mt-0.5">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ STATS ═══ */}
+      <section className="py-16 px-6 bg-background">
+        <div className="max-w-2xl mx-auto">
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { icon: <MapPin className="w-5 h-5 text-orange-500" />, value: "20+", label: "Sport zallari" },
+              { icon: <Users className="w-5 h-5 text-blue-500" />, value: "1000+", label: "Faol a'zolar" },
+              { icon: <Trophy className="w-5 h-5 text-violet-500" />, value: "5★", label: "Reyting" },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="text-center p-4 rounded-2xl border border-border bg-card shadow-sm"
+              >
+                <div className="flex justify-center mb-2">{s.icon}</div>
+                <div className="text-2xl font-extrabold text-foreground">{s.value}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ BOTTOM CTA ═══ */}
+      <section className="py-16 px-6 bg-gradient-to-b from-background to-muted/30 dark:to-muted/10">
+        <div className="max-w-sm mx-auto text-center space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-extrabold text-foreground">Tayyormisiz?</h2>
+            <p className="text-muted-foreground text-sm">
+              Bugun boshlang — birinchi bron bepul konsultatsiya bilan!
+            </p>
+          </div>
+          <Button
+            onClick={onStart}
+            size="lg"
+            data-testid="button-start-bottom"
+            className="w-full h-14 rounded-2xl text-base font-bold bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white border-0 shadow-lg shadow-orange-500/30 gap-2 transition-all duration-200"
+          >
+            Hozir Boshlash
+            <ArrowRight className="w-5 h-5" />
+          </Button>
+        </div>
+      </section>
+
     </div>
   );
 }
