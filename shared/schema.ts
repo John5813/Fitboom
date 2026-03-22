@@ -226,3 +226,8 @@ export type InsertLoginCode = z.infer<typeof insertLoginCodeSchema>;
 export type LoginCode = typeof loginCodes.$inferSelect;
 export type InsertGymRating = z.infer<typeof insertGymRatingSchema>;
 export type GymRating = typeof gymRatings.$inferSelect;
+
+export type GymWithRating = Gym & {
+  avgRating: number | null;
+  ratingCount: number;
+};

@@ -618,6 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const booking = await storage.getBooking(bookingId);
       if (!booking) return res.status(404).json({ error: "Bron topilmadi" });
       if (booking.userId !== userId) return res.status(403).json({ error: "Bu bron sizniki emas" });
+      if (booking.gymId !== gymId) return res.status(400).json({ error: "Bron ushbu zalga tegishli emas" });
       if (!booking.isCompleted && booking.status !== 'completed') {
         return res.status(400).json({ error: "Faqat yakunlangan bronlarga baho berish mumkin" });
       }

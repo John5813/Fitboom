@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Gym, TimeSlot } from "@shared/schema";
+import type { Gym, GymWithRating, TimeSlot } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -39,7 +39,7 @@ interface GymOwnerData {
 }
 
 export default function AdminGymsPage() {
-  const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
+  const [selectedGym, setSelectedGym] = useState<GymWithRating | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const [createdGym, setCreatedGym] = useState<Gym | null>(null);
@@ -176,7 +176,7 @@ export default function AdminGymsPage() {
     setSelectedDays([]);
   };
 
-  const { data: gymsData, isLoading } = useQuery<{ gyms: Gym[] }>({
+  const { data: gymsData, isLoading } = useQuery<{ gyms: GymWithRating[] }>({
     queryKey: ['/api/gyms'],
   });
 
@@ -192,8 +192,15 @@ export default function AdminGymsPage() {
     queryFn: () => fetch(`/api/gym-owner/${selectedGym?.id}`, { credentials: 'include' }).then(res => res.json()),
   });
 
+  const { data: gymRatingsData } = useQuery<{ ratings: { id: string; userId: string; bookingId: string; rating: number; createdAt: string }[] }>({
+    queryKey: ['/api/gyms', selectedGym?.id, 'ratings-admin'],
+    enabled: !!selectedGym?.id,
+    queryFn: () => fetch(`/api/gyms/${selectedGym?.id}/ratings-admin`, { credentials: 'include' }).then(res => res.json()),
+  });
+
   const gyms = gymsData?.gyms || [];
   const timeSlots = timeSlotsData?.timeSlots || [];
+  const gymRatings = gymRatingsData?.ratings || [];
 
   const createPaymentMutation = useMutation({
     mutationFn: async (data: { gymId: string; amount: number; notes: string }) => {
@@ -801,6 +808,7 @@ export default function AdminGymsPage() {
                 <TableRow>
                   <TableHead className="w-10">№</TableHead>
                   <TableHead>Zal</TableHead>
+                  <TableHead className="text-right">Reyting</TableHead>
                   <TableHead className="text-right">Daromad</TableHead>
                   <TableHead className="text-right">Qarz</TableHead>
                 </TableRow>
@@ -834,6 +842,15 @@ export default function AdminGymsPage() {
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
                       {gym.name}
+                    </TableCell>
+                    <TableCell className="text-right" data-testid={`text-gym-rating-${gym.id}`}>
+                      {gym.avgRating != null ? (
+                        <span className="text-xs text-yellow-500">
+                          ⭐ {gym.avgRating.toFixed(1)} ({gym.ratingCount})
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right" data-testid={`text-gym-earnings-${gym.id}`}>
                       <span className="text-xs text-green-600 dark:text-green-400">
@@ -1143,6 +1160,36 @@ export default function AdminGymsPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  Reytinglar
+                  {gymRatings.length > 0 && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      ({gymRatings.length} ta •{" "}
+                      o'rtacha: {(gymRatings.reduce((s, r) => s + r.rating, 0) / gymRatings.length).toFixed(1)}⭐)
+                    </span>
+                  )}
+                </h3>
+                {gymRatings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mb-4">Hozircha baho yo'q</p>
+                ) : (
+                  <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                    {[...gymRatings]
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map((r) => (
+                        <div key={r.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm" data-testid={`row-rating-${r.id}`}>
+                          <span className="text-muted-foreground text-xs truncate max-w-[140px]" title={r.bookingId}>
+                            {new Date(r.createdAt).toLocaleDateString('uz-UZ')}
+                          </span>
+                          <span className="font-semibold text-yellow-500">
+                            {'⭐'.repeat(r.rating)} ({r.rating}/5)
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>

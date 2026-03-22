@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import type { Gym, Booking, UserPurchase } from "@shared/schema";
+import type { Gym, GymWithRating, Booking, UserPurchase } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -103,7 +103,7 @@ export default function HomePage() {
     refetchInterval: 60000,
   });
 
-  const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: Gym[] }>({
+  const { data: gymsData, isLoading: gymsLoading } = useQuery<{ gyms: GymWithRating[] }>({
     queryKey: ['/api/gyms'],
   });
 
@@ -690,8 +690,8 @@ export default function HomePage() {
                   longitude={gym.longitude ?? undefined}
                   description={gym.description ?? undefined}
                   facilities={gym.facilities ?? undefined}
-                  avgRating={(gym as any).avgRating ?? null}
-                  ratingCount={(gym as any).ratingCount ?? 0}
+                  avgRating={gym.avgRating ?? null}
+                  ratingCount={gym.ratingCount ?? 0}
                   onBook={handleBookGym}
                 />
               ))}
