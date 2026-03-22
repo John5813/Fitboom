@@ -625,13 +625,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const timeSlotData = insertTimeSlotSchema.parse(req.body);
 
-      if (timeSlotData.dayOfWeek === 'Yakshanba') {
-        return res.status(400).json({ error: "Yakshanba dam olish kuni. Bu kunga slot yaratib bo'lmaydi." });
-      }
-
       const gym = await storage.getGym(timeSlotData.gymId);
       if (!gym) {
         return res.status(404).json({ error: "Gym not found" });
+      }
+
+      // Per-gym dam kunlari tekshiruvi (eski hardcoded Yakshanba o'rniga)
+      const dayNameToNumber: Record<string, number> = {
+        'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3,
+        'Payshanba': 4, 'Juma': 5, 'Shanba': 6,
+      };
+      const dayNum = dayNameToNumber[timeSlotData.dayOfWeek];
+      if (dayNum !== undefined && (gym.closedDays || []).includes(String(dayNum))) {
+        return res.status(400).json({ error: `${timeSlotData.dayOfWeek} bu zal uchun dam olish kuni.` });
       }
 
       if (timeSlotData.availableSpots > timeSlotData.capacity) {
@@ -962,8 +968,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
         const nowUTC = Date.now();
         const diffHours = (slotUTC - nowUTC) / 3600000;
-        // Agar 2 soatdan kam qolgan bo'lsa (lekin hali o'tmagan bo'lsa)
-        if (diffHours < 2 && diffHours > -24) {
+        // Agar 2 soatdan kam qolgan bo'lsa (shu jumladan o'tib ketgan bronlar ham)
+        if (diffHours < 2) {
           noRefund = true;
         }
       }
@@ -1041,8 +1047,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const bookingDayOfWeek = new Date(bookingDate + 'T12:00:00').getDay();
-      if (bookingDayOfWeek === 0) {
-        return res.status(400).json({ message: "Yakshanba dam olish kuni. Bu kunga bron qilib bo'lmaydi." });
+      if ((gym.closedDays || []).includes(String(bookingDayOfWeek))) {
+        return res.status(400).json({ message: "Bu kun bu zal uchun dam olish kuni. Bron qilib bo'lmaydi." });
       }
 
       const newCredits = user.credits - gym.credits;

@@ -329,7 +329,7 @@ export default function HomePage() {
       const [year, month, day] = booking.date.split('-').map(Number);
       const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
       const diffHours = (slotUTC - Date.now()) / 3600000;
-      if (diffHours < 2 && diffHours > -24) {
+      if (diffHours < 2) {
         const confirmed = window.confirm(
           "Diqqat! Boshlanishga 2 soatdan kam vaqt qoldi.\n\nBronni bekor qilsangiz kredit qaytarilmaydi.\n\nDavom etasizmi?"
         );

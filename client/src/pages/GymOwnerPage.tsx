@@ -745,7 +745,7 @@ export default function GymOwnerPage() {
           <div className="space-y-4">
             <div className="p-3 border rounded-md bg-muted/30">
               <p className="text-xs text-muted-foreground mb-2">
-                Du-Sh, 09:00-21:00, har soatga 15 kishi. Yakshanba dam olish kuni.
+                Du-Sh, 09:00-21:00, har soatga 15 kishi. Dam kunlari zal sozlamalaridan aniqlanadi.
               </p>
               <Button
                 onClick={handleOwnerAutoGenerate}

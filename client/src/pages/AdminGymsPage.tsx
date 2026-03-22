@@ -1281,7 +1281,7 @@ export default function AdminGymsPage() {
             <div className="p-3 border rounded-md bg-muted/30">
               <p className="text-sm font-medium mb-2">Tez sozlash</p>
               <p className="text-xs text-muted-foreground mb-3">
-                Du-Sh, 09:00-21:00, har soatga 15 kishi. Yakshanba dam olish kuni.
+                Du-Sh, 09:00-21:00, har soatga 15 kishi. Dam kunlari zal sozlamalaridan aniqlanadi.
               </p>
               <Button
                 onClick={handleAutoGenerate}
@@ -1317,9 +1317,7 @@ export default function AdminGymsPage() {
                     >
                       {day.short}
                     </Button>
-                    {day.full === 'Yakshanba' && (
-                      <span className="text-[10px] text-muted-foreground">Dam kun</span>
-                    )}
+                    
                   </div>
                 ))}
               </div>
