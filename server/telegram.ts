@@ -746,8 +746,14 @@ export function setupCreditExpiryScheduler(storage: IStorage): void {
   };
 
   const msUntilFirst = getMsUntilNext0900Tashkent();
-  console.log(`[CreditReminder] Scheduler started: first run in ${Math.round(msUntilFirst / 60000)} minutes`);
+  console.log(`[CreditReminder] Scheduler started: running immediately, then daily at 09:00 Tashkent (next in ${Math.round(msUntilFirst / 60000)} minutes)`);
 
+  // Server ishga tushganida darhol ishga tushirish
+  sendCreditExpiryReminders(storage).catch(err =>
+    console.error('[CreditReminder] Startup run error:', err)
+  );
+
+  // Keyingi 09:00 Toshkent vaqtida va har kuni takrorlanadi
   setTimeout(() => {
     sendCreditExpiryReminders(storage);
     setInterval(() => {
