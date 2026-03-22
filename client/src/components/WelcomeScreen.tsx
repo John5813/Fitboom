@@ -14,10 +14,12 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
 
         {/* Background layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950" />
-        <div className="absolute inset-0 opacity-20"
+        <div
+          className="absolute inset-0"
           style={{
             backgroundImage:
               "radial-gradient(ellipse 80% 60% at 50% -10%, #f97316 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 100%, #0ea5e9 0%, transparent 60%)",
+            animation: "hero-glow 6s ease-in-out infinite",
           }}
         />
         {/* Subtle grid */}

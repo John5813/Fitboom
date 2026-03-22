@@ -133,7 +133,7 @@ export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTrans
               <div className="flex-1">
                 <span className="font-semibold text-base text-foreground">Click</span>
               </div>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Brinda</span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Yaqinda</span>
             </div>
 
             {/* Disabled: Payme */}
@@ -150,7 +150,7 @@ export default function PaymentMethodDialog({ isOpen, onClose, onSelectCardTrans
               <div className="flex-1">
                 <span className="font-semibold text-base text-foreground">Payme</span>
               </div>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Brinda</span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Yaqinda</span>
             </div>
           </div>
         </DialogContent>

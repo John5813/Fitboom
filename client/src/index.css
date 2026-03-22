@@ -173,6 +173,17 @@ body {
   }
 }
 
+@keyframes hero-glow {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.28;
+    transform: scale(1.08);
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
