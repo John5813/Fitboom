@@ -86,7 +86,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             <ArrowRight className="w-5 h-5" />
           </Button>
 
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-400 text-sm">
             Ro'yxatdan o'tish bepul · 30 soniyada tayyor
           </p>
         </div>
