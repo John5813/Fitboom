@@ -915,7 +915,7 @@ export default function AdminGymsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Kredit (kalit)</Label>
+                      <Label>Kredit narxi</Label>
                       <Input
                         type="number"
                         value={gymForm.credits}
@@ -1512,7 +1512,7 @@ export default function AdminGymsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="credits">Kalit *</Label>
+                <Label htmlFor="credits">Kredit *</Label>
                 <Input
                   id="credits"
                   type="number"

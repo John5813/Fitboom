@@ -50,7 +50,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight tracking-tight">
               Sport zallariga<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                bir kalit bilan
+                bir kredit bilan
               </span>
             </h1>
             <p className="text-gray-400 text-lg leading-relaxed max-w-sm mx-auto">
@@ -106,8 +106,8 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               {
                 icon: <KeyRound className="w-6 h-6 text-orange-500" />,
                 bg: "bg-orange-50 dark:bg-orange-950/40",
-                title: "Kalit tizimi",
-                desc: "6, 13 yoki 24 ta kalit sotib oling — har kalit bitta zalga kirish. Turli zallarni sinab ko'ring, bitta obunaga bog'lanmang.",
+                title: "Kredit tizimi",
+                desc: "60, 130 yoki 240 ta kredit sotib oling — har kredit bitta zalga kirish. Turli zallarni sinab ko'ring, bitta obunaga bog'lanmang.",
               },
               {
                 icon: <Dumbbell className="w-6 h-6 text-blue-500" />,
@@ -119,7 +119,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
                 icon: <Video className="w-6 h-6 text-violet-500" />,
                 bg: "bg-violet-50 dark:bg-violet-950/40",
                 title: "Online darslar",
-                desc: "Kalit bilan professional ustozlarning video kurslarini ham oling. Uyda ham, zalda ham mashq qiling.",
+                desc: "Kredit bilan professional ustozlarning video kurslarini ham oling. Uyda ham, zalda ham mashq qiling.",
               },
             ].map((f) => (
               <div
@@ -159,7 +159,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
               },
               {
                 num: "02",
-                title: "Kalit sotib oling",
+                title: "Kredit sotib oling",
                 desc: "O'zingizga mos paketni tanlang va to'liq raqamga o'tkazing.",
                 color: "text-blue-500",
                 border: "border-blue-500/30 bg-blue-500/5",

@@ -24,9 +24,9 @@ interface PurchaseCreditsDialogProps {
 }
 
 const packages: CreditPackage[] = [
-  { credits: 6, price: 180000 },
-  { credits: 13, price: 350000, isPopular: true },
-  { credits: 24, price: 650000 },
+  { credits: 60, price: 180000 },
+  { credits: 130, price: 350000, isPopular: true },
+  { credits: 240, price: 650000 },
 ];
 
 const CARD_NUMBER = "9860160104562378";

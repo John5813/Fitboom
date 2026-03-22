@@ -309,7 +309,7 @@ export default function HomePage() {
       } else {
         toast({
           title: "Bron bekor qilindi",
-          description: "Kalitingiz qaytarildi.",
+          description: "Kreditingiz qaytarildi.",
         });
       }
     },
@@ -396,14 +396,14 @@ export default function HomePage() {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Muvaffaqiyatli!",
-        description: `${data.credits} kalit sotib olindi. Jami: ${data.totalCredits} kalit`,
+        description: `${data.credits} kredit sotib olindi. Jami: ${data.totalCredits} kredit`,
       });
       setIsPurchaseDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
         title: "Xatolik",
-        description: error.message || "Kalit sotib olishda xatolik yuz berdi.",
+        description: error.message || "Kredit sotib olishda xatolik yuz berdi.",
         variant: "destructive",
       });
     },
@@ -589,7 +589,7 @@ export default function HomePage() {
                           </div>
                         )}
                         <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground border-primary-border font-display font-bold text-sm px-3 py-1">
-                          {gym.credits} kalit
+                          {gym.credits} kredit
                         </Badge>
                         <div className="absolute bottom-0 left-0 right-0 p-5">
                           <h3 className="text-white font-bold text-xl leading-tight drop-shadow-lg">
@@ -1052,7 +1052,7 @@ export default function HomePage() {
               >
                 {(user?.credits || 0) < selectedGymForBooking.credits 
                   ? "Kredit yetarli emas" 
-                  : `${selectedGymForBooking.credits} kalit bilan band qilish`}
+                  : `${selectedGymForBooking.credits} kredit bilan band qilish`}
               </Button>
             </div>
           </DialogContent>

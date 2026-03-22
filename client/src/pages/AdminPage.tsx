@@ -197,7 +197,7 @@ export default function AdminPage() {
     if (!/^\d+$/.test(creditsStr)) {
       toast({
         title: "Xatolik",
-        description: "Kalit faqat butun son bo'lishi kerak.",
+        description: "Kredit faqat butun son bo'lishi kerak.",
         variant: "destructive"
       });
       return;
@@ -206,7 +206,7 @@ export default function AdminPage() {
     if (creditsValue < 0) {
       toast({
         title: "Xatolik",
-        description: "Kalit manfiy bo'lishi mumkin emas.",
+        description: "Kredit manfiy bo'lishi mumkin emas.",
         variant: "destructive"
       });
       return;
@@ -464,7 +464,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="gym-price">Narx (kalit)</Label>
+                  <Label htmlFor="gym-price">Narx (kredit)</Label>
                   <Input
                     id="gym-price"
                     type="number"
@@ -655,8 +655,8 @@ export default function AdminPage() {
                               </span>
                             </p>
                             <p>
-                              <span className="text-muted-foreground text-xs">Kalit:</span>{' '}
-                              <span className="font-medium">{gym.credits} kalit</span>
+                              <span className="text-muted-foreground text-xs">Kredit:</span>{' '}
+                              <span className="font-medium">{gym.credits} kredit</span>
                             </p>
                             <p className="truncate">Manzil: {gym.address}</p>
                           </div>
