@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2, QrCode, CheckCircle2, Settings, UserRound } from "lucide-react";
+import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2, QrCode, CheckCircle2, Settings, UserRound, TrendingUp, CalendarDays, MapPin, BarChart3, Activity } from "lucide-react";
 import QRScanner from "@/components/QRScanner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -415,167 +415,290 @@ export default function GymOwnerPage() {
 
   const { gym, visits, payments } = data;
 
+  const now = new Date();
+  const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayLocal = localDate(now);
+
+  const todayVisits = useMemo(() => visits.filter(v => localDate(new Date(v.visitDate)) === todayLocal), [visits, todayLocal]);
+  const todayRevenue = useMemo(() => todayVisits.reduce((s, v) => s + v.amountEarned, 0), [todayVisits]);
+  const thisMonthVisits = useMemo(() => visits.filter(v => {
+    const d = new Date(v.visitDate);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }), [visits, now]);
+  const thisMonthRevenue = useMemo(() => thisMonthVisits.reduce((s, v) => s + v.amountEarned, 0), [thisMonthVisits]);
+  const totalPaid = useMemo(() => payments.reduce((s, p) => s + p.amount, 0), [payments]);
+  const currentBalance = gym.totalEarnings - totalPaid;
+  const totalOccupied = useMemo(() => timeSlots.reduce((s, t) => s + (t.capacity - t.availableSpots), 0), [timeSlots]);
+  const totalCapacity = useMemo(() => timeSlots.reduce((s, t) => s + t.capacity, 0), [timeSlots]);
+  const occupancyPercent = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+  const recentVisits = useMemo(() => [...visits].sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()).slice(0, 5), [visits]);
+  const sortedPayments = useMemo(() => [...payments].sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()), [payments]);
+  const cleanAddress = gym.address ? gym.address.replace(/https?:\/\/[^\s]+/g, '').replace(/,\s*$/, '').trim() : '';
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-50 bg-background border-b">
+    <div className="min-h-screen bg-muted/30">
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold truncate" data-testid="text-gym-name">
-              {gym.name}
-            </h1>
+          <div className="flex items-center gap-3 min-w-0">
+            {gym.imageUrl ? (
+              <img src={gym.imageUrl} alt={gym.name} className="w-9 h-9 rounded-lg object-cover ring-2 ring-primary/20" />
+            ) : (
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold truncate" data-testid="text-gym-name">{gym.name}</h1>
+              <p className="text-[11px] text-muted-foreground truncate">Zal egasi paneli</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={openEditDialog} data-testid="button-edit-gym">
-              <Edit className="h-4 w-4 mr-1" />
-              Tahrirlash
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditDialog} data-testid="button-edit-gym">
+              <Edit className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
-              <Settings className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        <Button
-          className="w-full h-16 text-lg font-bold gap-3 shadow-lg hover-elevate active-elevate-2 bg-primary text-primary-foreground"
+      <div className="p-4 space-y-4 max-w-lg mx-auto">
+        {/* QR Scanner — Primary Action */}
+        <button
           onClick={() => setShowScanner(true)}
+          className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg active:scale-[0.98] transition-transform"
           data-testid="button-open-scanner"
         >
-          <QrCode className="h-8 w-8" />
-          QR Skanerlash
-        </Button>
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-lg font-bold">QR Skanerlash</p>
+              <p className="text-sm opacity-80">Mijozning QR kodini tekshiring</p>
+            </div>
+            <div className="h-14 w-14 rounded-xl bg-white/20 flex items-center justify-center">
+              <QrCode className="h-7 w-7" />
+            </div>
+          </div>
+        </button>
 
-        <Card data-testid="card-gym-info">
-          <CardContent className="p-4">
-            <div className="flex gap-4">
-              {gym.imageUrl ? (
-                <img
-                  src={gym.imageUrl}
-                  alt={gym.name}
-                  className="w-24 h-24 rounded-md object-cover"
-                  data-testid="img-gym"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-md bg-muted flex items-center justify-center">
-                  <Building2 className="h-10 w-10 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1">
-                <h2 className="text-xl font-bold" data-testid="text-gym-title">
-                  {gym.name}
-                </h2>
-                {gym.address && (
-                  <p className="text-sm text-muted-foreground mt-1" data-testid="text-gym-address">
-                    {gym.address}
+        {/* Gym Info Card */}
+        <Card className="overflow-hidden border-0 shadow-sm" data-testid="card-gym-info">
+          {gym.images && gym.images.length > 0 ? (
+            <div className="relative h-40">
+              <img src={gym.images[0]} alt={gym.name} className="w-full h-full object-cover" data-testid="img-gym" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <h2 className="text-white font-bold text-xl" data-testid="text-gym-title">{gym.name}</h2>
+                {cleanAddress && (
+                  <p className="text-white/80 text-sm flex items-center gap-1.5 mt-1" data-testid="text-gym-address">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    {cleanAddress}
                   </p>
-                )}
-                {gym.hours && (
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    <Clock className="inline w-3 h-3 mr-1" />
-                    {gym.hours}
-                  </p>
-                )}
-                {gym.closedDays && gym.closedDays.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {['Ya','Du','Se','Ch','Pa','Ju','Sh'].map((label, i) =>
-                      gym.closedDays!.includes(String(i)) ? (
-                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-medium" data-testid={`text-closed-day-${i}`}>
-                          {label}
-                        </span>
-                      ) : null
-                    )}
-                    <span className="text-[10px] text-muted-foreground self-center">dam kunlari</span>
-                  </div>
                 )}
               </div>
             </div>
-          </CardContent>
+          ) : (
+            <CardContent className="p-4">
+              <h2 className="font-bold text-lg" data-testid="text-gym-title">{gym.name}</h2>
+              {cleanAddress && (
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1" data-testid="text-gym-address">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {cleanAddress}
+                </p>
+              )}
+            </CardContent>
+          )}
+          <div className="px-4 py-3 flex items-center gap-4 border-t bg-background">
+            {gym.hours && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{gym.hours}</span>
+              </div>
+            )}
+            {gym.closedDays && gym.closedDays.length > 0 && (
+              <div className="flex items-center gap-1">
+                {['Ya','Du','Se','Ch','Pa','Ju','Sh'].map((label, i) =>
+                  gym.closedDays!.includes(String(i)) ? (
+                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium" data-testid={`text-closed-day-${i}`}>
+                      {label}
+                    </span>
+                  ) : null
+                )}
+              </div>
+            )}
+          </div>
         </Card>
 
-        <Card data-testid="card-your-earnings">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <span className="text-sm text-muted-foreground">Sizning daromadingiz</span>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground font-medium">Bugun</span>
+                <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-blue-500" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold" data-testid="text-today-visitors">{todayVisits.length}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">tashrif</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground font-medium">Bugungi daromad</span>
+                <div className="h-7 w-7 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-green-600" data-testid="text-today-revenue">{formatCurrency(todayRevenue)}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">so'm</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground font-medium">Shu oy</span>
+                <div className="h-7 w-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <CalendarDays className="h-4 w-4 text-violet-500" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold" data-testid="text-month-visitors">{thisMonthVisits.length}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{formatCurrency(thisMonthRevenue)} daromad</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground font-medium">Band slotlar</span>
+                <div className="h-7 w-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-orange-500" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold" data-testid="text-occupancy">{occupancyPercent}%</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{totalOccupied}/{totalCapacity} joy</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Balance Card */}
+        <Card className="border-0 shadow-sm overflow-hidden" data-testid="card-your-earnings">
+          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground font-medium mb-1">Joriy balans</p>
+                <p className="text-3xl font-bold text-green-600" data-testid="text-your-earnings">{formatCurrency(currentBalance)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Jami: {formatCurrency(gym.totalEarnings)} • To'langan: {formatCurrency(totalPaid)}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-green-500/15 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-green-500" />
+              </div>
             </div>
-            <p className="text-xl font-bold text-green-600" data-testid="text-your-earnings">
-              {formatCurrency(gym.totalEarnings - payments.reduce((sum, p) => sum + p.amount, 0))}
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              To'lovlar har oyning o'rtasida va oxirida amalga oshiriladi
-            </p>
-          </CardContent>
+          </div>
         </Card>
 
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          onClick={() => setShowTimeSlots(true)}
-          data-testid="button-manage-time-slots"
-        >
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            <span>Vaqt slotlarini boshqarish</span>
-          </div>
-          <Badge variant="secondary">{timeSlots.length}</Badge>
-        </Button>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setShowTimeSlots(true)}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border bg-background hover:bg-muted/50 transition-colors shadow-sm"
+            data-testid="button-manage-time-slots"
+          >
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-sm font-medium">Vaqt slotlari</span>
+            <Badge variant="secondary" className="text-xs">{timeSlots.length} ta</Badge>
+          </button>
+          <button
+            onClick={() => setShowVisitors(true)}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border bg-background hover:bg-muted/50 transition-colors shadow-sm"
+            data-testid="button-view-visitors"
+          >
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-sm font-medium">Barcha tashriflar</span>
+            <Badge variant="secondary" className="text-xs">{visits.length} ta</Badge>
+          </button>
+        </div>
 
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          onClick={() => setShowVisitors(true)}
-          data-testid="button-view-visitors"
-        >
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            <span>Tashriflarni ko'rish</span>
-          </div>
-          <Badge variant="secondary">{visits.length}</Badge>
-        </Button>
+        {/* Recent Visitors */}
+        {recentVisits.length > 0 && (
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  So'nggi tashriflar
+                </CardTitle>
+                <button onClick={() => setShowVisitors(true)} className="text-xs text-primary font-medium" data-testid="link-all-visitors">
+                  Barchasini ko'rish
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="space-y-2">
+                {recentVisits.map((visit) => (
+                  <div
+                    key={visit.id}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedVisitor(visit)}
+                    data-testid={`recent-visitor-${visit.id}`}
+                  >
+                    <Avatar className="h-9 w-9">
+                      {visit.visitorProfileImage && <img src={visit.visitorProfileImage} alt={visit.visitorName} className="h-full w-full object-cover" />}
+                      <AvatarFallback className="text-sm bg-primary/10 text-primary">{visit.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{visit.visitorName}</p>
+                      <p className="text-[11px] text-muted-foreground">{formatDate(visit.visitDate)}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-green-600">+{formatCurrency(visit.amountEarned)}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card data-testid="card-payments">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              To'lovlar tarixi ({payments.length})
+        {/* Payments */}
+        <Card className="border-0 shadow-sm" data-testid="card-payments">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              To'lovlar tarixi
+              {payments.length > 0 && <Badge variant="secondary" className="text-xs">{payments.length}</Badge>}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="px-4 pb-4 pt-0">
             {payments.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Hali to'lovlar yo'q
+              <div className="py-6 text-center">
+                <CreditCard className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Hali to'lovlar amalga oshirilmagan</p>
               </div>
             ) : (
-              <ScrollArea className="h-48">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Sana</TableHead>
-                      <TableHead className="text-right">Summa</TableHead>
-                      <TableHead>Izoh</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...payments].sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()).map((payment) => (
-                      <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(payment.paymentDate)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          +{formatCurrency(payment.amount)}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground truncate max-w-[120px]">
-                          {payment.notes || "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <ScrollArea className={payments.length > 5 ? "h-64" : ""}>
+              <div className="space-y-2">
+                {sortedPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30" data-testid={`row-payment-${payment.id}`}>
+                    <div>
+                      <p className="text-sm font-medium text-green-600">+{formatCurrency(payment.amount)}</p>
+                      <p className="text-[11px] text-muted-foreground">{formatDate(payment.paymentDate)}</p>
+                    </div>
+                    {payment.notes && (
+                      <p className="text-xs text-muted-foreground max-w-[120px] truncate">{payment.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
               </ScrollArea>
             )}
           </CardContent>
         </Card>
+
+        <div className="pb-4" />
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

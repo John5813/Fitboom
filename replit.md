@@ -27,6 +27,19 @@ PostgreSQL, hosted via Neon serverless, serves as the primary database. Drizzle 
 - GymCard shows star + average rating in photo overlay and detail dialog
 - BookingCard shows "Baho bering" button for completed unrated bookings; star display for already-rated
 
+### Gym Owner Panel
+- Professional dashboard with analytics: today's visitors, daily revenue, monthly stats, slot occupancy rate
+- Hero banner with gym image, gradient overlay, clean address (URL stripped), hours, closed days
+- QR scanner as primary action with gradient button
+- Balance card showing total earnings, paid amount, and current balance
+- Quick action buttons for time slot management and all visitors
+- Recent visitors inline list (last 5) with avatars and revenue
+- Payments history with modern card layout
+- Settings dialog for switching to user mode (requires re-entering owner access code) and logout
+- Browser back button intercepted to prevent accidental navigation away
+- Auto-redirect: if gymOwnerId exists in localStorage, user always lands on gym owner panel
+- Slot management with auto-generate + manual entry, both available during gym creation
+
 ### Time Slot System
 - Weekly schedule pattern: Mon-Sat with hourly slots (09:00-21:00) by default
 - Each slot tracks capacity and availableSpots (default 15 per hour)
