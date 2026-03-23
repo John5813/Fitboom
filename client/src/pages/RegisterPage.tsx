@@ -27,7 +27,10 @@ type Step = "method" | "telegram-code" | "sms-phone" | "sms-code";
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<Step>("method");
+  const [step, setStep] = useState<Step>(() => {
+    const saved = sessionStorage.getItem("loginStep");
+    return (saved as Step) || "method";
+  });
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [loginCode, setLoginCode] = useState("");
   const [phone, setPhone] = useState("");
@@ -72,10 +75,11 @@ export default function RegisterPage() {
         await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         await queryClient.refetchQueries({ queryKey: ['/api/user'] });
         if (data.profileCompleted) {
+          sessionStorage.removeItem("loginStep");
           toast({ title: "Xush kelibsiz!", description: "Tizimga muvaffaqiyatli kirdingiz." });
           setLocation("/home");
         } else {
-          setStep("method");
+          changeStep("method");
           setShowProfileDialog(true);
         }
       }
@@ -91,7 +95,7 @@ export default function RegisterPage() {
       return response.json();
     },
     onSuccess: () => {
-      setStep("sms-code");
+      changeStep("sms-code");
       setCountdown(60);
       toast({ title: "SMS yuborildi", description: `${phone} raqamiga tasdiqlash kodi yuborildi` });
     },
@@ -118,10 +122,11 @@ export default function RegisterPage() {
         await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         await queryClient.refetchQueries({ queryKey: ['/api/user'] });
         if (data.profileCompleted) {
+          sessionStorage.removeItem("loginStep");
           toast({ title: "Xush kelibsiz!", description: "Tizimga muvaffaqiyatli kirdingiz." });
           setLocation("/home");
         } else {
-          setStep("method");
+          changeStep("method");
           setShowProfileDialog(true);
         }
       }
@@ -154,9 +159,14 @@ export default function RegisterPage() {
     },
   });
 
+  const changeStep = (s: Step) => {
+    if (s === "method") sessionStorage.removeItem("loginStep");
+    else sessionStorage.setItem("loginStep", s);
+    setStep(s);
+  };
+
   const handleTelegramAuth = () => {
-    window.open('https://t.me/uzfitboom_bot?start=auth', '_blank');
-    setStep("telegram-code");
+    changeStep("telegram-code");
   };
 
   const handleSendSms = (e: React.FormEvent) => {
@@ -205,8 +215,8 @@ export default function RegisterPage() {
             {step !== "method" && (
               <button
                 onClick={() => {
-                  if (step === "sms-code") setStep("sms-phone");
-                  else setStep("method");
+                  if (step === "sms-code") changeStep("sms-phone");
+                  else changeStep("method");
                 }}
                 className="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm mb-2 -ml-1"
                 data-testid="button-back"
@@ -247,7 +257,7 @@ export default function RegisterPage() {
                 </button>
 
                 <button
-                  onClick={() => setStep("sms-phone")}
+                  onClick={() => changeStep("sms-phone")}
                   className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-green-100 bg-green-50 hover:bg-green-100 hover:border-green-200 transition-all text-left"
                   data-testid="button-phone-auth"
                 >
@@ -270,8 +280,18 @@ export default function RegisterPage() {
             {/* Telegram kodi */}
             {step === "telegram-code" && (
               <form onSubmit={handleVerifyTelegram} className="space-y-4">
-                <div className="bg-blue-50 rounded-2xl p-4 text-sm text-blue-700 text-center">
-                  <p>Telegram botga o'tib <strong>/start</strong> bosing va kelgan kodni shu yerga kiriting</p>
+                <div className="bg-blue-50 rounded-2xl p-4 text-sm text-blue-700">
+                  <p className="text-center mb-3">Telegram botdan kod oling va shu yerga kiriting</p>
+                  <a
+                    href="https://t.me/uzfitboom_bot?start=auth"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full bg-blue-500 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-600 transition-colors"
+                    data-testid="link-open-bot"
+                  >
+                    <Send size={16} />
+                    Telegram botni ochish
+                  </a>
                 </div>
                 <Input
                   type="text"
