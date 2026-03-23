@@ -169,6 +169,15 @@ export default function GymOwnerPage() {
       setLocation("/settings");
     } else {
       localStorage.setItem("lastUserRole", "gymOwner");
+      // Push an extra history entry so the browser back button doesn't escape the panel
+      window.history.pushState(null, '', window.location.href);
+      const handlePopState = () => {
+        window.history.pushState(null, '', window.location.href);
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
     }
   }, [gymId, accessCode, setLocation]);
 
