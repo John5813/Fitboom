@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2, QrCode, CheckCircle2, Settings, UserRound, TrendingUp, CalendarDays, MapPin, BarChart3, Activity } from "lucide-react";
-import QRScanner from "@/components/QRScanner";
+import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, X, Clock, Trash2, QrCode, Settings, UserRound, TrendingUp, CalendarDays, MapPin, Activity } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -27,6 +26,7 @@ interface GymOwnerData {
     closedDays?: string[];
     totalEarnings: number;
     currentDebt: number;
+    qrCode?: string | null;
   };
   visits: GymVisit[];
   payments: GymPayment[];
@@ -91,8 +91,8 @@ export default function GymOwnerPage() {
   const [showVisitors, setShowVisitors] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
-  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; visitorName?: string; visitorProfileImage?: string } | null>(null);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState('');
@@ -125,43 +125,27 @@ export default function GymOwnerPage() {
     }
   });
 
-  const verifyQRMutation = useMutation({
-    mutationFn: async (qrCode: string) => {
-      const response = await fetch('/api/verify-qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ qrCode, gymId }),
+  const generateAndShowQR = async (qrCodeData: string) => {
+    try {
+      const QRCode = (await import('qrcode')).default;
+      const url = await QRCode.toDataURL(qrCodeData, { 
+        width: 400, 
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "QR kodni tekshirishda xatolik");
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setScanResult({
-        success: true,
-        message: "Tashrif muvaffaqiyatli qayd etildi",
-        visitorName: data.visitorName,
-        visitorProfileImage: data.visitorProfileImage
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/gym-owner'] });
-      setShowScanner(false);
-    },
-    onError: (error: any) => {
-      setScanResult({
-        success: false,
-        message: error.message
-      });
-      setShowScanner(false);
+      setQrImageUrl(url);
+      setShowQRCode(true);
+    } catch {
+      toast({ title: "Xatolik", description: "QR kod yaratishda xatolik", variant: "destructive" });
     }
-  });
+  };
 
-  const handleScan = (data: string | null) => {
-    if (data && !verifyQRMutation.isPending) {
-      verifyQRMutation.mutate(data);
-    }
+  const handleDownloadQR = () => {
+    if (!qrImageUrl) return;
+    const a = document.createElement('a');
+    a.href = qrImageUrl;
+    a.download = `fitboom-qr.png`;
+    a.click();
   };
 
   useEffect(() => {
@@ -465,16 +449,16 @@ export default function GymOwnerPage() {
       </div>
 
       <div className="p-4 space-y-4 max-w-lg mx-auto">
-        {/* QR Scanner — Primary Action */}
+        {/* Gym QR Code — Primary Action */}
         <button
-          onClick={() => setShowScanner(true)}
+          onClick={() => gym.qrCode ? generateAndShowQR(gym.qrCode) : toast({ title: "QR kod yo'q", description: "Bu zal uchun QR kod hali yaratilmagan", variant: "destructive" })}
           className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 shadow-lg active:scale-[0.98] transition-transform"
-          data-testid="button-open-scanner"
+          data-testid="button-show-qr"
         >
           <div className="flex items-center justify-between">
             <div className="text-left">
-              <p className="text-lg font-bold">QR Skanerlash</p>
-              <p className="text-sm opacity-80">Mijozning QR kodini tekshiring</p>
+              <p className="text-lg font-bold">Zalning QR Kodi</p>
+              <p className="text-sm opacity-80">Mijozlar shu kodni skanerlaydi</p>
             </div>
             <div className="h-14 w-14 rounded-xl bg-white/20 flex items-center justify-center">
               <QrCode className="h-7 w-7" />
@@ -784,65 +768,36 @@ export default function GymOwnerPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showScanner} onOpenChange={setShowScanner}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>QR Kodni Skanerlang</DialogTitle>
-            <DialogDescription>Mijozning QR kodini kameraga ko'rsating</DialogDescription>
-          </DialogHeader>
-          <div className="aspect-square overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/50">
-            {showScanner && (
-              <QRScanner
-                isOpen={showScanner}
-                onClose={() => setShowScanner(false)}
-                onScan={handleScan}
-              />
-            )}
-          </div>
-          <Button variant="outline" onClick={() => setShowScanner(false)} className="w-full">
-            Yopish
-          </Button>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!scanResult} onOpenChange={(open) => !open && setScanResult(null)}>
+      <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
         <DialogContent className="max-w-sm">
-          <div className="flex flex-col items-center text-center p-4">
-            {scanResult?.success ? (
-              <>
-                <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="h-12 w-12 text-green-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-green-600 mb-2">Muvaffaqiyatli!</h3>
-                <p className="text-muted-foreground mb-6">{scanResult.message}</p>
-                
-                {scanResult.visitorName && (
-                  <div className="flex flex-col items-center gap-2 mb-6">
-                    <Avatar className="h-20 w-20 border-4 border-green-500 shadow-xl">
-                      {scanResult.visitorProfileImage && (
-                        <img src={scanResult.visitorProfileImage} alt={scanResult.visitorName} className="h-full w-full object-cover" />
-                      )}
-                      <AvatarFallback className="text-2xl">{scanResult.visitorName.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="font-bold text-2xl text-foreground">{scanResult.visitorName}</span>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      Tashrif tasdiqlandi
-                    </Badge>
-                  </div>
-                )}
-              </>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              Zalning QR Kodi
+            </DialogTitle>
+            <DialogDescription>
+              Shu QR kodni eshik oldiga yoki devorga qo'ying — mijozlar telefonlari bilan skanerlaydi
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            {qrImageUrl ? (
+              <div className="p-4 bg-white rounded-2xl shadow-sm border">
+                <img src={qrImageUrl} alt="Zal QR kodi" className="w-64 h-64" data-testid="img-gym-qr" />
+              </div>
             ) : (
-              <>
-                <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                  <X className="h-12 w-12 text-destructive" />
-                </div>
-                <h3 className="text-2xl font-bold text-destructive mb-2">Xatolik!</h3>
-                <p className="text-muted-foreground mb-6">{scanResult?.message}</p>
-              </>
+              <div className="w-64 h-64 bg-muted rounded-2xl flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
             )}
-            <Button onClick={() => setScanResult(null)} className="w-full">
-              Tushunarli
-            </Button>
+            <p className="text-sm text-muted-foreground text-center font-medium">{gym.name}</p>
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <Button variant="outline" onClick={() => setShowQRCode(false)} data-testid="button-close-qr">
+                Yopish
+              </Button>
+              <Button onClick={handleDownloadQR} disabled={!qrImageUrl} data-testid="button-download-qr">
+                Yuklab olish
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

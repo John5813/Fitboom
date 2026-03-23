@@ -2025,7 +2025,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hours: gym.hours,
           closedDays: gym.closedDays || [],
           totalEarnings: gym.totalEarnings || 0,
-          currentDebt: gym.currentDebt || 0
+          currentDebt: gym.currentDebt || 0,
+          qrCode: gym.qrCode || null
         },
         visits,
         payments
