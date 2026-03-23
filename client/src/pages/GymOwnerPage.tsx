@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2, QrCode, CheckCircle2 } from "lucide-react";
+import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Loader2, Eye, X, Clock, Trash2, QrCode, CheckCircle2, Settings, UserRound } from "lucide-react";
 import QRScanner from "@/components/QRScanner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -96,6 +96,10 @@ export default function GymOwnerPage() {
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState('');
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [isSwitchModeDialogOpen, setIsSwitchModeDialogOpen] = useState(false);
+  const [switchModeCode, setSwitchModeCode] = useState('');
+  const [isSwitchingMode, setIsSwitchingMode] = useState(false);
 
   const gymId = localStorage.getItem("gymOwnerId");
   const accessCode = localStorage.getItem("gymOwnerCode");
@@ -163,8 +167,40 @@ export default function GymOwnerPage() {
   useEffect(() => {
     if (!gymId || !accessCode) {
       setLocation("/settings");
+    } else {
+      localStorage.setItem("lastUserRole", "gymOwner");
     }
   }, [gymId, accessCode, setLocation]);
+
+  const handleSwitchToUserMode = async () => {
+    if (!switchModeCode.trim()) return;
+    setIsSwitchingMode(true);
+    try {
+      const res = await fetch('/api/gym-owner/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ accessCode: switchModeCode.trim().toUpperCase() }),
+      });
+      const resData = await res.json();
+      if (res.ok && resData.gym?.id === gymId) {
+        localStorage.removeItem("gymOwnerId");
+        localStorage.removeItem("gymOwnerCode");
+        localStorage.setItem("lastUserRole", "user");
+        setIsSwitchModeDialogOpen(false);
+        setIsSettingsDialogOpen(false);
+        setSwitchModeCode('');
+        setLocation("/home");
+        toast({ title: "Foydalanuvchi rejimi", description: "Mijoz paneliga o'tdingiz" });
+      } else {
+        toast({ title: "Xato kod", description: "Kiritilgan kod noto'g'ri", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Xatolik", description: "Server bilan bog'lanishda xatolik", variant: "destructive" });
+    } finally {
+      setIsSwitchingMode(false);
+    }
+  };
 
   const { data, isLoading, isError } = useQuery<GymOwnerData>({
     queryKey: ["/api/gym-owner", gymId],
@@ -375,17 +411,6 @@ export default function GymOwnerPage() {
       <div className="sticky top-0 z-50 bg-background border-b">
         <div className="flex items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => {
-                localStorage.setItem("lastUserRole", "user");
-                setLocation("/home");
-              }} 
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
             <h1 className="text-lg font-semibold truncate" data-testid="text-gym-name">
               {gym.name}
             </h1>
@@ -395,8 +420,8 @@ export default function GymOwnerPage() {
               <Edit className="h-4 w-4 mr-1" />
               Tahrirlash
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout} data-testid="button-logout">
-              <LogOut className="h-5 w-5" />
+            <Button variant="ghost" size="icon" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
+              <Settings className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -873,6 +898,89 @@ export default function GymOwnerPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+        <DialogContent className="max-w-sm" data-testid="dialog-owner-settings">
+          <DialogHeader>
+            <DialogTitle>Sozlamalar</DialogTitle>
+            <DialogDescription>Zal egasi paneli sozlamalari</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <button
+              type="button"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-muted transition-colors text-left"
+              onClick={() => { setIsSwitchModeDialogOpen(true); setSwitchModeCode(''); }}
+              data-testid="button-switch-to-user"
+            >
+              <UserRound className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-sm">Foydalanuvchi rejimiga o'tish</p>
+                <p className="text-xs text-muted-foreground">Mijoz paneliga qaytish uchun kodni tasdiqlang</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-destructive/30 hover:bg-destructive/5 transition-colors text-left"
+              onClick={() => { setIsSettingsDialogOpen(false); handleLogout(); }}
+              data-testid="button-logout-settings"
+            >
+              <LogOut className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="font-medium text-sm text-destructive">Hisobdan chiqish</p>
+                <p className="text-xs text-muted-foreground">Zal egasi sifatida tizimdan chiqish</p>
+              </div>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Switch to User Mode Dialog */}
+      <Dialog open={isSwitchModeDialogOpen} onOpenChange={(open) => { setIsSwitchModeDialogOpen(open); if (!open) setSwitchModeCode(''); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-switch-mode">
+          <DialogHeader>
+            <DialogTitle>Foydalanuvchi rejimiga o'tish</DialogTitle>
+            <DialogDescription>
+              Mijoz paneliga o'tish uchun zal egasi kodini qayta kiriting
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label htmlFor="switch-code">Maxsus kod</Label>
+              <Input
+                id="switch-code"
+                type="text"
+                value={switchModeCode}
+                onChange={(e) => setSwitchModeCode(e.target.value.toUpperCase())}
+                placeholder="Masalan: ABC123"
+                maxLength={6}
+                className="mt-1 font-mono tracking-widest text-center text-lg uppercase"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSwitchToUserMode(); }}
+                data-testid="input-switch-code"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSwitchToUserMode}
+                disabled={isSwitchingMode || switchModeCode.length < 4}
+                className="flex-1"
+                data-testid="button-confirm-switch"
+              >
+                {isSwitchingMode ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Tasdiqlash
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setIsSwitchModeDialogOpen(false); setSwitchModeCode(''); }}
+                className="flex-1"
+                data-testid="button-cancel-switch"
+              >
+                Bekor qilish
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -12,7 +12,7 @@ export default function LoginPage({ fromTelegram = false }: { fromTelegram?: boo
       const lastRole = localStorage.getItem("lastUserRole");
       if (user?.isAdmin && lastRole === "admin") {
         setLocation('/admin');
-      } else if (localStorage.getItem("gymOwnerId") && lastRole === "gymOwner") {
+      } else if (localStorage.getItem("gymOwnerId")) {
         setLocation('/gym-owner');
       } else {
         setLocation('/home');
