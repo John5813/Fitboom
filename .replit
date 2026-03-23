@@ -6,10 +6,9 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "vm"
 build = ["npm", "run", "build"]
-run = ["node", "./dist/index.cjs"]
-publicDir = "dist/public"
+run = ["bash", "-c", "NODE_ENV=production node dist/migrate.js && NODE_ENV=production node dist/index.js"]
 
 [[ports]]
 localPort = 5000
