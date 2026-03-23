@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -419,20 +419,20 @@ export default function GymOwnerPage() {
   const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const todayLocal = localDate(now);
 
-  const todayVisits = useMemo(() => visits.filter(v => localDate(new Date(v.visitDate)) === todayLocal), [visits, todayLocal]);
-  const todayRevenue = useMemo(() => todayVisits.reduce((s, v) => s + v.amountEarned, 0), [todayVisits]);
-  const thisMonthVisits = useMemo(() => visits.filter(v => {
+  const todayVisits = visits.filter(v => localDate(new Date(v.visitDate)) === todayLocal);
+  const todayRevenue = todayVisits.reduce((s, v) => s + v.amountEarned, 0);
+  const thisMonthVisits = visits.filter(v => {
     const d = new Date(v.visitDate);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }), [visits, now]);
-  const thisMonthRevenue = useMemo(() => thisMonthVisits.reduce((s, v) => s + v.amountEarned, 0), [thisMonthVisits]);
-  const totalPaid = useMemo(() => payments.reduce((s, p) => s + p.amount, 0), [payments]);
+  });
+  const thisMonthRevenue = thisMonthVisits.reduce((s, v) => s + v.amountEarned, 0);
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const currentBalance = gym.totalEarnings - totalPaid;
-  const totalOccupied = useMemo(() => timeSlots.reduce((s, t) => s + (t.capacity - t.availableSpots), 0), [timeSlots]);
-  const totalCapacity = useMemo(() => timeSlots.reduce((s, t) => s + t.capacity, 0), [timeSlots]);
+  const totalOccupied = timeSlots.reduce((s, t) => s + (t.capacity - t.availableSpots), 0);
+  const totalCapacity = timeSlots.reduce((s, t) => s + t.capacity, 0);
   const occupancyPercent = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-  const recentVisits = useMemo(() => [...visits].sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()).slice(0, 5), [visits]);
-  const sortedPayments = useMemo(() => [...payments].sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()), [payments]);
+  const recentVisits = [...visits].sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()).slice(0, 5);
+  const sortedPayments = [...payments].sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
   const cleanAddress = gym.address ? gym.address.replace(/https?:\/\/[^\s]+/g, '').replace(/,\s*$/, '').trim() : '';
 
   return (
