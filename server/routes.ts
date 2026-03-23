@@ -835,7 +835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Ruxsat etilgan kredit paketlari
-  const allowedCreditPackages = [6, 13, 24];
+  const allowedCreditPackages = [60, 130, 240];
 
   // Purchase credits (simplified - with validation)
   app.post('/api/purchase-credits', requireAuth, async (req, res) => {
@@ -844,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Faqat ruxsat etilgan paketlarni qabul qilish
       if (!credits || !allowedCreditPackages.includes(credits)) {
-        return res.status(400).json({ message: "Noto'g'ri kredit paketi. Faqat 6, 13 yoki 24 kredit sotib olish mumkin" });
+        return res.status(400).json({ message: "Noto'g'ri kredit paketi. Faqat 60, 130 yoki 240 kredit sotib olish mumkin" });
       }
 
       const user = await storage.getUser(req.user!.id);
