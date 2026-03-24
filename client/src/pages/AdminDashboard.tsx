@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Video, MessageSquare, Key, Trash2, Check, X, Users } from "lucide-react";
+import { ArrowLeft, Building2, Video, MessageSquare, Key, Trash2, Check, X, Users, Lock, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -20,10 +20,37 @@ interface PartnershipMessage {
 export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isVerified, setIsVerified] = useState(() => sessionStorage.getItem('adminVerified') === 'true');
+  const [gatePassword, setGatePassword] = useState("");
+  const [gateError, setGateError] = useState("");
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  const verifyGateMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const res = await fetch('/api/admin/verify-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Parol noto'g'ri");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      sessionStorage.setItem('adminVerified', 'true');
+      setIsVerified(true);
+      setGateError("");
+    },
+    onError: (error: Error) => {
+      setGateError(error.message || "Parol noto'g'ri");
+    },
+  });
 
   const { data: messagesData } = useQuery<{ messages: PartnershipMessage[] }>({
     queryKey: ['/api/admin/partnership-messages'],
@@ -87,6 +114,60 @@ export default function AdminDashboard() {
       toast({ title: "Xatolik", description: error.message, variant: "destructive" });
     },
   });
+
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center pb-2">
+            <div className="flex justify-center mb-3">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <ShieldCheck className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl">Admin Panel</CardTitle>
+            <CardDescription>Kirish uchun admin parolini kiriting</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="Parol"
+                  className="pl-9"
+                  value={gatePassword}
+                  onChange={(e) => { setGatePassword(e.target.value); setGateError(""); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') verifyGateMutation.mutate(gatePassword); }}
+                  data-testid="input-admin-password"
+                  autoFocus
+                />
+              </div>
+              {gateError && (
+                <p className="text-sm text-destructive text-center" data-testid="text-gate-error">{gateError}</p>
+              )}
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => verifyGateMutation.mutate(gatePassword)}
+              disabled={verifyGateMutation.isPending || !gatePassword}
+              data-testid="button-admin-login"
+            >
+              {verifyGateMutation.isPending ? "Tekshirilmoqda..." : "Kirish"}
+            </Button>
+            <div className="text-center">
+              <Link href="/home">
+                <Button variant="ghost" size="sm" data-testid="button-back-from-gate">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Orqaga
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

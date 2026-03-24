@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Gym, GymWithRating, TimeSlot } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { GymPayment } from "@shared/schema";
 
 interface GymOwnerData {
@@ -39,6 +39,7 @@ interface GymOwnerData {
 }
 
 export default function AdminGymsPage() {
+  const [, setLocation] = useLocation();
   const [selectedGym, setSelectedGym] = useState<GymWithRating | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
@@ -49,6 +50,11 @@ export default function AdminGymsPage() {
   const [paymentNotes, setPaymentNotes] = useState('');
   const [lastPaymentInfo, setLastPaymentInfo] = useState<{ amount: number; gymName: string } | null>(null);
   const { toast } = useToast();
+
+  const isVerified = sessionStorage.getItem('adminVerified') === 'true';
+  useEffect(() => {
+    if (!isVerified) setLocation('/admin');
+  }, [isVerified]);
 
   const CLOSED_DAYS = [
     { value: "1", label: "Du" },
@@ -766,6 +772,8 @@ export default function AdminGymsPage() {
       });
     }
   };
+
+  if (!isVerified) return null;
 
   return (
     <div className="container mx-auto p-6">

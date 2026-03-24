@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Search, CreditCard, Calendar, User } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 
 interface UserData {
@@ -19,10 +19,18 @@ interface UserData {
 }
 
 export default function AdminUsersPage() {
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+
+  const isVerified = sessionStorage.getItem('adminVerified') === 'true';
+
+  useEffect(() => {
+    if (!isVerified) setLocation('/admin');
+  }, [isVerified]);
 
   const { data: usersData, isLoading, error, isError } = useQuery<{ users: UserData[] }>({
     queryKey: ['/api/admin/users'],
+    enabled: isVerified,
   });
 
   const users = usersData?.users || [];
@@ -62,6 +70,8 @@ export default function AdminUsersPage() {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString('uz-UZ');
   };
+
+  if (!isVerified) return null;
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { VideoCollection, OnlineClass } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
@@ -14,11 +14,12 @@ import { Eye, Plus, ArrowLeft, Video, X, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function AdminCollectionsPage() {
+  const [, setLocation] = useLocation();
   const [selectedCollection, setSelectedCollection] = useState<VideoCollection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -31,6 +32,11 @@ export default function AdminCollectionsPage() {
   const [editingVideo, setEditingVideo] = useState<OnlineClass | null>(null);
   const [viewingVideo, setViewingVideo] = useState<OnlineClass | null>(null);
   const { toast } = useToast();
+
+  const isVerified = sessionStorage.getItem('adminVerified') === 'true';
+  useEffect(() => {
+    if (!isVerified) setLocation('/admin');
+  }, [isVerified]);
 
   const [collectionForm, setCollectionForm] = useState({
     name: '',
@@ -501,6 +507,8 @@ export default function AdminCollectionsPage() {
     setViewingVideo(video);
     setIsViewVideoDialogOpen(true);
   };
+
+  if (!isVerified) return null;
 
   return (
     <div className="container mx-auto p-6">
