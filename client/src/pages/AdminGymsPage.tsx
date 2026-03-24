@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History, TrendingUp, Building2, Star } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History, TrendingUp, Building2, Star, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -1513,471 +1513,399 @@ export default function AdminGymsPage() {
       </Dialog>
 
       {/* Create Gym Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-gym">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl">Yangi Zal Qo'shish</DialogTitle>
-            <DialogDescription>
-              Yangi sport zal ma'lumotlarini kiriting
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        setIsCreateDialogOpen(open);
+        if (!open) { setPendingSlots([]); setAutoSelectedDays([]); setAutoSlotForm({ startTime: '09:00', endTime: '21:00', capacity: '15' }); }
+      }}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-create-gym">
+          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-5 text-white shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-white font-bold flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Yangi Zal Qo'shish
+              </DialogTitle>
+              <DialogDescription className="text-blue-100/80">
+                Barcha majburiy (*) maydonlarni to'ldiring
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Zal nomi *</Label>
-              <Input
-                id="name"
-                value={gymForm.name}
-                onChange={(e) => setGymForm({ ...gymForm, name: e.target.value })}
-                placeholder="Misol: FitZone Gym"
-                data-testid="input-gym-name"
-              />
-            </div>
+          <ScrollArea className="flex-1">
+            <div className="p-5 space-y-5">
 
-            <div>
-              <Label>Kategoriyalar *</Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
-                {CATEGORIES.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Hozircha kategoriyalar yo'q</p>
-                ) : (
-                  CATEGORIES.map((category) => (
-                    <div key={category.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`cat-${category.id}`}
-                        checked={gymForm.categories.includes(category.name)}
-                        onCheckedChange={() => toggleCategory(category.name)}
-                        data-testid={`checkbox-category-${category.name}`}
+              {/* Section 1: Asosiy ma'lumotlar */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">1</div>
+                  <h3 className="font-semibold text-sm">Asosiy ma'lumotlar</h3>
+                </div>
+                <div className="rounded-xl border bg-card p-4 space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Zal nomi *</Label>
+                    <Input
+                      value={gymForm.name}
+                      onChange={(e) => setGymForm({ ...gymForm, name: e.target.value })}
+                      placeholder="Misol: FitZone Premium"
+                      className="h-10"
+                      data-testid="input-gym-name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">1 tashrif = kredit *</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={gymForm.credits}
+                        onChange={(e) => setGymForm({ ...gymForm, credits: e.target.value })}
+                        placeholder="2"
+                        className="h-10"
+                        data-testid="input-gym-credits"
                       />
-                      <label
-                        htmlFor={`cat-${category.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {category.icon} {category.name}
-                      </label>
                     </div>
-                  ))
-                )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Ish vaqti</Label>
+                      <Input
+                        value={gymForm.hours}
+                        onChange={(e) => setGymForm({ ...gymForm, hours: e.target.value })}
+                        placeholder="09:00 - 22:00"
+                        className="h-10"
+                        data-testid="input-gym-hours"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Tavsif</Label>
+                    <Textarea
+                      value={gymForm.description}
+                      onChange={(e) => setGymForm({ ...gymForm, description: e.target.value })}
+                      placeholder="Zal haqida qisqacha ma'lumot..."
+                      rows={2}
+                      data-testid="input-gym-description"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Imkoniyatlar</Label>
+                    <Input
+                      value={gymForm.facilities}
+                      onChange={(e) => setGymForm({ ...gymForm, facilities: e.target.value })}
+                      placeholder="Dush, Garderob, Wi-Fi, Sauna..."
+                      className="h-10"
+                      data-testid="input-gym-facilities"
+                    />
+                  </div>
+                </div>
               </div>
-              {gymForm.categories.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {gymForm.categories.map((cat) => (
-                    <Badge key={cat} variant="secondary" className="text-xs">
-                      {cat}
+
+              {/* Section 2: Kategoriyalar */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">2</div>
+                  <h3 className="font-semibold text-sm">Kategoriyalar *</h3>
+                </div>
+                <div className="rounded-xl border bg-card p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.map((cat) => (
                       <button
+                        key={cat.id}
                         type="button"
-                        onClick={() => toggleCategory(cat)}
-                        className="ml-1 hover:text-destructive"
+                        onClick={() => toggleCategory(cat.name)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          gymForm.categories.includes(cat.name)
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-background border-border hover:bg-muted text-foreground'
+                        }`}
+                        data-testid={`checkbox-category-${cat.name}`}
                       >
-                        <X className="h-3 w-3" />
+                        <span>{cat.icon}</span>
+                        {cat.name}
                       </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="credits">Kredit *</Label>
-                <Input
-                  id="credits"
-                  type="number"
-                  value={gymForm.credits}
-                  onChange={(e) => setGymForm({ ...gymForm, credits: e.target.value })}
-                  placeholder="2"
-                  data-testid="input-gym-credits"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hours">Ish vaqti</Label>
-                <Input
-                  id="hours"
-                  value={gymForm.hours}
-                  onChange={(e) => setGymForm({ ...gymForm, hours: e.target.value })}
-                  placeholder="09:00 - 22:00"
-                  data-testid="input-gym-hours"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Dam kunlari</Label>
-              <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                {CLOSED_DAYS.map((d) => {
-                  const isChecked = gymForm.closedDays.includes(d.value);
-                  return (
-                    <button
-                      key={d.value}
-                      type="button"
-                      onClick={() => setGymForm(prev => ({
-                        ...prev,
-                        closedDays: isChecked
-                          ? prev.closedDays.filter(v => v !== d.value)
-                          : [...prev.closedDays, d.value]
-                      }))}
-                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                        isChecked
-                          ? 'bg-destructive text-destructive-foreground border-destructive'
-                          : 'bg-background text-foreground border-border hover:bg-muted'
-                      }`}
-                      data-testid={`button-closed-day-${d.value}`}
-                    >
-                      {d.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {gymForm.closedDays.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tanlangan dam kunlari brondan chiqariladi
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="locationLink">Joylashuv (Google Maps Link) *</Label>
-              <Input
-                id="locationLink"
-                type="url"
-                value={gymForm.locationLink}
-                onChange={(e) => handleLocationLinkChange(e.target.value)}
-                placeholder="https://maps.google.com/?q=41.311151,69.279737"
-                data-testid="input-gym-location-link"
-              />
-              {isResolvingUrl && (
-                <p className="text-xs text-primary mt-1">Koordinatalar aniqlanmoqda...</p>
-              )}
-              {gymForm.latitude && gymForm.longitude && (
-                <p className="text-xs text-green-600 mt-1">
-                  Koordinatalar topildi: {gymForm.latitude}, {gymForm.longitude}
-                </p>
-              )}
-              {!isResolvingUrl && !gymForm.latitude && gymForm.locationLink && gymForm.locationLink.length > 10 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Google Maps dan link kiriting (qisqartirilgan yoki to'liq havola)
-                </p>
-              )}
-              {!gymForm.locationLink && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Google Maps dan link kiritsangiz, koordinatalar avtomatik ajratib olinadi
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label>Zal rasmlari</Label>
-              <div className="grid grid-cols-4 gap-2 mb-2">
-                {gymForm.images?.map((img, idx) => (
-                  <div key={idx} className="relative group aspect-square rounded-md overflow-hidden border">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setGymForm(prev => ({
-                        ...prev,
-                        images: prev.images.filter((_, i) => i !== idx),
-                        imageUrl: prev.imageUrl === prev.images[idx] ? (prev.images.filter((_, i) => i !== idx)[0] || "") : prev.imageUrl
-                      }))}
-                      className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                    {img === gymForm.imageUrl && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5">
-                        Asosiy
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setGymForm(prev => ({ ...prev, imageUrl: img }))}
-                      className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-medium"
-                    >
-                      Asosiy qilish
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2">
-                <Input
-                  id="imageFile"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImagesUpload}
-                  disabled={uploadingImages}
-                  data-testid="input-gym-images"
-                />
-                {uploadingImages && (
-                  <p className="text-sm text-muted-foreground animate-pulse">Yuklanmoqda...</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Tavsif</Label>
-              <Textarea
-                id="description"
-                value={gymForm.description}
-                onChange={(e) => setGymForm({ ...gymForm, description: e.target.value })}
-                placeholder="Zal haqida qisqacha ma'lumot..."
-                rows={3}
-                data-testid="input-gym-description"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="facilities">Imkoniyatlar</Label>
-              <Textarea
-                id="facilities"
-                value={gymForm.facilities}
-                onChange={(e) => setGymForm({ ...gymForm, facilities: e.target.value })}
-                placeholder="Dush, Garderob, Wi-Fi, ..."
-                rows={2}
-                data-testid="input-gym-facilities"
-              />
-            </div>
-
-            <div className="border rounded-lg p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Vaqt slotlari</Label>
-                {pendingSlots.length > 0 && (
-                  <Badge variant="secondary">{pendingSlots.length} ta slot</Badge>
-                )}
-              </div>
-
-              {/* Auto-generate section */}
-              <div className="bg-muted/50 rounded-md p-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Avtomatik to'ldirish</p>
-                <div className="flex flex-wrap gap-1">
-                  {WEEKDAYS.map((d) => (
-                    <button
-                      key={d.full}
-                      type="button"
-                      onClick={() => setAutoSelectedDays(prev =>
-                        prev.includes(d.full) ? prev.filter(x => x !== d.full) : [...prev, d.full]
-                      )}
-                      className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
-                        autoSelectedDays.includes(d.full)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background text-foreground border-border hover:bg-muted'
-                      }`}
-                      data-testid={`button-auto-day-${d.short}`}
-                    >
-                      {d.short}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setAutoSelectedDays(WEEKDAYS.slice(0, 5).map(d => d.full))}
-                    className="px-2 py-1 rounded text-xs border border-dashed border-border hover:bg-muted transition-colors"
-                    data-testid="button-auto-select-weekdays"
-                  >
-                    Du–Ju
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAutoSelectedDays(WEEKDAYS.map(d => d.full))}
-                    className="px-2 py-1 rounded text-xs border border-dashed border-border hover:bg-muted transition-colors"
-                    data-testid="button-auto-select-all"
-                  >
-                    Hammasi
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs">Boshlanish</Label>
-                    <Input
-                      type="time"
-                      value={autoSlotForm.startTime}
-                      onChange={(e) => setAutoSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
-                      className="h-8 text-sm"
-                      data-testid="input-auto-start"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Tugash</Label>
-                    <Input
-                      type="time"
-                      value={autoSlotForm.endTime}
-                      onChange={(e) => setAutoSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
-                      className="h-8 text-sm"
-                      data-testid="input-auto-end"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Sig'im</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={autoSlotForm.capacity}
-                      onChange={(e) => setAutoSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
-                      className="h-8 text-sm"
-                      placeholder="15"
-                      data-testid="input-auto-capacity"
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full"
-                  disabled={autoSelectedDays.length === 0}
-                  data-testid="button-auto-fill-slots"
-                  onClick={() => {
-                    const startH = parseInt(autoSlotForm.startTime.split(':')[0]);
-                    const endH = parseInt(autoSlotForm.endTime.split(':')[0]);
-                    if (startH >= endH || !autoSlotForm.capacity) return;
-                    const generated: Array<{ dayOfWeek: string; startTime: string; endTime: string; capacity: string }> = [];
-                    for (const day of autoSelectedDays) {
-                      for (let h = startH; h < endH; h++) {
-                        generated.push({
-                          dayOfWeek: day,
-                          startTime: `${h.toString().padStart(2, '0')}:00`,
-                          endTime: `${(h + 1).toString().padStart(2, '0')}:00`,
-                          capacity: autoSlotForm.capacity,
-                        });
-                      }
-                    }
-                    setPendingSlots(prev => [...prev, ...generated]);
-                  }}
-                >
-                  <Clock className="w-4 h-4 mr-1" />
-                  {autoSelectedDays.length > 0
-                    ? `${autoSelectedDays.length} kun × ${Math.max(0, parseInt(autoSlotForm.endTime) - parseInt(autoSlotForm.startTime))} soat = ${autoSelectedDays.length * Math.max(0, parseInt(autoSlotForm.endTime.split(':')[0]) - parseInt(autoSlotForm.startTime.split(':')[0]))} slot yaratish`
-                    : 'Kunlarni tanlang'}
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="flex-1 border-t" />
-                <span>yoki qo'lda qo'shing</span>
-                <div className="flex-1 border-t" />
-              </div>
-
-              {/* Manual entry */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-xs">Kun</Label>
-                    <Select
-                      value={newSlotForm.dayOfWeek}
-                      onValueChange={(v) => setNewSlotForm(prev => ({ ...prev, dayOfWeek: v }))}
-                    >
-                      <SelectTrigger className="h-8 text-sm" data-testid="select-slot-day">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WEEKDAYS.map((d) => (
-                          <SelectItem key={d.full} value={d.full}>{d.full}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Sig'im</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newSlotForm.capacity}
-                      onChange={(e) => setNewSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
-                      className="h-8 text-sm"
-                      placeholder="15"
-                      data-testid="input-slot-capacity"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Boshlanish</Label>
-                    <Input
-                      type="time"
-                      value={newSlotForm.startTime}
-                      onChange={(e) => setNewSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
-                      className="h-8 text-sm"
-                      data-testid="input-slot-start"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Tugash</Label>
-                    <Input
-                      type="time"
-                      value={newSlotForm.endTime}
-                      onChange={(e) => setNewSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
-                      className="h-8 text-sm"
-                      data-testid="input-slot-end"
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  data-testid="button-add-slot"
-                  onClick={() => {
-                    if (!newSlotForm.startTime || !newSlotForm.endTime || !newSlotForm.capacity) return;
-                    setPendingSlots(prev => [...prev, { ...newSlotForm }]);
-                    setNewSlotForm(prev => ({
-                      ...prev,
-                      startTime: newSlotForm.endTime,
-                      endTime: newSlotForm.endTime.replace(/(\d+):(\d+)/, (_, h, m) => `${String((parseInt(h) + 1) % 24).padStart(2, '0')}:${m}`),
-                    }));
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-1" /> Slot qo'shish
-                </Button>
-              </div>
-
-              {/* Pending slots list */}
-              {pendingSlots.length > 0 && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Qo'shilgan slotlar:</p>
-                    <button
-                      type="button"
-                      onClick={() => setPendingSlots([])}
-                      className="text-xs text-destructive hover:underline"
-                      data-testid="button-clear-slots"
-                    >
-                      Barchasini o'chirish
-                    </button>
-                  </div>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {pendingSlots.map((slot, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-muted rounded px-2 py-1 text-xs">
-                        <span className="font-medium w-24 truncate">{slot.dayOfWeek}</span>
-                        <span className="text-muted-foreground">{slot.startTime} – {slot.endTime}</span>
-                        <span>{slot.capacity} kishi</span>
-                        <button
-                          type="button"
-                          onClick={() => setPendingSlots(prev => prev.filter((_, i) => i !== idx))}
-                          className="text-destructive hover:text-destructive/80 ml-1"
-                          data-testid={`button-remove-slot-${idx}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
                     ))}
                   </div>
+                  {gymForm.categories.length === 0 && (
+                    <p className="text-xs text-amber-500 mt-2">Kamida bitta kategoriya tanlang</p>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                onClick={handleCreateGym}
-                disabled={createGymMutation.isPending || isResolvingUrl}
-                className="flex-1"
-                data-testid="button-submit-gym"
-              >
-                {createGymMutation.isPending ? 'Yuklanmoqda...' : isResolvingUrl ? 'Koordinatalar aniqlanmoqda...' : "Qo'shish"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => { setIsCreateDialogOpen(false); setPendingSlots([]); setNewSlotForm({ dayOfWeek: 'Dushanba', startTime: '09:00', endTime: '10:00', capacity: '15' }); setAutoSelectedDays([]); setAutoSlotForm({ startTime: '09:00', endTime: '21:00', capacity: '15' }); }}
-                className="flex-1"
-                data-testid="button-cancel-gym"
-              >
-                Bekor qilish
-              </Button>
+              {/* Section 3: Dam kunlari */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">3</div>
+                  <h3 className="font-semibold text-sm">Dam kunlari</h3>
+                  <span className="text-xs text-muted-foreground">(ixtiyoriy)</span>
+                </div>
+                <div className="rounded-xl border bg-card p-4">
+                  <p className="text-xs text-muted-foreground mb-3">Tanlangan kunlarda bron qilish yoqilmaydi</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {CLOSED_DAYS.map((d) => {
+                      const isChecked = gymForm.closedDays.includes(d.value);
+                      return (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => setGymForm(prev => ({
+                            ...prev,
+                            closedDays: isChecked
+                              ? prev.closedDays.filter(v => v !== d.value)
+                              : [...prev.closedDays, d.value]
+                          }))}
+                          className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                            isChecked
+                              ? 'bg-red-500 text-white border-red-500'
+                              : 'bg-background border-border hover:bg-muted'
+                          }`}
+                          data-testid={`button-closed-day-${d.value}`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Joylashuv */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">4</div>
+                  <h3 className="font-semibold text-sm">Joylashuv *</h3>
+                </div>
+                <div className="rounded-xl border bg-card p-4">
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Google Maps havolasi</Label>
+                  <Input
+                    type="url"
+                    value={gymForm.locationLink}
+                    onChange={(e) => handleLocationLinkChange(e.target.value)}
+                    placeholder="https://maps.app.goo.gl/..."
+                    className="h-10"
+                    data-testid="input-gym-location-link"
+                  />
+                  {isResolvingUrl && (
+                    <div className="flex items-center gap-2 mt-2 text-xs text-blue-600 animate-pulse">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                      Koordinatalar aniqlanmoqda...
+                    </div>
+                  )}
+                  {gymForm.latitude && gymForm.longitude && (
+                    <div className="flex items-center gap-2 mt-2 text-xs text-emerald-600">
+                      <Check className="h-3.5 w-3.5" />
+                      Koordinatalar topildi: {gymForm.latitude}, {gymForm.longitude}
+                    </div>
+                  )}
+                  {!gymForm.locationLink && (
+                    <p className="text-[11px] text-muted-foreground mt-2">Google Maps'dan link kiriting — koordinatalar avtomatik ajratib olinadi</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Section 5: Rasmlar */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">5</div>
+                  <h3 className="font-semibold text-sm">Rasmlar</h3>
+                  <span className="text-xs text-muted-foreground">(ixtiyoriy)</span>
+                </div>
+                <div className="rounded-xl border bg-card p-4">
+                  {gymForm.images?.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {gymForm.images.map((img, idx) => (
+                        <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setGymForm(prev => ({
+                              ...prev,
+                              images: prev.images.filter((_, i) => i !== idx),
+                              imageUrl: prev.imageUrl === prev.images[idx] ? (prev.images.filter((_, i) => i !== idx)[0] || "") : prev.imageUrl
+                            }))}
+                            className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          {img === gymForm.imageUrl && (
+                            <div className="absolute bottom-0 inset-x-0 bg-blue-600/80 text-[8px] text-white text-center py-0.5">Asosiy</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <label className="flex items-center justify-center gap-2 h-11 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors text-sm text-muted-foreground">
+                    <Plus className="h-4 w-4" />
+                    {uploadingImages ? "Yuklanmoqda..." : "Rasm tanlash"}
+                    <input type="file" multiple accept="image/*" className="hidden" onChange={handleImagesUpload} disabled={uploadingImages} data-testid="input-gym-images" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Section 6: Vaqt slotlari */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">6</div>
+                    <h3 className="font-semibold text-sm">Vaqt slotlari</h3>
+                    <span className="text-xs text-muted-foreground">(ixtiyoriy)</span>
+                  </div>
+                  {pendingSlots.length > 0 && (
+                    <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200">
+                      {pendingSlots.length} slot tayyor
+                    </Badge>
+                  )}
+                </div>
+                <div className="rounded-xl border bg-card p-4 space-y-4">
+                  <p className="text-xs text-muted-foreground">Kunlarni, ish vaqtini va sig'imni belgilang — soatlik slotlar avtomatik yaratiladi</p>
+
+                  {/* Day picker */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs font-medium">Ish kunlari</Label>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setAutoSelectedDays(WEEKDAYS.slice(0,5).map(d=>d.full))} className="text-[10px] text-blue-600 hover:underline" data-testid="button-auto-select-weekdays">Du–Ju</button>
+                        <span className="text-muted-foreground text-[10px]">•</span>
+                        <button type="button" onClick={() => setAutoSelectedDays(WEEKDAYS.slice(0,6).map(d=>d.full))} className="text-[10px] text-blue-600 hover:underline" data-testid="button-auto-select-workdays">Du–Sh</button>
+                        <span className="text-muted-foreground text-[10px]">•</span>
+                        <button type="button" onClick={() => setAutoSelectedDays(WEEKDAYS.map(d=>d.full))} className="text-[10px] text-blue-600 hover:underline" data-testid="button-auto-select-all">Hammasi</button>
+                        <span className="text-muted-foreground text-[10px]">•</span>
+                        <button type="button" onClick={() => setAutoSelectedDays([])} className="text-[10px] text-muted-foreground hover:underline">Tozala</button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {WEEKDAYS.map((d) => (
+                        <button
+                          key={d.full}
+                          type="button"
+                          onClick={() => setAutoSelectedDays(prev =>
+                            prev.includes(d.full) ? prev.filter(x => x !== d.full) : [...prev, d.full]
+                          )}
+                          className={`py-2 rounded-lg text-xs font-semibold border transition-all ${
+                            autoSelectedDays.includes(d.full)
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                              : 'bg-background border-border hover:bg-muted'
+                          }`}
+                          data-testid={`button-auto-day-${d.short}`}
+                        >
+                          {d.short}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Time range + capacity */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Boshlanish</Label>
+                      <Input
+                        type="time"
+                        value={autoSlotForm.startTime}
+                        onChange={(e) => setAutoSlotForm(prev => ({ ...prev, startTime: e.target.value }))}
+                        className="h-10"
+                        data-testid="input-auto-start"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Tugash</Label>
+                      <Input
+                        type="time"
+                        value={autoSlotForm.endTime}
+                        onChange={(e) => setAutoSlotForm(prev => ({ ...prev, endTime: e.target.value }))}
+                        className="h-10"
+                        data-testid="input-auto-end"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">Sig'im (kishi)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={autoSlotForm.capacity}
+                        onChange={(e) => setAutoSlotForm(prev => ({ ...prev, capacity: e.target.value }))}
+                        placeholder="15"
+                        className="h-10"
+                        data-testid="input-auto-capacity"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview + generate button */}
+                  {(() => {
+                    const startH = parseInt(autoSlotForm.startTime.split(':')[0]);
+                    const endH = parseInt(autoSlotForm.endTime.split(':')[0]);
+                    const hours = endH > startH ? endH - startH : 0;
+                    const totalSlots = autoSelectedDays.length * hours;
+                    return (
+                      <div className="space-y-2">
+                        {autoSelectedDays.length > 0 && hours > 0 && (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                            {autoSelectedDays.length} kun × {hours} soat = <span className="font-bold">{totalSlots} ta slot</span> yaratiladi ({autoSlotForm.startTime}–{autoSlotForm.endTime}, har soat {autoSlotForm.capacity} kishi)
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant={pendingSlots.length > 0 ? "outline" : "default"}
+                          className="w-full h-10"
+                          disabled={autoSelectedDays.length === 0 || hours <= 0 || !autoSlotForm.capacity}
+                          data-testid="button-auto-fill-slots"
+                          onClick={() => {
+                            if (startH >= endH || !autoSlotForm.capacity) return;
+                            const generated: Array<{ dayOfWeek: string; startTime: string; endTime: string; capacity: string }> = [];
+                            for (const day of autoSelectedDays) {
+                              for (let h = startH; h < endH; h++) {
+                                generated.push({
+                                  dayOfWeek: day,
+                                  startTime: `${h.toString().padStart(2, '0')}:00`,
+                                  endTime: `${(h + 1).toString().padStart(2, '0')}:00`,
+                                  capacity: autoSlotForm.capacity,
+                                });
+                              }
+                            }
+                            setPendingSlots(generated);
+                            toast({ title: `${generated.length} ta slot tayyor`, description: "Zal saqlangach avtomatik qo'shiladi" });
+                          }}
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          {pendingSlots.length > 0 ? "Slotlarni qayta hisoblash" : "Slotlarni tayyorlash"}
+                        </Button>
+                        {pendingSlots.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingSlots([])}
+                            className="w-full text-xs text-destructive hover:underline py-1"
+                            data-testid="button-clear-slots"
+                          >
+                            Slotlarni bekor qilish
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
+          </ScrollArea>
+
+          <div className="border-t p-4 flex gap-3 shrink-0 bg-background">
+            <Button
+              onClick={handleCreateGym}
+              disabled={createGymMutation.isPending || isResolvingUrl}
+              className="flex-1 h-11"
+              data-testid="button-submit-gym"
+            >
+              {createGymMutation.isPending
+                ? 'Saqlanmoqda...'
+                : isResolvingUrl
+                ? 'Koordinatalar aniqlanmoqda...'
+                : pendingSlots.length > 0
+                ? `Zal + ${pendingSlots.length} slot saqlash`
+                : "Zalni saqlash"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setIsCreateDialogOpen(false); setPendingSlots([]); setAutoSelectedDays([]); setAutoSlotForm({ startTime: '09:00', endTime: '21:00', capacity: '15' }); }}
+              className="h-11 px-6"
+              data-testid="button-cancel-gym"
+            >
+              Bekor
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

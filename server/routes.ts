@@ -1942,6 +1942,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      const bookings = await storage.getBookings(req.params.id);
+      const purchases = await storage.getUserPurchases(req.params.id);
+      res.json({ user, bookings, purchases });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/users/:id/adjust-credits', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { amount, type, expiryDays } = req.body;
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ message: "Kredit miqdori noto'g'ri" });
+      }
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+
+      let newCredits: number;
+      if (type === 'add') {
+        newCredits = (user.credits || 0) + amount;
+      } else if (type === 'remove') {
+        newCredits = Math.max(0, (user.credits || 0) - amount);
+      } else if (type === 'set') {
+        newCredits = amount;
+      } else {
+        return res.status(400).json({ message: "Noto'g'ri tur" });
+      }
+
+      let updated;
+      if (type === 'add' && expiryDays) {
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + expiryDays);
+        updated = await storage.updateUserCreditsWithExpiry(user.id, newCredits, expiry);
+      } else {
+        updated = await storage.updateUserCredits(user.id, newCredits);
+      }
+      res.json({ user: updated });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin login verification with password (bcrypt hashed)
   app.post('/api/admin/verify-password', async (req, res) => {
     try {
