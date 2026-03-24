@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Gym, GymWithRating, TimeSlot } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History, TrendingUp, Building2, Star } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -775,153 +775,185 @@ export default function AdminGymsPage() {
 
   if (!isVerified) return null;
 
+  const totalEarnings = gyms.reduce((s, g) => s + (g.totalEarnings || 0), 0);
+  const totalDebt = gyms.reduce((s, g) => s + (g.currentDebt || 0), 0);
+
   return (
-    <div className="container mx-auto p-6">
-      {lastPaymentInfo && (
-        <div className="mb-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg">
-          <p className="text-green-800 dark:text-green-200 font-medium">
-            {lastPaymentInfo.gymName} uchun {new Intl.NumberFormat('uz-UZ').format(lastPaymentInfo.amount)} so'm to'lov qayd qilindi!
-          </p>
-        </div>
-      )}
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="sm" data-testid="button-back">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Orqaga
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-display font-bold">Zallar Ro'yxati</h1>
-            <p className="text-muted-foreground mt-2">Barcha sport zallar va ularning ma'lumotlari</p>
+    <div className="min-h-screen bg-background">
+      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white">
+        <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link href="/admin">
+                <Button variant="ghost" size="icon" className="text-blue-200/70 hover:text-white hover:bg-white/10 h-9 w-9" data-testid="button-back">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold">Zallar</h1>
+                <p className="text-blue-200/60 text-sm">{gyms.length} ta sport zal</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-blue-200/70 hover:text-white hover:bg-white/10 hidden sm:flex"
+                onClick={async () => {
+                  try {
+                    const res = await apiRequest("/api/fix-gym-coordinates", "POST", {});
+                    const data = await res.json();
+                    const fixed = data.results?.filter((r: any) => r.status === "fixed").length || 0;
+                    toast({ title: "Koordinatalar yangilandi", description: `${fixed} ta zal koordinatalari topildi.` });
+                    queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
+                  } catch { toast({ title: "Xatolik", variant: "destructive" }); }
+                }}
+                data-testid="button-fix-coordinates"
+              >
+                <MapPin className="h-4 w-4 mr-1" />
+                Koordinata
+              </Button>
+              <Button size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0" onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-gym">
+                <Plus className="h-4 w-4 mr-1" />
+                Yangi Zal
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                const res = await apiRequest("/api/fix-gym-coordinates", "POST", {});
-                const data = await res.json();
-                const fixed = data.results?.filter((r: any) => r.status === "fixed").length || 0;
-                toast({
-                  title: "Koordinatalar yangilandi",
-                  description: `${fixed} ta zal koordinatalari topildi va saqlandi.`,
-                });
-                queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
-              } catch {
-                toast({ title: "Xatolik", variant: "destructive" });
-              }
-            }}
-            data-testid="button-fix-coordinates"
-          >
-            <MapPin className="h-4 w-4 mr-2" />
-            Koordinatalarni tuzatish
-          </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-gym">
-            <Plus className="h-4 w-4 mr-2" />
-            Yangi Zal
-          </Button>
         </div>
       </div>
 
-      <Card className="p-6">
-        {isLoading ? (
-          <div className="text-center py-8">Yuklanmoqda...</div>
-        ) : gyms.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Hozircha zallar yo'q
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">№</TableHead>
-                  <TableHead>Zal</TableHead>
-                  <TableHead className="text-right">Reyting</TableHead>
-                  <TableHead className="text-right">Daromad</TableHead>
-                  <TableHead className="text-right">Qarz</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {gyms.map((gym, index) => (
-                  <TableRow 
-                    key={gym.id} 
-                    data-testid={`row-gym-${gym.id}`}
-                    className="cursor-pointer hover-elevate"
-                    onClick={() => {
-                      setSelectedGym(gym);
-                      setGymForm(prev => ({
-                        ...prev,
-                        name: gym.name || '',
-                        address: gym.address || '',
-                        locationLink: gym.address || '',
-                        description: gym.description || '',
-                        credits: String(gym.credits || ''),
-                        categories: gym.categories || [],
-                        imageUrl: gym.imageUrl || '',
-                        images: gym.images || [],
-                        facilities: gym.facilities || '',
-                        hours: gym.hours || '',
-                        latitude: gym.latitude || '',
-                        longitude: gym.longitude || '',
-                        closedDays: gym.closedDays || [],
-                      }));
-                    }}
-                  >
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-semibold" data-testid={`text-gym-name-${gym.id}`}>
-                      {gym.name}
-                    </TableCell>
-                    <TableCell className="text-right" data-testid={`text-gym-rating-${gym.id}`}>
-                      {gym.avgRating != null ? (
-                        <span className="text-xs text-yellow-500">
-                          ⭐ {gym.avgRating.toFixed(1)} ({gym.ratingCount})
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right" data-testid={`text-gym-earnings-${gym.id}`}>
-                      <span className="text-xs text-green-600 dark:text-green-400">
-                        {formatCurrency(gym.totalEarnings || 0)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right" data-testid={`text-gym-debt-${gym.id}`}>
-                      <span className={`text-xs ${(gym.currentDebt || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
-                        {formatCurrency(gym.currentDebt || 0)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-3">
+        {lastPaymentInfo && (
+          <div className="mb-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
+              {lastPaymentInfo.gymName}: {new Intl.NumberFormat('uz-UZ').format(lastPaymentInfo.amount)} so'm qayd qilindi
+            </p>
           </div>
         )}
-      </Card>
 
-      {/* Gym Detail Dialog */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="rounded-xl bg-card border shadow-sm p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 className="h-3.5 w-3.5 text-blue-500" />
+              <span className="text-[11px] text-muted-foreground">Zallar</span>
+            </div>
+            <p className="text-xl font-bold">{gyms.length}</p>
+          </div>
+          <div className="rounded-xl bg-card border shadow-sm p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="text-[11px] text-muted-foreground">Daromad</span>
+            </div>
+            <p className="text-lg font-bold truncate">{formatCurrency(totalEarnings)}</p>
+          </div>
+          <div className="rounded-xl bg-card border shadow-sm p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard className="h-3.5 w-3.5 text-red-500" />
+              <span className="text-[11px] text-muted-foreground">Qarz</span>
+            </div>
+            <p className="text-lg font-bold truncate text-red-600 dark:text-red-400">{formatCurrency(totalDebt)}</p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl bg-muted/50 animate-pulse" />)}
+          </div>
+        ) : gyms.length === 0 ? (
+          <div className="text-center py-16">
+            <Building2 className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground font-medium">Hozircha zallar yo'q</p>
+            <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Birinchi zalni qo'shing
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2.5 pb-6">
+            {gyms.map((gym, index) => (
+              <Card
+                key={gym.id}
+                data-testid={`row-gym-${gym.id}`}
+                className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 border overflow-hidden"
+                onClick={() => {
+                  setSelectedGym(gym);
+                  setGymForm(prev => ({
+                    ...prev,
+                    name: gym.name || '',
+                    address: gym.address || '',
+                    locationLink: gym.address || '',
+                    description: gym.description || '',
+                    credits: String(gym.credits || ''),
+                    categories: gym.categories || [],
+                    imageUrl: gym.imageUrl || '',
+                    images: gym.images || [],
+                    facilities: gym.facilities || '',
+                    hours: gym.hours || '',
+                    latitude: gym.latitude || '',
+                    longitude: gym.longitude || '',
+                    closedDays: gym.closedDays || [],
+                  }));
+                }}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-3 p-4">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate" data-testid={`text-gym-name-${gym.id}`}>{gym.name}</h3>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        {gym.avgRating != null && (
+                          <span className="text-xs text-amber-500 font-medium" data-testid={`text-gym-rating-${gym.id}`}>
+                            ⭐ {gym.avgRating.toFixed(1)} ({gym.ratingCount})
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">{gym.credits} kr</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400" data-testid={`text-gym-earnings-${gym.id}`}>
+                        {formatCurrency(gym.totalEarnings || 0)}
+                      </p>
+                      {(gym.currentDebt || 0) > 0 && (
+                        <p className="text-xs text-red-500 font-medium mt-0.5" data-testid={`text-gym-debt-${gym.id}`}>
+                          Qarz: {formatCurrency(gym.currentDebt || 0)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
       <Dialog open={!!selectedGym} onOpenChange={(open) => !open && setSelectedGym(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-gym-detail">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl">
-              {selectedGym?.name}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-gym-detail">
+          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-5 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-white">
+                {selectedGym?.name}
+              </DialogTitle>
+              <DialogDescription className="text-blue-100/80">
+                {selectedGym?.categories?.join(', ') || 'Sport zal'}
+              </DialogDescription>
+            </DialogHeader>
+            {(selectedGym as any)?.ownerAccessCode && (
+              <div className="mt-3 bg-white/15 backdrop-blur-sm rounded-lg p-2.5 flex items-center justify-between">
+                <span className="text-xs text-blue-100">Egasi paroli:</span>
+                <span className="font-bold font-mono text-lg tracking-wider" data-testid="text-gym-owner-code">
+                  {(selectedGym as any).ownerAccessCode}
+                </span>
+              </div>
+            )}
+          </div>
 
           {selectedGym && (
-            <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
-              <div className="space-y-4">
-                {(selectedGym as any).ownerAccessCode && (
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Zal egasi paroli:</p>
-                    <p className="text-xl font-bold font-mono text-center" data-testid="text-gym-owner-code">
-                      {(selectedGym as any).ownerAccessCode}
-                    </p>
-                  </div>
-                )}
+            <ScrollArea className="flex-1 overflow-y-auto">
+              <div className="space-y-5 p-5">
 
                 <div className="space-y-3">
                   <div>
@@ -1158,66 +1190,68 @@ export default function AdminGymsPage() {
               )}
               </div>
 
-              <div className="pt-4 border-t">
-                <h3 className="text-lg font-semibold mb-4">Moliyaviy Ma'lumotlar</h3>
-                <div className="mb-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">Joriy Qarz</p>
-                    <p className="text-xl font-bold text-red-600 dark:text-red-400" data-testid="text-current-debt">
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  Moliyaviy Ma'lumotlar
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-card border p-3">
+                    <p className="text-[11px] text-muted-foreground">Jami daromad</p>
+                    <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(selectedGym.totalEarnings || 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-card border p-3">
+                    <p className="text-[11px] text-muted-foreground">Joriy qarz</p>
+                    <p className="text-base font-bold text-red-600 dark:text-red-400" data-testid="text-current-debt">
                       {formatCurrency(gymOwnerData?.gym?.currentDebt || selectedGym.currentDebt || 0)}
                     </p>
                   </div>
                 </div>
-                <Button
-                  onClick={() => setIsPaymentDialogOpen(true)}
-                  className="w-full mb-4"
-                  variant="outline"
-                  data-testid="button-record-payment"
-                >
+                <Button onClick={() => setIsPaymentDialogOpen(true)} className="w-full" size="sm" data-testid="button-record-payment">
                   <CreditCard className="h-4 w-4 mr-2" />
                   To'lov Qayd Qilish
                 </Button>
-
                 {gymOwnerData?.payments && gymOwnerData.payments.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm text-muted-foreground mb-2">So'nggi To'lovlar</p>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {[...gymOwnerData.payments]
-                        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
-                        .slice(0, 5)
-                        .map((payment) => (
-                        <div key={payment.id} className="flex justify-between items-center p-2 bg-muted/50 rounded text-sm">
-                          <span>{new Date(payment.paymentDate).toLocaleDateString('uz-UZ')}</span>
-                          <span className="font-medium text-green-600">{formatCurrency(payment.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="space-y-1.5 max-h-28 overflow-y-auto">
+                    {[...gymOwnerData.payments]
+                      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+                      .slice(0, 5)
+                      .map((payment) => (
+                      <div key={payment.id} className="flex justify-between items-center px-3 py-2 bg-card rounded-lg border text-xs">
+                        <span className="text-muted-foreground">{new Date(payment.paymentDate).toLocaleDateString('uz-UZ')}</span>
+                        <span className="font-semibold text-emerald-600">{formatCurrency(payment.amount)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              <div className="pt-4 border-t">
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  Reytinglar
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-500" />
+                    Reytinglar
+                  </h3>
                   {gymRatings.length > 0 && (
-                    <span className="text-sm font-normal text-muted-foreground">
-                      ({gymRatings.length} ta •{" "}
-                      o'rtacha: {(gymRatings.reduce((s, r) => s + r.rating, 0) / gymRatings.length).toFixed(1)}⭐)
-                    </span>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {(gymRatings.reduce((s, r) => s + r.rating, 0) / gymRatings.length).toFixed(1)} ⭐ ({gymRatings.length})
+                    </Badge>
                   )}
-                </h3>
+                </div>
                 {gymRatings.length === 0 ? (
-                  <p className="text-sm text-muted-foreground mb-4">Hozircha baho yo'q</p>
+                  <p className="text-xs text-muted-foreground text-center py-2">Hozircha baho yo'q</p>
                 ) : (
-                  <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
                     {[...gymRatings]
                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                       .map((r) => (
-                        <div key={r.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm" data-testid={`row-rating-${r.id}`}>
-                          <span className="text-muted-foreground text-xs truncate max-w-[140px]" title={r.bookingId}>
+                        <div key={r.id} className="flex items-center justify-between px-3 py-2 bg-card rounded-lg border text-xs" data-testid={`row-rating-${r.id}`}>
+                          <span className="text-muted-foreground">
                             {new Date(r.createdAt).toLocaleDateString('uz-UZ')}
                           </span>
-                          <span className="font-semibold text-yellow-500">
+                          <span className="font-semibold text-amber-500">
                             {'⭐'.repeat(r.rating)} ({r.rating}/5)
                           </span>
                         </div>

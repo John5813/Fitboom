@@ -510,185 +510,172 @@ export default function AdminCollectionsPage() {
 
   if (!isVerified) return null;
 
+  const freeCount = collections.filter(c => c.isFree).length;
+  const paidCount = collections.length - freeCount;
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="sm" data-testid="button-back">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Orqaga
+    <div className="min-h-screen bg-background">
+      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white">
+        <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link href="/admin">
+                <Button variant="ghost" size="icon" className="text-blue-200/70 hover:text-white hover:bg-white/10 h-9 w-9" data-testid="button-back">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold">Video To'plamlar</h1>
+                <p className="text-blue-200/60 text-sm">{collections.length} ta to'plam</p>
+              </div>
+            </div>
+            <Button size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0" onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-collection">
+              <Plus className="h-4 w-4 mr-1" />
+              Yangi
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-display font-bold">Video To'plamlar</h1>
-            <p className="text-muted-foreground mt-2">Barcha video to'plamlar va kurslar</p>
           </div>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-collection">
-          <Plus className="h-4 w-4 mr-2" />
-          Yangi To'plam
-        </Button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">Yuklanmoqda...</div>
-      ) : collections.length === 0 ? (
-        <Card className="p-6">
-          <div className="text-center py-8 text-muted-foreground">
-            To'plamlar topilmadi
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-3">
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="rounded-xl bg-card border shadow-sm p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <Video className="h-3.5 w-3.5 text-violet-500" />
+              <span className="text-[11px] text-muted-foreground">Jami</span>
+            </div>
+            <p className="text-xl font-bold">{collections.length}</p>
           </div>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {collections.map((collection) => (
-            <Card key={collection.id} className="overflow-hidden hover-elevate cursor-pointer" data-testid={`card-collection-${collection.id}`}>
-              <div 
-                className="relative h-48 cursor-pointer"
+          <div className="rounded-xl bg-card border shadow-sm p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] text-emerald-500 font-bold">$</span>
+              <span className="text-[11px] text-muted-foreground">Pullik</span>
+            </div>
+            <p className="text-xl font-bold">{paidCount}</p>
+          </div>
+          <div className="rounded-xl bg-card border shadow-sm p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] text-blue-500 font-bold">F</span>
+              <span className="text-[11px] text-muted-foreground">Bepul</span>
+            </div>
+            <p className="text-xl font-bold">{freeCount}</p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[1,2,3,4].map(i => <div key={i} className="h-64 rounded-xl bg-muted/50 animate-pulse" />)}
+          </div>
+        ) : collections.length === 0 ? (
+          <div className="text-center py-16">
+            <Video className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground font-medium">To'plamlar topilmadi</p>
+            <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Birinchi to'plamni yarating
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6">
+            {collections.map((collection) => (
+              <Card
+                key={collection.id}
+                className="overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 border cursor-pointer"
+                data-testid={`card-collection-${collection.id}`}
                 onClick={() => {
                   setViewingCollectionId(collection.id);
                   setSelectedCollection(collection);
                 }}
               >
-                {collection.thumbnailUrl ? (
-                  <img 
-                    src={collection.thumbnailUrl} 
-                    alt={collection.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                    <Video className="h-16 w-16 text-primary/40" />
-                  </div>
-                )}
-                <div className="absolute top-2 right-2">
-                  {collection.isFree ? (
-                    <Badge className="bg-green-500/90 text-white">
-                      Bepul
-                    </Badge>
+                <div className="relative h-40">
+                  {collection.thumbnailUrl ? (
+                    <img src={collection.thumbnailUrl} alt={collection.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Badge className="bg-primary/90 text-white">
-                      {collection.price} sum
-                    </Badge>
+                    <div className="w-full h-full bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center">
+                      <Video className="h-12 w-12 text-violet-400/50" />
+                    </div>
                   )}
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-lg mb-2 truncate" data-testid={`text-collection-name-${collection.id}`}>
-                  {collection.name}
-                </h3>
-                {collection.description && (
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {collection.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Video className="h-4 w-4" />
-                    <span>{(collection as any).videoCount || 0} ta video</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                    <h3 className="font-semibold text-white text-base truncate mr-2" data-testid={`text-collection-name-${collection.id}`}>
+                      {collection.name}
+                    </h3>
+                    {collection.isFree ? (
+                      <Badge className="bg-emerald-500 text-white border-0 shrink-0 text-[10px]">Bepul</Badge>
+                    ) : (
+                      <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 shrink-0 text-[10px]">{collection.price?.toLocaleString()} sum</Badge>
+                    )}
                   </div>
-                  {collection.categories && collection.categories.length > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      {collection.categories[0]}
-                    </Badge>
+                </div>
+                <div className="p-3.5">
+                  {collection.description && (
+                    <p className="text-xs text-muted-foreground mb-2.5 line-clamp-2">{collection.description}</p>
                   )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Video className="h-3.5 w-3.5" />
+                      <span>{(collection as any).videoCount || 0} ta video</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={(e) => { e.stopPropagation(); openAddVideoDialog(collection.id); }} data-testid={`button-add-video-${collection.id}`}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Video
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      setViewingCollectionId(collection.id);
-                      setSelectedCollection(collection);
-                    }}
-                    data-testid={`button-view-${collection.id}`}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Ko'rish
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => openAddVideoDialog(collection.id)}
-                    data-testid={`button-add-video-${collection.id}`}
-                  >
-                    <Video className="h-4 w-4 mr-1" />
-                    Video
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Collection Detail Dialog */}
       <Dialog open={!!selectedCollection} onOpenChange={(open) => {
         if (!open) {
           setSelectedCollection(null);
           setViewingCollectionId(null);
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden" data-testid="dialog-collection-detail">
-          <DialogHeader>
-            <div className="flex items-start justify-between">
-              <DialogTitle className="font-display text-2xl">
-                {selectedCollection?.name}
-              </DialogTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectedCollection && handleEditCollection(selectedCollection)}
-                  data-testid="button-edit-collection"
-                >
-                  Tahrirlash
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => selectedCollection && handleDeleteCollection(selectedCollection.id)}
-                  data-testid="button-delete-collection"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  O'chirish
-                </Button>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-collection-detail">
+          {selectedCollection?.thumbnailUrl ? (
+            <div className="relative h-40">
+              <img src={selectedCollection.thumbnailUrl} alt={selectedCollection.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4">
+                <DialogHeader>
+                  <DialogTitle className="text-white text-lg">{selectedCollection?.name}</DialogTitle>
+                  <DialogDescription className="text-white/70 text-xs">
+                    {selectedCollection?.isFree ? 'Bepul' : `${selectedCollection?.price?.toLocaleString()} sum`} · {viewingVideos.length} ta video
+                  </DialogDescription>
+                </DialogHeader>
               </div>
             </div>
-          </DialogHeader>
+          ) : (
+            <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-5 text-white">
+              <DialogHeader>
+                <DialogTitle className="text-white text-lg">{selectedCollection?.name}</DialogTitle>
+                <DialogDescription className="text-violet-100/80 text-xs">
+                  {selectedCollection?.isFree ? 'Bepul' : `${selectedCollection?.price?.toLocaleString()} sum`} · {viewingVideos.length} ta video
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          )}
 
           {selectedCollection && (
-            <ScrollArea className="max-h-[calc(90vh-8rem)] overflow-x-hidden">
-              <div className="space-y-4 pr-4 overflow-x-hidden">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Narx</p>
-                    <p className="font-semibold">{selectedCollection.price.toLocaleString()} sum</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Videolar soni</p>
-                    <p className="font-semibold">{viewingVideos.length} ta</p>
-                  </div>
+            <ScrollArea className="flex-1 overflow-y-auto">
+              <div className="space-y-4 p-5 overflow-x-hidden">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditCollection(selectedCollection)} data-testid="button-edit-collection">
+                    Tahrirlash
+                  </Button>
+                  <Button variant="destructive" size="sm" className="flex-1" onClick={() => handleDeleteCollection(selectedCollection.id)} data-testid="button-delete-collection">
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    O'chirish
+                  </Button>
                 </div>
 
                 {selectedCollection.description && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tavsif</p>
-                    <p className="text-sm">{selectedCollection.description}</p>
-                  </div>
-                )}
-
-                {selectedCollection.thumbnailUrl && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Rasm</p>
-                    <img 
-                      src={selectedCollection.thumbnailUrl} 
-                      alt={selectedCollection.name}
-                      className="rounded-lg w-full h-48 object-cover"
-                    />
-                  </div>
+                  <p className="text-sm text-muted-foreground">{selectedCollection.description}</p>
                 )}
 
                 <div className="border-t pt-4">
