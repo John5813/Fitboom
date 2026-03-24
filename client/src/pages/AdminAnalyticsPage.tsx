@@ -84,7 +84,7 @@ export default function AdminAnalyticsPage() {
 
   const saveExpenseMutation = useMutation({
     mutationFn: async (data: typeof expenseForm) => {
-      const res = await apiRequest('POST', '/api/admin/expenses', data);
+      const res = await apiRequest('/api/admin/expenses', 'POST', data);
       return res.json();
     },
     onSuccess: () => {
@@ -98,7 +98,7 @@ export default function AdminAnalyticsPage() {
 
   const deleteExpenseMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/admin/expenses/${id}`);
+      await apiRequest(`/api/admin/expenses/${id}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/expenses'] });
