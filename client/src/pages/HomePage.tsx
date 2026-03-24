@@ -532,6 +532,9 @@ export default function HomePage() {
             </div>
             <div className="flex items-center gap-1">
               <LanguageSelector />
+              <Button variant="ghost" size="icon" onClick={() => setLocation('/profile')} data-testid="button-profile">
+                <User className="w-5 h-5" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => setLocation('/settings')} data-testid="button-settings">
                 <Settings className="w-5 h-5" />
               </Button>
