@@ -16,6 +16,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminGymsPage from "@/pages/AdminGymsPage";
 import AdminCollectionsPage from "@/pages/AdminCollectionsPage";
 import AdminUsersPage from "@/pages/AdminUsersPage";
+import AdminAnalyticsPage from "@/pages/AdminAnalyticsPage";
 import CoursesPage from "@/pages/CoursesPage";
 import MyCourseDetailPage from "@/pages/MyCourseDetailPage";
 import VideoPlayerPage from "@/pages/VideoPlayerPage";
@@ -69,6 +70,11 @@ function Router() {
       <Route path="/admin/users">
         <ProtectedRoute>
           <AdminUsersPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/analytics">
+        <ProtectedRoute>
+          <AdminAnalyticsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/courses">

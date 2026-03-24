@@ -27,6 +27,17 @@ PostgreSQL, hosted via Neon serverless, serves as the primary database. Drizzle 
 - GymCard shows star + average rating in photo overlay and detail dialog
 - BookingCard shows "Baho bering" button for completed unrated bookings; star display for already-rated
 
+### Admin Analytics Dashboard
+- Route: `/admin/analytics` — comprehensive business metrics page
+- **Key Metrics**: DAU (Daily Active Users), MAU (Monthly Active Users), MRR (Monthly Recurring Revenue), ARPU (Average Revenue Per User)
+- **Expense Management**: Manual input form for monthly marketing spend and operational costs (admin_expenses table: month, year, marketing_spend, operational_costs, notes)
+- **CAC Calculation**: Automatic Customer Acquisition Cost = Total Marketing Spend / New Users for selected month/year
+- **User Segmentation**:
+  - Top Active Users — ranked by booking count (activity score)
+  - At-Risk Users — users with completed profiles who haven't booked in 7+ days
+- API endpoints: `/api/admin/analytics`, `/api/admin/analytics/cac`, `/api/admin/analytics/top-users`, `/api/admin/analytics/at-risk-users`, `/api/admin/expenses` (GET/POST/DELETE)
+- Navigation card added to AdminDashboard
+
 ### Gym Owner Panel
 - Professional dashboard with analytics: today's visitors, daily revenue, monthly stats, slot occupancy rate
 - Hero banner with gym image, gradient overlay, clean address (URL stripped), hours, closed days

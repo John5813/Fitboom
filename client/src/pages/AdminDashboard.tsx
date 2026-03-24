@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Building2, Video, MessageSquare, Key, Trash2, Check, X, Users,
-  Lock, ShieldCheck, TrendingUp, ChevronRight, Settings, LayoutDashboard, Eye
+  Lock, ShieldCheck, TrendingUp, ChevronRight, Settings, LayoutDashboard, Eye, BarChart3
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -229,6 +229,15 @@ export default function AdminDashboard() {
       gradient: "from-emerald-500/10 to-green-500/10",
       iconColor: "text-emerald-600",
       iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
+    },
+    {
+      title: "Analitika",
+      desc: "Biznes ko'rsatkichlari va moliya",
+      icon: BarChart3,
+      href: "/admin/analytics",
+      gradient: "from-orange-500/10 to-red-500/10",
+      iconColor: "text-orange-600",
+      iconBg: "bg-orange-100 dark:bg-orange-900/30",
     },
   ];
 

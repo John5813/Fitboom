@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -78,6 +78,23 @@ export interface IStorage {
   getGymRatings(gymId: string): Promise<GymRating[]>;
   getUserRatings(userId: string): Promise<GymRating[]>;
   getGymAverageRatings(): Promise<{ gymId: string; average: number; count: number }[]>;
+  getAdminExpenses(month?: number, year?: number): Promise<AdminExpense[]>;
+  getAdminExpense(id: string): Promise<AdminExpense | undefined>;
+  upsertAdminExpense(expense: InsertAdminExpense): Promise<AdminExpense>;
+  deleteAdminExpense(id: string): Promise<boolean>;
+  getAnalyticsMetrics(): Promise<{
+    dau: number;
+    mau: number;
+    totalRevenue: number;
+    mrr: number;
+    arpu: number;
+    totalUsers: number;
+    newUsersThisMonth: number;
+    activeUsersToday: number;
+    activeUsersMonth: number;
+  }>;
+  getAtRiskUsers(daysInactive: number): Promise<User[]>;
+  getTopActiveUsers(limit: number): Promise<{ user: User; activityScore: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -601,6 +618,110 @@ export class DatabaseStorage implements IStorage {
       average: Number(r.average),
       count: Number(r.count),
     }));
+  }
+
+  async getAdminExpenses(month?: number, year?: number): Promise<AdminExpense[]> {
+    if (month !== undefined && year !== undefined) {
+      return await db.select().from(adminExpenses)
+        .where(and(eq(adminExpenses.month, month), eq(adminExpenses.year, year)));
+    }
+    return await db.select().from(adminExpenses);
+  }
+
+  async getAdminExpense(id: string): Promise<AdminExpense | undefined> {
+    const [expense] = await db.select().from(adminExpenses).where(eq(adminExpenses.id, id));
+    return expense || undefined;
+  }
+
+  async upsertAdminExpense(expense: InsertAdminExpense): Promise<AdminExpense> {
+    const existing = await db.select().from(adminExpenses)
+      .where(and(eq(adminExpenses.month, expense.month), eq(adminExpenses.year, expense.year)));
+    if (existing.length > 0) {
+      const [updated] = await db.update(adminExpenses)
+        .set({ marketingSpend: expense.marketingSpend, operationalCosts: expense.operationalCosts, notes: expense.notes })
+        .where(eq(adminExpenses.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(adminExpenses).values(expense).returning();
+    return created;
+  }
+
+  async deleteAdminExpense(id: string): Promise<boolean> {
+    const result = await db.delete(adminExpenses).where(eq(adminExpenses.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAnalyticsMetrics(): Promise<{
+    dau: number; mau: number; totalRevenue: number; mrr: number; arpu: number;
+    totalUsers: number; newUsersThisMonth: number; activeUsersToday: number; activeUsersMonth: number;
+  }> {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const allUsers = await db.select().from(users);
+    const totalUsers = allUsers.length;
+
+    const newUsersThisMonth = allUsers.filter(u => u.createdAt && new Date(u.createdAt) >= startOfMonth).length;
+
+    const todayBookings = await db.select({ userId: bookings.userId })
+      .from(bookings)
+      .where(sql`${bookings.createdAt} >= ${startOfDay}`);
+    const dauSet = new Set(todayBookings.map(b => b.userId));
+    const dau = dauSet.size;
+
+    const monthBookings = await db.select({ userId: bookings.userId })
+      .from(bookings)
+      .where(sql`${bookings.createdAt} >= ${startOfMonth}`);
+    const mauSet = new Set(monthBookings.map(b => b.userId));
+    const mau = mauSet.size;
+
+    const revenueResult = await db.select({
+      total: sql<number>`COALESCE(SUM(${creditPayments.price}), 0)`
+    }).from(creditPayments).where(eq(creditPayments.status, 'approved'));
+    const totalRevenue = Number(revenueResult[0]?.total || 0);
+
+    const monthRevenueResult = await db.select({
+      total: sql<number>`COALESCE(SUM(${creditPayments.price}), 0)`
+    }).from(creditPayments)
+      .where(and(eq(creditPayments.status, 'approved'), sql`${creditPayments.createdAt} >= ${startOfMonth}`));
+    const mrr = Number(monthRevenueResult[0]?.total || 0);
+
+    const arpu = totalUsers > 0 ? Math.round(totalRevenue / totalUsers) : 0;
+
+    return {
+      dau, mau, totalRevenue, mrr, arpu,
+      totalUsers, newUsersThisMonth,
+      activeUsersToday: dau, activeUsersMonth: mau,
+    };
+  }
+
+  async getAtRiskUsers(daysInactive: number): Promise<User[]> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysInactive);
+
+    const activeUserIds = await db.select({ userId: bookings.userId })
+      .from(bookings)
+      .where(sql`${bookings.createdAt} >= ${cutoff}`);
+    const activeSet = new Set(activeUserIds.map(b => b.userId));
+
+    const allUsers = await db.select().from(users);
+    return allUsers.filter(u => !activeSet.has(u.id) && u.profileCompleted);
+  }
+
+  async getTopActiveUsers(limit: number): Promise<{ user: User; activityScore: number }[]> {
+    const rows = await db.select({
+      userId: bookings.userId,
+      score: sql<number>`COUNT(*)`,
+    }).from(bookings).groupBy(bookings.userId).orderBy(sql`COUNT(*) DESC`).limit(limit);
+
+    const results: { user: User; activityScore: number }[] = [];
+    for (const row of rows) {
+      const [user] = await db.select().from(users).where(eq(users.id, row.userId));
+      if (user) results.push({ user, activityScore: Number(row.score) });
+    }
+    return results;
   }
 }
 

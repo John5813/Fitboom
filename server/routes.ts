@@ -2227,6 +2227,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/analytics', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const metrics = await storage.getAnalyticsMetrics();
+      res.json(metrics);
+    } catch (error: any) {
+      console.error("Analytics error:", error);
+      res.status(500).json({ error: "Analitika yuklashda xatolik" });
+    }
+  });
+
+  app.get('/api/admin/analytics/at-risk-users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const days = parseInt(req.query.days as string) || 7;
+      const atRiskUsers = await storage.getAtRiskUsers(days);
+      res.json(atRiskUsers);
+    } catch (error: any) {
+      res.status(500).json({ error: "Xatolik" });
+    }
+  });
+
+  app.get('/api/admin/analytics/top-users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topUsers = await storage.getTopActiveUsers(limit);
+      res.json(topUsers);
+    } catch (error: any) {
+      res.status(500).json({ error: "Xatolik" });
+    }
+  });
+
+  app.get('/api/admin/expenses', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      const expenses = await storage.getAdminExpenses(month, year);
+      res.json(expenses);
+    } catch (error: any) {
+      res.status(500).json({ error: "Xatolik" });
+    }
+  });
+
+  app.post('/api/admin/expenses', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { month, year, marketingSpend, operationalCosts, notes } = req.body;
+      if (!month || !year) {
+        return res.status(400).json({ error: "Oy va yil majburiy" });
+      }
+      const expense = await storage.upsertAdminExpense({
+        month, year,
+        marketingSpend: marketingSpend || 0,
+        operationalCosts: operationalCosts || 0,
+        notes: notes || null,
+      });
+      res.json(expense);
+    } catch (error: any) {
+      console.error("Expense save error:", error);
+      res.status(500).json({ error: "Xarajat saqlashda xatolik" });
+    }
+  });
+
+  app.delete('/api/admin/expenses/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteAdminExpense(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Topilmadi" });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Xatolik" });
+    }
+  });
+
+  app.get('/api/admin/analytics/cac', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+      const expenses = await storage.getAdminExpenses(month, year);
+      const totalMarketing = expenses.reduce((sum, e) => sum + (e.marketingSpend || 0), 0);
+
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+      const allUsers = await storage.getAllUsers();
+      const newUsers = allUsers.filter(u => {
+        if (!u.createdAt) return false;
+        const d = new Date(u.createdAt);
+        return d >= startOfMonth && d <= endOfMonth;
+      });
+
+      const cac = newUsers.length > 0 ? Math.round(totalMarketing / newUsers.length) : 0;
+
+      res.json({
+        month, year,
+        totalMarketing,
+        newUsersCount: newUsers.length,
+        cac,
+        totalOperational: expenses.reduce((sum, e) => sum + (e.operationalCosts || 0), 0),
+      });
+    } catch (error: any) {
+      console.error("CAC calculation error:", error);
+      res.status(500).json({ error: "CAC hisoblashda xatolik" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -227,6 +227,20 @@ export type LoginCode = typeof loginCodes.$inferSelect;
 export type InsertGymRating = z.infer<typeof insertGymRatingSchema>;
 export type GymRating = typeof gymRatings.$inferSelect;
 
+export const adminExpenses = pgTable("admin_expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  marketingSpend: integer("marketing_spend").notNull().default(0),
+  operationalCosts: integer("operational_costs").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAdminExpenseSchema = createInsertSchema(adminExpenses).omit({ id: true, createdAt: true });
+export type InsertAdminExpense = z.infer<typeof insertAdminExpenseSchema>;
+export type AdminExpense = typeof adminExpenses.$inferSelect;
+
 export type GymWithRating = Gym & {
   avgRating: number | null;
   ratingCount: number;
