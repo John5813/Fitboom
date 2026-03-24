@@ -128,6 +128,7 @@ export default function ProfilePage() {
                 <AvatarImage
                   src={(user as any)?.profileImageUrl || undefined}
                   alt={user?.name || "Profile"}
+                  className="object-cover"
                 />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white">
                   {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-12 h-12" />}
