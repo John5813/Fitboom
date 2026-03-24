@@ -666,31 +666,43 @@ export class DatabaseStorage implements IStorage {
 
     const newUsersThisMonth = allUsers.filter(u => u.createdAt && new Date(u.createdAt) >= startOfMonth).length;
 
+    // DAU: today's bookings, excluding cancelled ones
     const todayBookings = await db.select({ userId: bookings.userId })
       .from(bookings)
-      .where(sql`${bookings.createdAt} >= ${startOfDay}`);
+      .where(and(
+        sql`${bookings.createdAt} >= ${startOfDay}`,
+        sql`${bookings.status} != 'cancelled'`
+      ));
     const dauSet = new Set(todayBookings.map(b => b.userId));
     const dau = dauSet.size;
 
+    // MAU: this month's bookings, excluding cancelled ones
     const monthBookings = await db.select({ userId: bookings.userId })
       .from(bookings)
-      .where(sql`${bookings.createdAt} >= ${startOfMonth}`);
+      .where(and(
+        sql`${bookings.createdAt} >= ${startOfMonth}`,
+        sql`${bookings.status} != 'cancelled'`
+      ));
     const mauSet = new Set(monthBookings.map(b => b.userId));
     const mau = mauSet.size;
 
+    // Total revenue: all approved credit payments
     const revenueResult = await db.select({
       total: sql<number>`COALESCE(SUM(${creditPayments.price}), 0)`
     }).from(creditPayments).where(eq(creditPayments.status, 'approved'));
     const totalRevenue = Number(revenueResult[0]?.total || 0);
 
+    // MRR: this month's approved payments
     const monthRevenueResult = await db.select({
       total: sql<number>`COALESCE(SUM(${creditPayments.price}), 0)`
     }).from(creditPayments)
       .where(and(eq(creditPayments.status, 'approved'), sql`${creditPayments.createdAt} >= ${startOfMonth}`));
     const mrr = Number(monthRevenueResult[0]?.total || 0);
 
-    const arpu = totalUsers > 0 ? Math.round(totalRevenue / totalUsers) : 0;
+    // ARPU: monthly revenue / monthly active users (standard definition)
+    const arpu = mau > 0 ? Math.round(mrr / mau) : 0;
 
+    // LTV: total revenue / number of unique paying users (ARPPU)
     const payingUsersResult = await db.select({
       count: sql<number>`COUNT(DISTINCT ${creditPayments.userId})`
     }).from(creditPayments).where(eq(creditPayments.status, 'approved'));
@@ -708,20 +720,37 @@ export class DatabaseStorage implements IStorage {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - daysInactive);
 
-    const activeUserIds = await db.select({ userId: bookings.userId })
+    // Users who booked recently (not at-risk)
+    const recentlyActiveIds = await db.select({ userId: bookings.userId })
       .from(bookings)
-      .where(sql`${bookings.createdAt} >= ${cutoff}`);
-    const activeSet = new Set(activeUserIds.map(b => b.userId));
+      .where(and(
+        sql`${bookings.createdAt} >= ${cutoff}`,
+        sql`${bookings.status} != 'cancelled'`
+      ));
+    const recentActiveSet = new Set(recentlyActiveIds.map(b => b.userId));
+
+    // Users who have at least 1 booking ever (they actually used the app)
+    const everBookedIds = await db.select({ userId: bookings.userId })
+      .from(bookings)
+      .where(sql`${bookings.status} != 'cancelled'`);
+    const everBookedSet = new Set(everBookedIds.map(b => b.userId));
 
     const allUsers = await db.select().from(users);
-    return allUsers.filter(u => !activeSet.has(u.id) && u.profileCompleted);
+    // At-risk = has booked before, but NOT in the last N days
+    return allUsers.filter(u =>
+      everBookedSet.has(u.id) && !recentActiveSet.has(u.id) && u.profileCompleted
+    );
   }
 
   async getTopActiveUsers(limit: number): Promise<{ user: User; activityScore: number }[]> {
     const rows = await db.select({
       userId: bookings.userId,
       score: sql<number>`COUNT(*)`,
-    }).from(bookings).groupBy(bookings.userId).orderBy(sql`COUNT(*) DESC`).limit(limit);
+    }).from(bookings)
+      .where(sql`${bookings.status} != 'cancelled'`)
+      .groupBy(bookings.userId)
+      .orderBy(sql`COUNT(*) DESC`)
+      .limit(limit);
 
     const results: { user: User; activityScore: number }[] = [];
     for (const row of rows) {

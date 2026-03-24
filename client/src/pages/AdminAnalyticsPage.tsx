@@ -113,7 +113,7 @@ export default function AdminAnalyticsPage() {
     { label: "DAU", desc: "Kunlik aktiv", value: metrics?.dau || 0, icon: Activity, color: "from-blue-500 to-cyan-500" },
     { label: "MAU", desc: "Oylik aktiv", value: metrics?.mau || 0, icon: Users, color: "from-violet-500 to-purple-500" },
     { label: "MRR", desc: "Oylik daromad", value: formatCurrency(metrics?.mrr || 0), icon: TrendingUp, color: "from-emerald-500 to-green-500" },
-    { label: "ARPU", desc: "Har bir foydalanuvchi", value: formatCurrency(metrics?.arpu || 0), icon: DollarSign, color: "from-amber-500 to-orange-500" },
+    { label: "ARPU", desc: "Aktiv foydalanuvchi/oy", value: formatCurrency(metrics?.arpu || 0), icon: DollarSign, color: "from-amber-500 to-orange-500" },
     { label: "LTV", desc: "Mijoz umrlik qiymati", value: formatCurrency(metrics?.ltv || 0), icon: Target, color: "from-rose-500 to-pink-500" },
   ];
 
