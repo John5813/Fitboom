@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Search, CreditCard, Calendar, User, Users, TrendingUp,
   AlertTriangle, Clock, ShieldCheck, Phone, MessageCircle, Plus, Minus,
@@ -265,10 +264,11 @@ export default function AdminUsersPage() {
 
       {/* User Detail Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={(open) => { if (!open) { setSelectedUser(null); setCreditAmount(""); } }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-user-detail">
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0" data-testid="dialog-user-detail">
           {selectedUser && (
             <>
-              <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-5 text-white shrink-0">
+              {/* Fixed header */}
+              <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-5 text-white shrink-0 rounded-t-xl">
                 <DialogHeader>
                   <div className="flex items-center gap-3">
                     <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xl font-bold shrink-0">
@@ -298,11 +298,13 @@ export default function AdminUsersPage() {
                 </DialogHeader>
               </div>
 
-              <ScrollArea className="flex-1">
+              {/* Scrollable body */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="p-5 space-y-5">
+
                   {/* Profile Info */}
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Shaxsiy ma'lumotlar</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Shaxsiy ma'lumotlar</h3>
                     <div className="rounded-xl border bg-card divide-y">
                       {selectedUser.phone && (
                         <div className="flex items-center gap-3 px-4 py-3">
@@ -339,8 +341,8 @@ export default function AdminUsersPage() {
                   </div>
 
                   {/* Credit Adjustment */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Kredit boshqarish</h3>
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kredit boshqarish</h3>
                     <div className="rounded-xl border bg-card p-4 space-y-4">
                       {/* Mode tabs */}
                       <div className="grid grid-cols-3 gap-1.5 bg-muted/50 p-1 rounded-lg">
@@ -355,7 +357,7 @@ export default function AdminUsersPage() {
                             onClick={() => setCreditMode(m.key as any)}
                             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
                               creditMode === m.key
-                                ? 'bg-card shadow-sm ' + m.color
+                                ? 'bg-background shadow-sm ' + m.color
                                 : 'text-muted-foreground hover:text-foreground'
                             }`}
                             data-testid={`button-credit-mode-${m.key}`}
@@ -366,10 +368,32 @@ export default function AdminUsersPage() {
                         ))}
                       </div>
 
+                      {/* Quick amounts */}
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-2">Tez miqdorlar:</p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {[10, 20, 30, 50, 60, 100, 130, 240].map(n => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setCreditAmount(String(n))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                creditAmount === String(n)
+                                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                  : 'bg-background border-border hover:bg-muted'
+                              }`}
+                              data-testid={`button-quick-credit-${n}`}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Amount input */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-xs">
+                          <Label className="text-xs text-muted-foreground">
                             {creditMode === 'add' ? "Qo'shish miqdori" : creditMode === 'remove' ? "Ayirish miqdori" : "Yangi qiymat"}
                           </Label>
                           <Input
@@ -384,7 +408,7 @@ export default function AdminUsersPage() {
                         </div>
                         {creditMode === 'add' && (
                           <div>
-                            <Label className="text-xs">Muddati (kun)</Label>
+                            <Label className="text-xs text-muted-foreground">Muddati (kun)</Label>
                             <Input
                               type="number"
                               min="1"
@@ -398,34 +422,25 @@ export default function AdminUsersPage() {
                         )}
                       </div>
 
-                      {/* Quick amounts */}
-                      <div>
-                        <p className="text-[11px] text-muted-foreground mb-1.5">Tez miqdorlar:</p>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {[10, 20, 30, 50, 60, 100, 130, 240].map(n => (
-                            <button
-                              key={n}
-                              type="button"
-                              onClick={() => setCreditAmount(String(n))}
-                              className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${
-                                creditAmount === String(n)
-                                  ? 'bg-primary text-primary-foreground border-primary'
-                                  : 'bg-background border-border hover:bg-muted'
-                              }`}
-                              data-testid={`button-quick-credit-${n}`}
-                            >
-                              {n}
-                            </button>
-                          ))}
+                      {/* Preview */}
+                      {creditAmount && !isNaN(parseInt(creditAmount)) && parseInt(creditAmount) > 0 && (
+                        <div className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2 text-xs">
+                          <span className="text-muted-foreground">Yangi balans:</span>
+                          <span className="font-bold text-base">
+                            {creditMode === 'add' ? selectedUser.credits + parseInt(creditAmount) :
+                             creditMode === 'remove' ? Math.max(0, selectedUser.credits - parseInt(creditAmount)) :
+                             parseInt(creditAmount)}
+                            <span className="text-xs font-normal text-muted-foreground ml-1">kredit</span>
+                          </span>
                         </div>
-                      </div>
+                      )}
 
                       <Button
                         onClick={handleAdjust}
-                        disabled={adjustCreditsMutation.isPending || !creditAmount}
-                        className={`w-full ${
-                          creditMode === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                          creditMode === 'remove' ? 'bg-red-600 hover:bg-red-700' : ''
+                        disabled={adjustCreditsMutation.isPending || !creditAmount || parseInt(creditAmount) <= 0}
+                        className={`w-full h-11 text-sm font-semibold ${
+                          creditMode === 'add' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' :
+                          creditMode === 'remove' ? 'bg-red-600 hover:bg-red-700 text-white' : ''
                         }`}
                         data-testid="button-adjust-credits"
                       >
@@ -434,41 +449,28 @@ export default function AdminUsersPage() {
                           creditMode === 'remove' ? `-${creditAmount || '?'} kredit ayirish` :
                           `${creditAmount || '?'} ga belgilash`}
                       </Button>
-
-                      {/* Preview */}
-                      {creditAmount && !isNaN(parseInt(creditAmount)) && (
-                        <div className="text-center text-xs text-muted-foreground py-1 bg-muted/30 rounded-lg">
-                          {selectedUser.credits} →{" "}
-                          <span className="font-semibold text-foreground">
-                            {creditMode === 'add' ? selectedUser.credits + parseInt(creditAmount) :
-                             creditMode === 'remove' ? Math.max(0, selectedUser.credits - parseInt(creditAmount)) :
-                             parseInt(creditAmount)}
-                          </span>
-                          {" "}kredit
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* Booking history */}
+                  {/* Booking history - newest first */}
                   {isDetailLoading ? (
                     <div className="space-y-2">
                       {[1,2,3].map(i => <div key={i} className="h-12 rounded-lg bg-muted/50 animate-pulse" />)}
                     </div>
                   ) : (userDetail?.bookings?.length || 0) > 0 && (
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                         <History className="h-3.5 w-3.5" />
                         Bronlar tarixi ({userDetail!.bookings.length})
                       </h3>
                       <div className="space-y-1.5">
-                        {userDetail!.bookings.slice(0,5).map(b => (
-                          <div key={b.id} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <Dumbbell className="h-3.5 w-3.5 text-muted-foreground" />
-                              <div>
-                                <p className="text-xs font-medium">{formatDate(b.bookingDate)}</p>
-                              </div>
+                        {[...userDetail!.bookings]
+                          .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime())
+                          .map(b => (
+                          <div key={b.id} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <Dumbbell className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <p className="text-xs font-medium">{formatDate(b.bookingDate)}</p>
                             </div>
                             <Badge
                               variant={b.status === 'confirmed' ? 'default' : b.status === 'cancelled' ? 'destructive' : 'secondary'}
@@ -478,37 +480,37 @@ export default function AdminUsersPage() {
                             </Badge>
                           </div>
                         ))}
-                        {userDetail!.bookings.length > 5 && (
-                          <p className="text-xs text-center text-muted-foreground">+ {userDetail!.bookings.length - 5} ta bron</p>
-                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Purchases */}
+                  {/* Purchases - newest first */}
                   {!isDetailLoading && (userDetail?.purchases?.length || 0) > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <div className="space-y-2 pb-2">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                         <ShoppingBag className="h-3.5 w-3.5" />
-                        Xaridlar ({userDetail!.purchases.length})
+                        To'lov tarixi ({userDetail!.purchases.length})
                       </h3>
                       <div className="space-y-1.5">
-                        {userDetail!.purchases.slice(0,5).map(p => (
-                          <div key={p.id} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2">
+                        {[...userDetail!.purchases]
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map(p => (
+                          <div key={p.id} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2.5">
                             <div>
                               <p className="text-xs font-medium">{p.packageName || 'Kredit paketi'}</p>
                               <p className="text-[11px] text-muted-foreground">{formatDate(p.createdAt)}</p>
                             </div>
-                            {p.creditsAdded && (
-                              <span className="text-xs font-bold text-emerald-600">+{p.creditsAdded} kr</span>
+                            {p.creditsAdded != null && (
+                              <span className="text-sm font-bold text-emerald-600">+{p.creditsAdded} kr</span>
                             )}
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
+
                 </div>
-              </ScrollArea>
+              </div>
             </>
           )}
         </DialogContent>
