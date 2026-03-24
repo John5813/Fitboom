@@ -12,26 +12,55 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle({ client: pool });
 
+// Ensure all tables that may have been added after initial migration exist
+async function ensureTablesExist() {
+  const client = await pool.connect();
+  try {
+    // admin_expenses — added after initial deployment
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admin_expenses (
+        id SERIAL PRIMARY KEY,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        marketing_spend NUMERIC(12,2) NOT NULL DEFAULT 0,
+        operational_costs NUMERIC(12,2) NOT NULL DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(month, year)
+      )
+    `);
+
+    // Add any other columns or tables that were added incrementally:
+    // Example: ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...
+    console.log("ensureTablesExist: all checks passed.");
+  } finally {
+    client.release();
+  }
+}
+
 async function runMigrations() {
   console.log("Running migrations...");
   try {
-    // Migrations often fail on Replit due to relation already exists errors
-    // We'll skip them and rely on db:push during development/first deploy
     if (process.env.NODE_ENV === "production" && !process.env.SKIP_MIGRATIONS) {
-      await migrate(db, { migrationsFolder: "./migrations" });
-      console.log("Migrations completed successfully!");
+      try {
+        await migrate(db, { migrationsFolder: "./migrations" });
+        console.log("Migrations completed successfully!");
+      } catch (err: any) {
+        if (err.message && err.message.includes("already exists")) {
+          console.log("Some relations already exist — skipping drizzle migrate, continuing.");
+        } else {
+          throw err;
+        }
+      }
     } else {
       console.log("Skipping migrations in development or per SKIP_MIGRATIONS flag.");
     }
+
+    // Always run these safety checks regardless of env
+    await ensureTablesExist();
     process.exit(0);
   } catch (err: any) {
     console.error("Migration failed:", err);
-    // In many Replit environments, the tables already exist. 
-    // If it's a "relation already exists" error, we can potentially ignore it
-    if (err.message && err.message.includes("already exists")) {
-      console.log("Relation already exists, treating as success.");
-      process.exit(0);
-    }
     process.exit(1);
   }
 }
