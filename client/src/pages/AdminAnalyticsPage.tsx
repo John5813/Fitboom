@@ -47,7 +47,7 @@ export default function AdminAnalyticsPage() {
   }, [isVerified, setLocation]);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<{
-    dau: number; mau: number; totalRevenue: number; mrr: number; arpu: number;
+    dau: number; mau: number; totalRevenue: number; mrr: number; arpu: number; ltv: number;
     totalUsers: number; newUsersThisMonth: number; activeUsersToday: number; activeUsersMonth: number;
   }>({
     queryKey: ['/api/admin/analytics'],
@@ -114,6 +114,7 @@ export default function AdminAnalyticsPage() {
     { label: "MAU", desc: "Oylik aktiv", value: metrics?.mau || 0, icon: Users, color: "from-violet-500 to-purple-500" },
     { label: "MRR", desc: "Oylik daromad", value: formatCurrency(metrics?.mrr || 0), icon: TrendingUp, color: "from-emerald-500 to-green-500" },
     { label: "ARPU", desc: "Har bir foydalanuvchi", value: formatCurrency(metrics?.arpu || 0), icon: DollarSign, color: "from-amber-500 to-orange-500" },
+    { label: "LTV", desc: "Mijoz umrlik qiymati", value: formatCurrency(metrics?.ltv || 0), icon: Target, color: "from-rose-500 to-pink-500" },
   ];
 
   const secondaryMetrics = [
@@ -153,7 +154,7 @@ export default function AdminAnalyticsPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {mainMetrics.map((m) => (
                 <Card key={m.label} className="overflow-hidden border shadow-sm">
                   <CardContent className="p-0">

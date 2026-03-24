@@ -88,6 +88,7 @@ export interface IStorage {
     totalRevenue: number;
     mrr: number;
     arpu: number;
+    ltv: number;
     totalUsers: number;
     newUsersThisMonth: number;
     activeUsersToday: number;
@@ -653,7 +654,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAnalyticsMetrics(): Promise<{
-    dau: number; mau: number; totalRevenue: number; mrr: number; arpu: number;
+    dau: number; mau: number; totalRevenue: number; mrr: number; arpu: number; ltv: number;
     totalUsers: number; newUsersThisMonth: number; activeUsersToday: number; activeUsersMonth: number;
   }> {
     const now = new Date();
@@ -690,8 +691,14 @@ export class DatabaseStorage implements IStorage {
 
     const arpu = totalUsers > 0 ? Math.round(totalRevenue / totalUsers) : 0;
 
+    const payingUsersResult = await db.select({
+      count: sql<number>`COUNT(DISTINCT ${creditPayments.userId})`
+    }).from(creditPayments).where(eq(creditPayments.status, 'approved'));
+    const payingUsers = Number(payingUsersResult[0]?.count || 0);
+    const ltv = payingUsers > 0 ? Math.round(totalRevenue / payingUsers) : 0;
+
     return {
-      dau, mau, totalRevenue, mrr, arpu,
+      dau, mau, totalRevenue, mrr, arpu, ltv,
       totalUsers, newUsersThisMonth,
       activeUsersToday: dau, activeUsersMonth: mau,
     };
