@@ -1,24 +1,27 @@
-const PRIMARY = "#0B7A8C";
-const PRIMARY_DARK = "#085F6E";
-const PRIMARY_LIGHT = "#E8F6F8";
+const ORANGE = "#F97316";
+const ORANGE_DARK = "#EA6C0A";
+const ORANGE_LIGHT = "rgba(249,115,22,0.15)";
 
 export default {
-  primary: PRIMARY,
-  primaryDark: PRIMARY_DARK,
-  primaryLight: PRIMARY_LIGHT,
-  background: "#F2F7FA",
-  card: "#FFFFFF",
-  text: "#1A2E35",
-  textSecondary: "#6B8A94",
-  border: "#DDE8EC",
+  primary: ORANGE,
+  primaryDark: ORANGE_DARK,
+  primaryLight: ORANGE_LIGHT,
+  background: "#090912",
+  surface: "#10101e",
+  card: "#14142a",
+  cardBorder: "#1e1e38",
+  text: "#FFFFFF",
+  textSecondary: "rgba(255,255,255,0.50)",
+  border: "#1e1e38",
   success: "#22C55E",
   error: "#EF4444",
   warning: "#F59E0B",
+  green: "#16a34a",
   light: {
-    text: "#1A2E35",
-    background: "#F2F7FA",
-    tint: PRIMARY,
-    tabIconDefault: "#8AACB8",
-    tabIconSelected: PRIMARY,
+    text: "#FFFFFF",
+    background: "#090912",
+    tint: ORANGE,
+    tabIconDefault: "rgba(255,255,255,0.35)",
+    tabIconSelected: ORANGE,
   },
 };

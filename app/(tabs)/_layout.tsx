@@ -1,151 +1,190 @@
-import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import {
+  Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 import Colors from "@/constants/Colors";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-function NativeTabLayout() {
+function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>{t("nav.home")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="gyms">
-        <Icon sf={{ default: "dumbbell", selected: "dumbbell.fill" }} />
-        <Label>{t("nav.gyms")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="map">
-        <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>{t("nav.map")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="bookings">
-        <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
-        <Label>{t("nav.bookings")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>{t("nav.profile")}</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+
+  const TAB_BOTTOM_INSET = Platform.OS === "web" ? 0 : insets.bottom;
+
+  const tabs = [
+    { name: "index",    icon: "home",     label: t("nav.home") },
+    { name: "gyms",     icon: "activity", label: t("nav.gyms") },
+    { name: "scanner",  icon: "camera",   label: t("nav.scanner"), isCenter: true },
+    { name: "courses",  icon: "video",    label: t("nav.classes") },
+    { name: "bookings", icon: "calendar", label: t("nav.bookings") },
+  ] as const;
+
+  const visibleRoutes = state.routes.filter((r) =>
+    tabs.some((t) => t.name === r.name)
   );
-}
-
-function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
-  const { t } = useLanguage();
-  const safeAreaInsets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        headerShown: false,
-        tabBarStyle: {
-          position: "absolute",
-          backgroundColor: isIOS ? "transparent" : isDark ? "#000" : "#fff",
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: isDark ? "#333" : "#ccc",
-          elevation: 0,
-          paddingBottom: safeAreaInsets.bottom,
-          ...(isWeb ? { height: 84 } : {}),
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : isWeb ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: isDark ? "#000" : "#fff" },
-              ]}
-            />
-          ) : null,
-      }}
+    <View
+      style={[
+        styles.tabBar,
+        { paddingBottom: TAB_BOTTOM_INSET, height: 64 + TAB_BOTTOM_INSET },
+      ]}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t("nav.home"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={24} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="gyms"
-        options={{
-          title: t("nav.gyms"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="dumbbell" tintColor={color} size={24} />
-            ) : (
-              <Feather name="activity" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="map"
-        options={{
-          title: t("nav.map"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="map" tintColor={color} size={24} />
-            ) : (
-              <Feather name="map" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="bookings"
-        options={{
-          title: t("nav.bookings"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="calendar" tintColor={color} size={24} />
-            ) : (
-              <Feather name="calendar" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t("nav.profile"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
-        }}
-      />
-    </Tabs>
+      {tabs.map((tab) => {
+        const route = visibleRoutes.find((r) => r.name === tab.name);
+        if (!route) return null;
+
+        const index = state.routes.indexOf(route);
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        if (tab.isCenter) {
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              onPress={onPress}
+              style={styles.centerBtnWrapper}
+              activeOpacity={0.8}
+            >
+              <View
+                style={[
+                  styles.centerBtn,
+                  isFocused && styles.centerBtnActive,
+                ]}
+              >
+                <Feather
+                  name={tab.icon}
+                  size={26}
+                  color={isFocused ? "#fff" : "rgba(255,255,255,0.9)"}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isFocused ? Colors.primary : Colors.textSecondary },
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        }
+
+        return (
+          <TouchableOpacity
+            key={tab.name}
+            onPress={onPress}
+            style={styles.tabItem}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name={tab.icon}
+              size={21}
+              color={isFocused ? Colors.primary : Colors.textSecondary}
+              strokeWidth={isFocused ? 2.5 : 1.8}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: isFocused ? Colors.primary : Colors.textSecondary },
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#10101e",
+    borderTopWidth: 1,
+    borderTopColor: "#1e1e38",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 10,
+    gap: 3,
+  },
+  centerBtnWrapper: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    marginTop: -28,
+    gap: 3,
+  },
+  centerBtn: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#1e1e38",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#10101e",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  centerBtnActive: {
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.6,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.1,
+  },
+});
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
+  return (
+    <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="gyms" />
+      <Tabs.Screen name="scanner" />
+      <Tabs.Screen name="courses" />
+      <Tabs.Screen name="bookings" />
+      <Tabs.Screen name="map" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
+    </Tabs>
+  );
 }

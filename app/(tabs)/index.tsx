@@ -7,13 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
-  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,12 +19,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { apiRequest } from "@/lib/api";
 import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
-import BookingCard from "@/components/BookingCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
@@ -34,22 +31,15 @@ export default function HomeScreen() {
     queryFn: () => apiRequest("/api/gyms"),
   });
 
-  const { data: bookingsData, refetch: refetchBookings } = useQuery({
-    queryKey: ["/api/bookings"],
-    queryFn: () => apiRequest("/api/bookings"),
-  });
-
   const gyms = gymsData?.gyms?.slice(0, 3) || [];
-  const upcomingBookings =
-    (bookingsData?.bookings || []).filter((b: any) => b.status === "confirmed").slice(0, 2);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchUser(), refetchGyms(), refetchBookings()]);
+    await Promise.all([refetchUser(), refetchGyms()]);
     setRefreshing(false);
   };
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top + 8;
 
   const daysLeft = user?.creditExpiryDate
     ? Math.ceil(
@@ -58,12 +48,23 @@ export default function HomeScreen() {
       )
     : null;
 
+  const isExpired = daysLeft !== null && daysLeft <= 0;
+  const isExpiringSoon = daysLeft !== null && daysLeft > 0 && daysLeft <= 5;
+
+  const LANG_FLAGS: Record<string, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
+  const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
+  const nextLang = (): "uz" | "ru" | "en" => {
+    if (language === "uz") return "ru";
+    if (language === "ru") return "en";
+    return "uz";
+  };
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPadding + 16, paddingBottom: 100 },
+        { paddingTop: topPadding, paddingBottom: 110 },
       ]}
       refreshControl={
         <RefreshControl
@@ -74,116 +75,120 @@ export default function HomeScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
+      {/* ─── Header ─── */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.welcomeText}>{t("home.welcome")},</Text>
-          <Text style={styles.userName}>{user?.name || "Fitboom"} 👋</Text>
+        {/* FitBoom Logo */}
+        <View style={styles.logoRow}>
+          <View style={styles.logoIcon}>
+            <Feather name="zap" size={18} color="#fff" />
+          </View>
+          <Text style={styles.logoText}>
+            <Text style={styles.logoFit}>Fit</Text>
+            <Text style={styles.logoBoom}>Boom</Text>
+          </Text>
         </View>
-        <TouchableOpacity
-          style={styles.notifBtn}
-          onPress={() => router.push("/courses/index" as any)}
-        >
-          <Feather name="video" size={20} color={Colors.primary} />
-        </TouchableOpacity>
+
+        {/* Right icons */}
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.langBtn}
+            onPress={() => setLanguage(nextLang())}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.langFlag}>{LANG_FLAGS[language]}</Text>
+            <Text style={styles.langLabel}>{LANG_LABELS[language]}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push("/(tabs)/profile" as any)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.avatarCircle}>
+              <Feather name="user" size={16} color={Colors.primary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push("/(tabs)/profile" as any)}
+            activeOpacity={0.7}
+          >
+            <Feather name="settings" size={20} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Credit Card */}
+      {/* ─── Green Credit Card ─── */}
       <LinearGradient
-        colors={["#0B7A8C", "#085F6E"]}
-        style={styles.creditCard}
+        colors={
+          isExpired
+            ? ["#ef4444", "#b91c1c"]
+            : ["#4ade80", "#16a34a", "#166534"]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        style={styles.creditCard}
       >
-        <View style={styles.creditCardLeft}>
-          <Text style={styles.creditLabel}>{t("home.balance")}</Text>
-          <View style={styles.creditRow}>
-            <Text style={styles.creditAmount}>{user?.credits ?? 0}</Text>
-            <Text style={styles.creditUnit}>{t("profile.credits")}</Text>
+        <View style={styles.creditLeft}>
+          <Text style={styles.creditKeyEmoji}>🔑</Text>
+          <View style={styles.creditInfo}>
+            <Text style={styles.creditLabel}>{t("profile.credits_title")}</Text>
+            <View style={styles.creditAmountRow}>
+              <Text style={styles.creditAmount}>{user?.credits ?? 0}</Text>
+              <Text style={styles.creditUnit}> {t("profile.credits_count")}</Text>
+            </View>
+            {daysLeft !== null && !isExpired && (
+              <View style={styles.creditDaysRow}>
+                <Feather
+                  name={isExpiringSoon ? "alert-triangle" : "clock"}
+                  size={12}
+                  color={isExpiringSoon ? "#fde68a" : "rgba(255,255,255,0.7)"}
+                />
+                <Text
+                  style={[
+                    styles.creditDays,
+                    isExpiringSoon && { color: "#fde68a" },
+                  ]}
+                >
+                  {daysLeft} {t("profile.days_left")}
+                </Text>
+              </View>
+            )}
+            {isExpired && (
+              <Text style={[styles.creditDays, { color: "#fde68a" }]}>
+                {t("profile.expired_message")}
+              </Text>
+            )}
           </View>
-          {daysLeft !== null && daysLeft > 0 && (
-            <Text style={styles.creditExpiry}>
-              {daysLeft} {t("profile.days_left")}
-            </Text>
-          )}
-          {daysLeft !== null && daysLeft <= 0 && (
-            <Text style={[styles.creditExpiry, { color: "#FF6B6B" }]}>
-              Muddat tugadi!
-            </Text>
-          )}
         </View>
+
         <TouchableOpacity
           style={styles.topupBtn}
           onPress={() => router.push("/payment" as any)}
+          activeOpacity={0.8}
         >
-          <Feather name="plus" size={16} color={Colors.primary} />
-          <Text style={styles.topupBtnText}>{t("home.topup")}</Text>
+          <Text style={styles.topupBtnText}>
+            {isExpired ? t("profile.renew") : t("profile.topup")}
+          </Text>
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        {[
-          {
-            icon: "activity" as const,
-            label: t("nav.gyms"),
-            onPress: () => router.push("/(tabs)/gyms" as any),
-          },
-          {
-            icon: "map" as const,
-            label: t("nav.map"),
-            onPress: () => router.push("/(tabs)/map" as any),
-          },
-          {
-            icon: "calendar" as const,
-            label: t("nav.bookings"),
-            onPress: () => router.push("/(tabs)/bookings" as any),
-          },
-          {
-            icon: "video" as const,
-            label: "Video",
-            onPress: () => router.push("/courses/index" as any),
-          },
-        ].map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            style={styles.quickAction}
-            onPress={item.onPress}
-          >
-            <View style={styles.quickActionIcon}>
-              <Feather name={item.icon} size={20} color={Colors.primary} />
-            </View>
-            <Text style={styles.quickActionLabel}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Upcoming Bookings */}
-      {upcomingBookings.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("home.upcoming")}</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/bookings" as any)}>
-              <Text style={styles.viewAll}>{t("home.view_all")}</Text>
-            </TouchableOpacity>
-          </View>
-          {upcomingBookings.map((booking: any) => (
-            <BookingCard key={booking.id} booking={booking} compact />
-          ))}
-        </View>
-      )}
-
-      {/* Nearby Gyms */}
+      {/* ─── Nearby Gyms Section ─── */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t("home.near_gyms")}</Text>
+          <View>
+            <Text style={styles.sectionTitle}>{t("home.near_gyms")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("home.sorted_by_distance")}</Text>
+          </View>
           <TouchableOpacity onPress={() => router.push("/(tabs)/gyms" as any)}>
             <Text style={styles.viewAll}>{t("home.view_all")}</Text>
           </TouchableOpacity>
         </View>
+
         {gyms.length === 0 ? (
           <View style={styles.emptyState}>
-            <Feather name="activity" size={32} color={Colors.textSecondary} />
+            <Feather name="activity" size={40} color={Colors.textSecondary} />
             <Text style={styles.emptyText}>{t("common.loading")}</Text>
           </View>
         ) : (
@@ -192,6 +197,7 @@ export default function HomeScreen() {
               key={gym.id}
               gym={gym}
               onPress={() => router.push(`/gym/${gym.id}` as any)}
+              onBook={() => router.push(`/gym/${gym.id}` as any)}
             />
           ))
         )}
@@ -201,125 +207,201 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingHorizontal: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  content: {
+    paddingHorizontal: 16,
+  },
+
+  /* Header */
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 20,
   },
-  welcomeText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: "Inter_400Regular",
-  },
-  userName: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    marginTop: 2,
-  },
-  notifBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: "center",
+  logoRow: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
   },
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  logoText: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+  },
+  logoFit: {
+    color: "#fff",
+  },
+  logoBoom: {
+    color: Colors.primary,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  langBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  langFlag: {
+    fontSize: 14,
+  },
+  langLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* Credit Card */
   creditCard: {
     borderRadius: 20,
-    padding: 24,
+    padding: 18,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
-    shadowColor: "#0B7A8C",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    justifyContent: "space-between",
+    marginBottom: 28,
+    shadowColor: "#16a34a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  creditCardLeft: { gap: 4 },
+  creditLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  creditKeyEmoji: {
+    fontSize: 36,
+  },
+  creditInfo: {
+    gap: 2,
+  },
   creditLabel: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.75)",
   },
-  creditRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  creditAmountRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
   creditAmount: {
-    fontSize: 40,
+    fontSize: 32,
     fontFamily: "Inter_700Bold",
     color: "#fff",
-    lineHeight: 46,
+    lineHeight: 38,
   },
   creditUnit: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: "rgba(255,255,255,0.8)",
   },
-  creditExpiry: {
+  creditDaysRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  creditDays: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
     fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.75)",
   },
   topupBtn: {
-    backgroundColor: "#fff",
+    backgroundColor: "#fbbf24",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    shadowColor: "#fbbf24",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   topupBtnText: {
-    color: Colors.primary,
-    fontFamily: "Inter_600SemiBold",
+    color: "#1a1a1a",
     fontSize: 14,
+    fontFamily: "Inter_700Bold",
   },
-  quickActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+
+  /* Section */
+  section: {
     marginBottom: 24,
   },
-  quickAction: { alignItems: "center", gap: 8 },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quickActionLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.text,
-  },
-  section: { marginBottom: 24 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+    alignItems: "flex-start",
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
   },
+  sectionSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   viewAll: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.primary,
+    marginTop: 3,
   },
+
+  /* Empty */
   emptyState: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: 40,
     gap: 12,
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   emptyText: {
     fontSize: 14,
