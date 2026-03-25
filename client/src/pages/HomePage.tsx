@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Settings, User, ShoppingCart, QrCode, Check, Info, CalendarCheck, ImageIcon, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, QrCode, Check, Info, CalendarCheck, ImageIcon, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2 } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
-import OnlineClassCard from "@/components/OnlineClassCard";
 import BookingCard from "@/components/BookingCard";
 import BottomNav from "@/components/BottomNav";
 import PurchaseCreditsDialog from "@/components/PurchaseCreditsDialog";
@@ -16,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import type { Gym, GymWithRating, Booking, UserPurchase } from "@shared/schema";
+import type { Gym, GymWithRating, Booking } from "@shared/schema";
 import { CATEGORIES, type Category } from "@shared/categories";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import gymImage from "@assets/814914041712414214qaranliqenerji_1765638608962.jpg";
 import poolImage from "@assets/generated_images/Swimming_pool_facility_9aea752a.png";
 import yogaImage from "@assets/generated_images/Yoga_studio_space_83aaaeab.png";
-import classImage from "@assets/generated_images/Online_fitness_class_instructor_ef28ee4a.png";
 
 // Define TimeSlot type if not already defined in schema
 interface TimeSlot {
@@ -123,8 +121,12 @@ export default function HomePage() {
 
   // Tab o'zgarganda URL hash ni yangilash
   const setActiveTab = (tab: 'home' | 'gyms' | 'classes' | 'bookings' | 'scanner') => {
+    // "classes" tab alohida sahifaga yo'naltiradi
+    if (tab === 'classes') {
+      setLocation('/courses');
+      return;
+    }
     setActiveTabState(tab);
-    // Hash ni yangilash (browser history ga qo'shish)
     window.history.pushState(null, '', `#${tab}`);
   };
 
@@ -261,11 +263,6 @@ export default function HomePage() {
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
     : [];
 
-  const { data: collectionsData, isLoading: classesLoading } = useQuery<{ collections: any[] }>({
-    queryKey: ['/api/collections'],
-  });
-
-  const onlineClasses = collectionsData?.collections || [];
 
   // Fetch bookings from API
   const { data: bookingsData } = useQuery<{ bookings: Booking[] }>({
@@ -478,46 +475,6 @@ export default function HomePage() {
 
   const categories = CATEGORIES.map(c => c.name);
 
-  const { data: purchasesData, isLoading: purchasesLoading } = useQuery<{ purchases: UserPurchase[] }>({
-    queryKey: ['/api/my-purchases'],
-    enabled: !!user,
-  });
-  const purchases = purchasesData?.purchases || [];
-  const purchasedCollectionIds = new Set(purchases.map(p => p.collectionId));
-
-  const purchaseCollectionMutation = useMutation({
-    mutationFn: async (collectionId: string) => {
-      const response = await fetch('/api/purchase-collection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ collectionId }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'To\'plamni sotib olishda xatolik yuz berdi');
-      }
-      return response.json();
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/my-purchases'] });
-      toast({
-        title: "Muvaffaqiyatli!",
-        description: `To'plam muvaffaqiyatli sotib olindi.`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Xatolik",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handlePurchaseCollection = (collectionId: string) => {
-    purchaseCollectionMutation.mutate(collectionId);
-  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -703,44 +660,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {activeTab === 'classes' && (
-        <div className="p-4 space-y-6">
-          <h1 className="font-display font-bold text-2xl">{t('courses.title')}</h1>
-          {classesLoading || purchasesLoading ? (
-            <p className="text-muted-foreground">{t('common.loading')}</p>
-          ) : onlineClasses.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {onlineClasses.map((collection) => {
-                const isPurchased = purchasedCollectionIds.has(collection.id);
-                return (
-                  <Card key={collection.id} className="overflow-hidden hover-elevate">
-                    <div className="relative aspect-square">
-                      <img src={collection.thumbnailUrl || classImage} alt={collection.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className="text-white font-semibold text-sm line-clamp-2">{collection.name}</h3>
-                        <p className="text-white/80 text-xs mt-1">{collection.isFree ? t('courses.free') : `${collection.price} sum`}</p>
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      <Button
-                        size="sm"
-                        className="w-full text-xs"
-                        onClick={() => isPurchased ? setLocation(`/my-courses/${collection.id}`) : handlePurchaseCollection(collection.id)}
-                      >
-                        {isPurchased ? <Video className="h-3 w-3 mr-1" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
-                        {isPurchased ? t('home.purchased') : t('courses.buy')}
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-12">{t('courses.no_courses_desc')}</p>
-          )}
-        </div>
-      )}
 
       {activeTab === 'bookings' && (
         <div className="p-4 space-y-6">
