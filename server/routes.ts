@@ -1203,13 +1203,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const collections = await storage.getVideoCollections();
       const allClasses = await storage.getClasses();
 
-      // Har bir collection uchun video sonini hisoblash
-      const collectionsWithCount = collections.map(collection => ({
+      // Authenticated user uchun purchase statusini qo'shish
+      const userId = (req as any).user?.id;
+      const purchasedIds = new Set<string>();
+      if (userId) {
+        const purchases = await storage.getUserPurchases(userId);
+        purchases.forEach(p => purchasedIds.add(p.collectionId));
+      }
+
+      const collectionsWithMeta = collections.map(collection => ({
         ...collection,
-        videoCount: allClasses.filter(c => c.collectionId === collection.id).length
+        videoCount: allClasses.filter(c => c.collectionId === collection.id).length,
+        isPurchased: collection.isFree || purchasedIds.has(collection.id),
       }));
 
-      res.json({ collections: collectionsWithCount });
+      res.json({ collections: collectionsWithMeta });
     } catch (error: any) {
       console.error("Error fetching collections:", error);
       res.status(500).json({ error: error.message || 'Failed to fetch collections' });
@@ -1222,7 +1230,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!collection) {
         return res.status(404).json({ error: 'Collection not found' });
       }
-      res.json({ collection });
+      const userId = (req as any).user?.id;
+      let isPurchased = collection.isFree;
+      if (userId && !isPurchased) {
+        isPurchased = await storage.hasUserPurchasedCollection(userId, collection.id);
+      }
+      const allClasses = await storage.getClasses(collection.id);
+      res.json({ collection: { ...collection, isPurchased, videoCount: allClasses.length } });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch collection' });
     }
@@ -1311,27 +1325,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const collectionId = req.query.collectionId as string | undefined;
 
-      // Oddiy foydalanuvchi uchun faqat sotib olingan to'plamlar
       if (collectionId) {
-        const hasPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
-        if (!hasPurchased) {
-          return res.status(403).json({ error: "Bu to'plamga ruxsat yo'q" });
+        const collection = await storage.getVideoCollection(collectionId);
+        if (!collection) return res.status(404).json({ error: "Kurs topilmadi" });
+
+        // Bepul kurs yoki sotib olingan kurs
+        const hasAccess = collection.isFree || 
+          await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
+
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Bu kursga kirish uchun kredit sarflang" });
         }
         const classes = await storage.getClasses(collectionId);
         return res.json({ classes });
       }
 
-      // Barcha sotib olingan to'plamlar videolarini qaytarish
+      // Barcha kirish huquqi bor kurslar videolari
+      const allCollections = await storage.getVideoCollections();
       const purchases = await storage.getUserPurchases(req.user!.id);
-      const collectionIds = purchases.map(p => p.collectionId);
+      const purchasedIds = new Set(purchases.map(p => p.collectionId));
+      const accessibleIds = allCollections
+        .filter(c => c.isFree || purchasedIds.has(c.id))
+        .map(c => c.id);
 
-      if (collectionIds.length === 0) {
-        return res.json({ classes: [] });
-      }
+      if (accessibleIds.length === 0) return res.json({ classes: [] });
 
       const allClasses = await storage.getClasses();
-      const userClasses = allClasses.filter(c => c.collectionId && collectionIds.includes(c.collectionId));
-
+      const userClasses = allClasses.filter(c => c.collectionId && accessibleIds.includes(c.collectionId));
       res.json({ classes: userClasses });
     } catch (error: any) {
       res.status(500).json({ error: error.message || 'Failed to fetch classes' });
@@ -1393,172 +1413,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Purchases routes
-  app.get('/api/my-purchases', requireAuth, async (req, res) => {
+  // Kurs ochish (kredit asosida)
+  app.post('/api/collections/:id/purchase', requireAuth, async (req, res) => {
     try {
-      const purchases = await storage.getUserPurchases(req.user!.id);
-      res.json({ purchases });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Stripe payment intent yaratish
-  app.post('/api/create-payment-intent', requireAuth, async (req, res) => {
-    try {
-      if (!stripe) {
-        return res.status(500).json({ error: "To'lov tizimi sozlanmagan" });
-      }
-
-      const { collectionId } = req.body;
-
-      if (!collectionId) {
-        return res.status(400).json({ error: "To'plam ID majburiy" });
-      }
+      const collectionId = req.params.id;
+      const user = req.user!;
 
       const collection = await storage.getVideoCollection(collectionId);
       if (!collection) {
-        return res.status(404).json({ error: "To'plam topilmadi" });
+        return res.status(404).json({ message: "Kurs topilmadi" });
       }
 
-      if (collection.isFree) {
-        return res.status(400).json({ error: "Bu to'plam bepul" });
+      // Allaqachon sotib olinganmi?
+      const alreadyPurchased = await storage.hasUserPurchasedCollection(user.id, collectionId);
+      if (alreadyPurchased || collection.isFree) {
+        return res.status(400).json({ message: "Siz bu kursga allaqachon kirish huquqiga egasiz" });
       }
 
-      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
-      if (alreadyPurchased) {
-        return res.status(400).json({ error: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
+      const creditCost = collection.price || 0;
+
+      // Kredit yetarlimi?
+      if ((user.credits || 0) < creditCost) {
+        return res.status(400).json({ 
+          message: `Kredit yetarli emas. Kerak: ${creditCost}, Mavjud: ${user.credits || 0}` 
+        });
       }
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: collection.price * 100,
-        currency: "uzs",
-        metadata: {
-          userId: req.user!.id,
-          collectionId: collectionId,
-          collectionName: collection.name
-        },
-      });
+      // Kreditni ayirish
+      const newCredits = (user.credits || 0) - creditCost;
+      await storage.updateUserCredits(user.id, newCredits);
 
-      res.json({ clientSecret: paymentIntent.client_secret });
+      // Kirish huquqini saqlash
+      await storage.createUserPurchase({ userId: user.id, collectionId });
+
+      console.log(`✅ Kurs ochildi: "${collection.name}" — ${user.id} foydalanuvchi ${creditCost} kredit sarfladi`);
+
+      res.json({ success: true, message: "Kurs muvaffaqiyatli ochildi", newCredits });
     } catch (error: any) {
-      console.error("Payment intent yaratishda xatolik:", error);
-      res.status(500).json({ error: error.message || "To'lov yaratishda xatolik" });
-    }
-  });
-
-  // To'lov muvaffaqiyatli bo'lgandan so'ng sotib olishni tasdiqlash
-  app.post('/api/confirm-purchase', requireAuth, async (req, res) => {
-    try {
-      const { collectionId, paymentIntentId } = req.body;
-
-      if (!collectionId || !paymentIntentId) {
-        return res.status(400).json({ error: "To'plam ID va to'lov ID majburiy" });
-      }
-
-      if (stripe && paymentIntentId) {
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-        if (paymentIntent.status !== 'succeeded') {
-          return res.status(400).json({ error: "To'lov muvaffaqiyatsiz" });
-        }
-
-        if (paymentIntent.metadata.userId !== req.user!.id ||
-            paymentIntent.metadata.collectionId !== collectionId) {
-          return res.status(400).json({ error: "To'lov ma'lumotlari mos kelmaydi" });
-        }
-      }
-
-      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
-      if (alreadyPurchased) {
-        return res.status(400).json({ error: "Siz bu to'plamni allaqachon sotib olgan edingiz" });
-      }
-
-      const purchase = await storage.createUserPurchase({
-        userId: req.user!.id,
-        collectionId: collectionId,
-      });
-
-      res.json({
-        success: true,
-        message: "To'plam muvaffaqiyatli sotib olindi",
-        purchase
-      });
-    } catch (error: any) {
-      console.error("Sotib olishni tasdiqlashda xatolik:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Purchase collection (test rejimi - to'lovsiz sotib olish)
-  app.post('/api/purchase-collection', requireAuth, async (req, res) => {
-    try {
-      const { collectionId } = req.body;
-
-      if (!collectionId) {
-        return res.status(400).json({ message: "Collection ID talab qilinadi" });
-      }
-
-      const collection = await storage.getVideoCollection(collectionId);
-      if (!collection) {
-        return res.status(404).json({ message: "To'plam topilmadi" });
-      }
-
-      const alreadyPurchased = await storage.hasUserPurchasedCollection(req.user!.id, collectionId);
-      if (alreadyPurchased) {
-        return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgansiz" });
-      }
-
-      // Test rejimi - avtomatik sotib olish
-      await storage.createUserPurchase({
-        userId: req.user!.id,
-        collectionId: collectionId,
-      });
-
-      console.log(`✅ To'plam sotib olindi: ${collection.name} (${collectionId}) foydalanuvchi ${req.user!.id} tomonidan`);
-
-      res.json({ 
-        message: "To'plam muvaffaqiyatli sotib olindi",
-        success: true 
-      });
-    } catch (error) {
-      console.error('Purchase error:', error);
-      res.status(500).json({ message: "Serverda xatolik yuz berdi" });
-    }
-  });
-
-  // Purchase free collection (eski endpoint - backward compatibility uchun)
-  app.post('/api/purchase-free-collection', requireAuth, async (req, res) => {
-    try {
-      const { collectionId } = req.body;
-
-      if (!collectionId) {
-        return res.status(400).json({ message: "Collection ID talab qilinadi" });
-      }
-
-      const collection = await storage.getVideoCollection(collectionId);
-      if (!collection) {
-        return res.status(404).json({ message: "To'plam topilmadi" });
-      }
-
-      if (!collection.isFree) {
-        return res.status(400).json({ message: "Bu to'plam bepul emas" });
-      }
-
-      const alreadyPurchased = await storage.hasPurchased(req.user!.id, collectionId);
-      if (alreadyPurchased) {
-        return res.status(400).json({ message: "Siz bu to'plamni allaqachon sotib olgansiz" });
-      }
-
-      await storage.createUserPurchase({
-        userId: req.user!.id,
-        collectionId: collectionId,
-      });
-
-      res.json({ message: "To'plam muvaffaqiyatli qo'shildi" });
-    } catch (error) {
-      console.error('Purchase error:', error);
-      res.status(500).json({ message: "Serverda xatolik yuz berdi" });
+      console.error('Collection purchase error:', error);
+      res.status(500).json({ message: error.message || "Serverda xatolik" });
     }
   });
 
