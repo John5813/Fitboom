@@ -80,7 +80,6 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
         <Text style={styles.title}>{t("bookings.title")}</Text>
         <View style={styles.tabs}>
@@ -137,7 +136,6 @@ export default function BookingsScreen() {
         )}
       </ScrollView>
 
-      {/* QR Modal */}
       <Modal
         visible={!!qrBooking}
         transparent
@@ -160,9 +158,7 @@ export default function BookingsScreen() {
                 </Text>
                 <Text style={styles.qrDate}>
                   {qrBooking.scheduledDate
-                    ? new Date(qrBooking.scheduledDate).toLocaleDateString(
-                        "uz-UZ"
-                      )
+                    ? new Date(qrBooking.scheduledDate).toLocaleDateString("uz-UZ")
                     : ""}{" "}
                   {qrBooking.startTime || ""}
                 </Text>
@@ -170,7 +166,7 @@ export default function BookingsScreen() {
                   <QRCode
                     value={qrBooking.id}
                     size={200}
-                    color={Colors.text}
+                    color="#1a1a2e"
                     backgroundColor="#fff"
                   />
                 </View>
@@ -193,7 +189,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.cardBorder,
   },
   title: {
     fontSize: 24,
@@ -203,7 +199,7 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: "row",
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 4,
   },
@@ -237,17 +233,19 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
   qrModal: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     alignItems: "center",
     gap: 12,
     paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
   },
   modalClose: {
     position: "absolute",
@@ -274,9 +272,9 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
     borderRadius: 16,
+    marginVertical: 8,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginVertical: 8,
   },
   qrHint: {
     fontSize: 12,

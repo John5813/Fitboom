@@ -9,23 +9,22 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
 import Colors from "@/constants/Colors";
 
-type Step = "phone" | "code";
+type Step = "welcome" | "phone" | "code";
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
-  const { user, isLoading, refetchUser } = useAuth();
+  const { user, isLoading } = useAuth();
   const { t } = useLanguage();
-  const [step, setStep] = useState<Step>("phone");
+  const [step, setStep] = useState<Step>("welcome");
   const [phone, setPhone] = useState("+998");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -59,24 +58,101 @@ export default function AuthScreen() {
     router.replace("/(tabs)" as any);
   };
 
+  if (step === "welcome") {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.glowTop} />
+        <View style={styles.glowBottom} />
+
+        <View style={styles.welcomeContent}>
+          <View style={styles.logoRow}>
+            <LinearGradient
+              colors={["#fb923c", "#f97316"]}
+              style={styles.logoIcon}
+            >
+              <Feather name="zap" size={28} color="#fff" />
+            </LinearGradient>
+            <Text style={styles.logoText}>
+              <Text style={{ color: "#fff" }}>Fit</Text>
+              <Text style={{ color: Colors.primary }}>Boom</Text>
+            </Text>
+          </View>
+
+          <View style={styles.headlineBox}>
+            <Text style={styles.headline}>
+              Sport zallariga{"\n"}
+              <Text style={styles.headlineOrange}>bir kredit bilan</Text>
+            </Text>
+            <Text style={styles.heroDesc}>
+              Toshkent bo'ylab eng yaxshi fitness zallarini bir joyda toping, bron qiling va kiring.
+            </Text>
+          </View>
+
+          <View style={styles.pillsRow}>
+            {[
+              { icon: "map-pin" as const, label: "Toshkent bo'ylab" },
+              { icon: "zap" as const, label: "Tezkor bron" },
+              { icon: "camera" as const, label: "QR kirish" },
+            ].map((p) => (
+              <View key={p.label} style={styles.pill}>
+                <Feather name={p.icon} size={12} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.pillText}>{p.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.startBtn}
+            onPress={() => setStep("phone")}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={["#f97316", "#fb923c"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.startBtnGrad}
+            >
+              <Text style={styles.startBtnText}>Boshlash</Text>
+              <Feather name="arrow-right" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <Text style={styles.freeText}>
+            Ro'yxatdan o'tish bepul · 30 soniyada tayyor
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <LinearGradient
-      colors={["#0B7A8C", "#085F6E", "#063F4A"]}
-      style={[styles.container, { paddingTop: insets.top }]}
-    >
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.inner}
+        style={styles.authInner}
       >
-        <View style={styles.logoSection}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>FB</Text>
-          </View>
-          <Text style={styles.appName}>{t("app.name")}</Text>
-          <Text style={styles.subtitle}>{t("auth.subtitle")}</Text>
+        <TouchableOpacity
+          style={styles.backRow}
+          onPress={() => setStep("welcome")}
+        >
+          <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.7)" />
+          <Text style={styles.backText}>{t("common.back")}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.authLogoRow}>
+          <LinearGradient
+            colors={["#fb923c", "#f97316"]}
+            style={styles.authLogoIcon}
+          >
+            <Feather name="zap" size={20} color="#fff" />
+          </LinearGradient>
+          <Text style={styles.authLogoText}>
+            <Text style={{ color: "#fff" }}>Fit</Text>
+            <Text style={{ color: Colors.primary }}>Boom</Text>
+          </Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.authCard}>
           {step === "phone" ? (
             <>
               <Text style={styles.cardTitle}>{t("auth.phone_label")}</Text>
@@ -85,7 +161,7 @@ export default function AuthScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 placeholder={t("auth.phone_placeholder")}
-                placeholderTextColor="#AAB8BD"
+                placeholderTextColor="rgba(255,255,255,0.3)"
                 keyboardType="phone-pad"
                 autoFocus
               />
@@ -112,7 +188,7 @@ export default function AuthScreen() {
                 value={code}
                 onChangeText={setCode}
                 placeholder={t("auth.code_placeholder")}
-                placeholderTextColor="#AAB8BD"
+                placeholderTextColor="rgba(255,255,255,0.3)"
                 keyboardType="number-pad"
                 maxLength={6}
                 autoFocus
@@ -129,17 +205,16 @@ export default function AuthScreen() {
                 )}
               </TouchableOpacity>
               <View style={styles.resendRow}>
-                <TouchableOpacity
-                  onPress={() => setStep("phone")}
-                  style={styles.backBtn}
-                >
-                  <Text style={styles.backBtnText}>{t("auth.back")}</Text>
+                <TouchableOpacity onPress={() => setStep("phone")}>
+                  <Text style={styles.linkText}>{t("auth.back")}</Text>
                 </TouchableOpacity>
                 {countdown > 0 ? (
                   <Text style={styles.countdownText}>{countdown}s</Text>
                 ) : (
                   <TouchableOpacity onPress={sendCode}>
-                    <Text style={styles.resendText}>{t("auth.resend")}</Text>
+                    <Text style={[styles.linkText, { color: Colors.primary }]}>
+                      {t("auth.resend")}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -147,81 +222,187 @@ export default function AuthScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  inner: {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  glowTop: {
+    position: "absolute",
+    top: -100,
+    left: "30%",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: Colors.primaryLight,
+  },
+  glowBottom: {
+    position: "absolute",
+    bottom: -50,
+    right: -50,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: "rgba(14,165,233,0.06)",
+  },
+  welcomeContent: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
-    gap: 32,
+    alignItems: "center",
+    paddingHorizontal: 28,
+    gap: 28,
   },
-  logoSection: {
+  logoRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
+  logoIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
+    justifyContent: "center",
   },
   logoText: {
     fontSize: 28,
     fontFamily: "Inter_700Bold",
-    color: "#fff",
   },
-  appName: {
-    fontSize: 32,
+  headlineBox: {
+    alignItems: "center",
+    gap: 14,
+  },
+  headline: {
+    fontSize: 34,
     fontFamily: "Inter_700Bold",
     color: "#fff",
+    textAlign: "center",
+    lineHeight: 42,
     letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 15,
-    color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
+  headlineOrange: {
+    color: Colors.primary,
   },
-  card: {
-    backgroundColor: "#fff",
+  heroDesc: {
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "center",
+    lineHeight: 24,
+    maxWidth: 300,
+  },
+  pillsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  pillText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.75)",
+  },
+  startBtn: {
+    width: "100%",
+    maxWidth: 280,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  startBtnGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+  },
+  startBtnText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  freeText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.35)",
+  },
+  authInner: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 24,
+  },
+  backRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  backText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.7)",
+  },
+  authLogoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+  authLogoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  authLogoText: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+  },
+  authCard: {
+    backgroundColor: Colors.card,
     borderRadius: 20,
     padding: 24,
     gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   cardTitle: {
     fontSize: 17,
     fontFamily: "Inter_600SemiBold",
-    color: "#1A2E35",
+    color: Colors.text,
   },
   codeHint: {
     fontSize: 13,
-    color: "#6B8A94",
+    color: Colors.textSecondary,
     fontFamily: "Inter_400Regular",
     marginTop: -8,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: "#DDE8EC",
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     fontFamily: "Inter_400Regular",
-    color: "#1A2E35",
-    backgroundColor: "#F8FAFB",
+    color: Colors.text,
+    backgroundColor: Colors.surface,
   },
   codeInput: {
     fontSize: 22,
@@ -230,15 +411,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   button: {
-    backgroundColor: "#0B7A8C",
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 4,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
+  buttonDisabled: { opacity: 0.7 },
   buttonText: {
     color: "#fff",
     fontSize: 16,
@@ -249,20 +428,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  backBtn: { padding: 4 },
-  backBtnText: {
-    color: "#6B8A94",
+  linkText: {
+    color: Colors.textSecondary,
     fontFamily: "Inter_500Medium",
     fontSize: 14,
   },
   countdownText: {
-    color: "#6B8A94",
+    color: Colors.textSecondary,
     fontFamily: "Inter_500Medium",
-    fontSize: 14,
-  },
-  resendText: {
-    color: "#0B7A8C",
-    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
 });

@@ -5,23 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-interface Booking {
-  id: string;
-  gymId: string;
-  gymName?: string;
-  scheduledDate: string;
-  startTime?: string;
-  endTime?: string;
-  status: string;
-  creditsUsed?: number;
-}
-
 interface BookingCardProps {
-  booking: Booking;
+  booking: any;
   compact?: boolean;
   onShowQR?: () => void;
   onCancel?: () => void;
@@ -44,7 +34,6 @@ export default function BookingCard({
     : "";
 
   const isUpcoming = booking.status === "confirmed";
-  const isPast = booking.status !== "confirmed";
 
   return (
     <View style={[styles.card, compact && styles.cardCompact]}>
@@ -98,19 +87,13 @@ export default function BookingCard({
         {!compact && isUpcoming && (
           <View style={styles.actions}>
             {onShowQR && (
-              <TouchableOpacity
-                style={styles.qrBtn}
-                onPress={onShowQR}
-              >
-                <Feather name="maximize" size={14} color={Colors.primary} />
+              <TouchableOpacity style={styles.qrBtn} onPress={onShowQR}>
+                <Feather name="maximize" size={14} color="#fff" />
                 <Text style={styles.qrBtnText}>{t("bookings.show_qr")}</Text>
               </TouchableOpacity>
             )}
             {onCancel && (
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={onCancel}
-              >
+              <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
                 <Text style={styles.cancelBtnText}>{t("bookings.cancel")}</Text>
               </TouchableOpacity>
             )}
@@ -127,11 +110,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: "row",
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   cardCompact: { borderRadius: 12 },
   leftStripe: {
@@ -172,7 +152,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   statusActive: { backgroundColor: Colors.primaryLight },
-  statusPast: { backgroundColor: Colors.background },
+  statusPast: { backgroundColor: Colors.surface },
   statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   statusActiveText: { color: Colors.primary },
   statusPastText: { color: Colors.textSecondary },
@@ -199,25 +179,24 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.primary,
   },
   qrBtnText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
+    color: "#fff",
   },
   cancelBtn: {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: "rgba(239,68,68,0.3)",
+    backgroundColor: "rgba(239,68,68,0.08)",
   },
   cancelBtnText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
+    color: Colors.error,
   },
 });

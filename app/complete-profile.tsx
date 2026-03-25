@@ -12,6 +12,7 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiRequest } from "@/lib/api";
@@ -57,18 +58,18 @@ export default function CompleteProfileScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={["#0B7A8C", "#085F6E", "#063F4A"]}
-      style={[styles.container, { paddingTop: insets.top }]}
-    >
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={styles.inner}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>FB</Text>
-          </View>
+          <LinearGradient
+            colors={["#fb923c", "#f97316"]}
+            style={styles.logoCircle}
+          >
+            <Feather name="zap" size={32} color="#fff" />
+          </LinearGradient>
           <Text style={styles.title}>{t("profile.complete_title")}</Text>
           <Text style={styles.subtitle}>{t("profile.complete_subtitle")}</Text>
         </View>
@@ -81,7 +82,7 @@ export default function CompleteProfileScreen() {
               value={name}
               onChangeText={setName}
               placeholder={t("profile.name_placeholder")}
-              placeholderTextColor="#AAB8BD"
+              placeholderTextColor={Colors.textSecondary}
               autoCapitalize="words"
             />
           </View>
@@ -93,7 +94,7 @@ export default function CompleteProfileScreen() {
               value={age}
               onChangeText={setAge}
               placeholder={t("profile.age_placeholder")}
-              placeholderTextColor="#AAB8BD"
+              placeholderTextColor={Colors.textSecondary}
               keyboardType="number-pad"
               maxLength={3}
             />
@@ -117,7 +118,7 @@ export default function CompleteProfileScreen() {
                       gender === g && styles.genderBtnTextActive,
                     ]}
                   >
-                    {g === "Erkak" ? `👨 ${t("profile.male")}` : `👩 ${t("profile.female")}`}
+                    {g === "Erkak" ? t("profile.male") : t("profile.female")}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -137,12 +138,12 @@ export default function CompleteProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: Colors.background },
   inner: {
     flexGrow: 1,
     justifyContent: "center",
@@ -155,13 +156,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
   },
-  logoText: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#fff" },
   title: {
     fontSize: 24,
     fontFamily: "Inter_700Bold",
@@ -170,37 +167,34 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.5)",
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderRadius: 20,
     padding: 24,
     gap: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   field: { gap: 8 },
   label: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-    color: "#1A2E35",
+    color: Colors.text,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: "#DDE8EC",
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     fontFamily: "Inter_400Regular",
-    color: "#1A2E35",
-    backgroundColor: "#F8FAFB",
+    color: Colors.text,
+    backgroundColor: Colors.surface,
   },
   genderRow: { flexDirection: "row", gap: 12 },
   genderBtn: {
@@ -208,22 +202,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#DDE8EC",
+    borderColor: Colors.border,
     alignItems: "center",
-    backgroundColor: "#F8FAFB",
+    backgroundColor: Colors.surface,
   },
   genderBtnActive: {
-    borderColor: "#0B7A8C",
-    backgroundColor: "#E8F6F8",
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   genderBtnText: {
     fontSize: 15,
     fontFamily: "Inter_500Medium",
-    color: "#6B8A94",
+    color: Colors.textSecondary,
   },
-  genderBtnTextActive: { color: "#0B7A8C" },
+  genderBtnTextActive: { color: Colors.primary },
   button: {
-    backgroundColor: "#0B7A8C",
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

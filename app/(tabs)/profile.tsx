@@ -15,7 +15,6 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -23,9 +22,9 @@ import { apiRequest } from "@/lib/api";
 import Colors from "@/constants/Colors";
 
 const LANGUAGES = [
-  { code: "uz", label: "O'zbek", flag: "🇺🇿" },
-  { code: "ru", label: "Русский", flag: "🇷🇺" },
-  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "uz", label: "O'zbek", flag: "\u{1F1FA}\u{1F1FF}" },
+  { code: "ru", label: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439", flag: "\u{1F1F7}\u{1F1FA}" },
+  { code: "en", label: "English", flag: "\u{1F1EC}\u{1F1E7}" },
 ] as const;
 
 export default function ProfileScreen() {
@@ -113,7 +112,7 @@ export default function ProfileScreen() {
       icon: "video" as const,
       label: t("courses.title"),
       onPress: () => router.push("/courses/index" as any),
-      color: Colors.primary,
+      color: Colors.coursePurple,
     },
     {
       icon: "globe" as const,
@@ -127,7 +126,7 @@ export default function ProfileScreen() {
             icon: "shield" as const,
             label: t("profile.admin"),
             onPress: () => setAdminModal(true),
-            color: "#8B5CF6",
+            color: Colors.coursePurple,
           },
         ]
       : []),
@@ -148,7 +147,6 @@ export default function ProfileScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
@@ -169,7 +167,6 @@ export default function ProfileScreen() {
             <Text style={styles.userPhone}>{user?.phone || ""}</Text>
             <View style={styles.genderAgeBadge}>
               <Text style={styles.genderAgeText}>
-                {user?.gender === "Erkak" ? "👨" : user?.gender === "Ayol" ? "👩" : "👤"}{" "}
                 {user?.gender || ""}{user?.age ? `, ${user.age} yosh` : ""}
               </Text>
             </View>
@@ -188,7 +185,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Credits Card */}
       <View style={styles.creditCard}>
         <View style={styles.creditLeft}>
           <Text style={styles.creditLabel}>{t("home.balance")}</Text>
@@ -226,7 +222,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Menu Items */}
       <View style={styles.menuCard}>
         {menuItems.map((item, idx) => (
           <TouchableOpacity
@@ -245,9 +240,7 @@ export default function ProfileScreen() {
             >
               <Feather name={item.icon} size={18} color={item.color} />
             </View>
-            <Text
-              style={[styles.menuLabel, { color: item.color }]}
-            >
+            <Text style={[styles.menuLabel, { color: item.color }]}>
               {item.label}
             </Text>
             {item.icon !== "log-out" && (
@@ -257,7 +250,6 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      {/* Edit Modal */}
       <Modal
         visible={editModal}
         transparent
@@ -306,7 +298,7 @@ export default function ProfileScreen() {
                       editGender === g && styles.genderBtnTextActive,
                     ]}
                   >
-                    {g === "Erkak" ? `👨 ${t("profile.male")}` : `👩 ${t("profile.female")}`}
+                    {g === "Erkak" ? t("profile.male") : t("profile.female")}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -326,7 +318,6 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* Language Modal */}
       <Modal
         visible={langModal}
         transparent
@@ -371,7 +362,6 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* Admin Modal */}
       <Modal
         visible={adminModal}
         transparent
@@ -417,11 +407,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   avatarSection: { flexDirection: "row", alignItems: "center", gap: 16, flex: 1 },
   avatar: {
@@ -478,11 +465,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
   },
   creditLeft: { gap: 4 },
   creditLabel: {
@@ -534,11 +516,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   menuItem: {
     flexDirection: "row",
@@ -565,16 +544,18 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     gap: 14,
     paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
   },
   modalHeader: {
     flexDirection: "row",
@@ -600,7 +581,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_400Regular",
     color: Colors.text,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   genderRow: { flexDirection: "row", gap: 12 },
   genderBtn: {
@@ -610,7 +591,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.border,
     alignItems: "center",
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   genderBtnActive: {
     borderColor: Colors.primary,

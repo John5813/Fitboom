@@ -27,7 +27,6 @@ import Colors from "@/constants/Colors";
 const { width } = Dimensions.get("window");
 
 const DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
-const TODAY_IDX = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
 export default function GymDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,7 +38,6 @@ export default function GymDetailScreen() {
   const [bookingModal, setBookingModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
-  const [bookingLoading, setBookingLoading] = useState(false);
 
   const { data: gymData, isLoading } = useQuery({
     queryKey: [`/api/gyms/${id}`],
@@ -70,7 +68,7 @@ export default function GymDetailScreen() {
       refetchUser();
       setBookingModal(false);
       setSelectedSlot(null);
-      Alert.alert("✓ " + t("gym.booked"), `${gym?.credits} kredit hisobingizdan chiqarildi`);
+      Alert.alert(t("gym.booked"), `${gym?.credits} kredit hisobingizdan chiqarildi`);
     },
     onError: (err: any) => {
       Alert.alert(t("common.error"), err.message || "Bron qilishda xatolik");
@@ -144,8 +142,7 @@ export default function GymDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[]}>
-        {/* Image Gallery */}
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
           <ScrollView
             horizontal
@@ -166,7 +163,6 @@ export default function GymDetailScreen() {
             ))}
           </ScrollView>
 
-          {/* Back button */}
           <TouchableOpacity
             style={[styles.backBtn, { top: (Platform.OS === "web" ? 67 : insets.top) + 8 }]}
             onPress={() => router.back()}
@@ -174,7 +170,6 @@ export default function GymDetailScreen() {
             <Feather name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
 
-          {/* Image dots */}
           {images.length > 1 && (
             <View style={styles.imageDots}>
               {images.map((_: any, idx: number) => (
@@ -186,7 +181,6 @@ export default function GymDetailScreen() {
             </View>
           )}
 
-          {/* Credit badge */}
           <LinearGradient
             colors={["transparent", "rgba(0,0,0,0.6)"]}
             style={styles.imageGradient}
@@ -199,7 +193,6 @@ export default function GymDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Name & Rating */}
           <View style={styles.nameRow}>
             <Text style={styles.gymName}>{gym.name}</Text>
             {gym.avgRating && (
@@ -212,7 +205,6 @@ export default function GymDetailScreen() {
             )}
           </View>
 
-          {/* Categories */}
           <View style={styles.categoriesRow}>
             {(gym.categories || []).map((cat: string) => (
               <View key={cat} style={styles.categoryTag}>
@@ -221,7 +213,6 @@ export default function GymDetailScreen() {
             ))}
           </View>
 
-          {/* Info */}
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <View style={styles.infoIconBox}>
@@ -248,7 +239,6 @@ export default function GymDetailScreen() {
             </View>
           </View>
 
-          {/* Description */}
           {gym.description && (
             <View style={styles.descCard}>
               <Text style={styles.descTitle}>Tavsif</Text>
@@ -256,7 +246,6 @@ export default function GymDetailScreen() {
             </View>
           )}
 
-          {/* Facilities */}
           {gym.facilities && (
             <View style={styles.facilitiesCard}>
               <Text style={styles.facilitiesTitle}>{t("gym.facilities")}</Text>
@@ -268,7 +257,6 @@ export default function GymDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Book Button */}
       <View
         style={[
           styles.bottomBar,
@@ -287,7 +275,6 @@ export default function GymDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Booking Modal */}
       <Modal
         visible={bookingModal}
         transparent
@@ -303,7 +290,6 @@ export default function GymDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Day Selector */}
             <Text style={styles.sectionLabel}>{t("gym.select_date")}</Text>
             <ScrollView
               horizontal
@@ -347,7 +333,6 @@ export default function GymDetailScreen() {
               })}
             </ScrollView>
 
-            {/* Time Slots */}
             <Text style={styles.sectionLabel}>{t("gym.select_slot")}</Text>
             {slots.length === 0 ? (
               <Text style={styles.noSlotsText}>{t("gym.no_slots")}</Text>
@@ -388,7 +373,6 @@ export default function GymDetailScreen() {
               </View>
             )}
 
-            {/* Confirm */}
             <TouchableOpacity
               style={[
                 styles.confirmBtn,
@@ -414,14 +398,14 @@ export default function GymDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
   errorText: {
     fontSize: 16,
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
   },
   imageContainer: { position: "relative", height: 280 },
-  image: { height: 280, backgroundColor: Colors.border },
+  image: { height: 280, backgroundColor: Colors.surface },
   backBtn: {
     position: "absolute",
     left: 16,
@@ -489,7 +473,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FEF3C7",
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
@@ -497,7 +481,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: "#92400E",
+    color: "#F59E0B",
   },
   categoriesRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   categoryTag: {
@@ -516,7 +500,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.cardBorder,
   },
   infoRow: {
     flexDirection: "row",
@@ -554,7 +538,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.cardBorder,
   },
   descTitle: {
     fontSize: 15,
@@ -573,7 +557,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.cardBorder,
   },
   facilitiesTitle: {
     fontSize: 15,
@@ -591,19 +575,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     paddingTop: 16,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.cardBorder,
     gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
   },
   bottomCreditInfo: { flex: 1 },
   bottomCreditLabel: {
@@ -632,17 +611,19 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     gap: 14,
     paddingBottom: 40,
     maxHeight: "85%",
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
   },
   modalHeader: {
     flexDirection: "row",
@@ -667,7 +648,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     gap: 4,
   },
   dayBtnActive: {
@@ -700,7 +681,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     alignItems: "center",
     minWidth: 100,
   },

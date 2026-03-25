@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 
@@ -30,9 +30,8 @@ const CARD_NUMBER = "9860 1234 5678 9012";
 
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
-  const { user, refetchUser } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
-  const queryClient = useQueryClient();
   const [selectedPkg, setSelectedPkg] = useState(PACKAGES[1]);
   const [uploading, setUploading] = useState(false);
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
@@ -114,7 +113,6 @@ export default function PaymentScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Current Balance */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Joriy balans</Text>
           <Text style={styles.balanceAmount}>
@@ -122,7 +120,6 @@ export default function PaymentScreen() {
           </Text>
         </View>
 
-        {/* Package Selection */}
         <Text style={styles.sectionTitle}>Paket tanlang</Text>
         <View style={styles.packages}>
           {PACKAGES.map((pkg) => (
@@ -175,7 +172,6 @@ export default function PaymentScreen() {
           ))}
         </View>
 
-        {/* Payment Instructions */}
         <View style={styles.instructionCard}>
           <Text style={styles.instructionTitle}>To'lov ko'rsatmalari</Text>
           <Text style={styles.instructionText}>
@@ -204,7 +200,6 @@ export default function PaymentScreen() {
           </View>
         </View>
 
-        {/* Upload Receipt */}
         <TouchableOpacity
           style={[styles.uploadBtn, uploading && { opacity: 0.7 }]}
           onPress={uploadReceipt}
@@ -230,13 +225,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.cardBorder,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -278,7 +273,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.cardBorder,
     position: "relative",
     overflow: "hidden",
   },
@@ -326,7 +321,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 14,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.cardBorder,
   },
   instructionTitle: {
     fontSize: 16,
@@ -346,7 +341,7 @@ const styles = StyleSheet.create({
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -396,11 +391,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
   },
   uploadBtnText: {
     color: "#fff",
