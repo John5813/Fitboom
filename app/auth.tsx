@@ -48,38 +48,15 @@ export default function AuthScreen() {
   }, [countdown]);
 
   const sendCode = async () => {
-    if (phone.length < 12) {
-      Alert.alert(t("common.error"), "Telefon raqamni to'liq kiriting");
+    if (phone.length < 7) {
+      Alert.alert(t("common.error"), "Telefon raqamni kiriting");
       return;
     }
-    setLoading(true);
-    try {
-      await apiRequest("/api/sms/send", "POST", { phone });
-      setStep("code");
-      setCountdown(60);
-    } catch (err: any) {
-      Alert.alert(t("common.error"), err.message || "SMS yuborishda xatolik");
-    } finally {
-      setLoading(false);
-    }
+    router.replace("/(tabs)" as any);
   };
 
   const verifyCode = async () => {
-    if (code.length < 4) {
-      Alert.alert(t("common.error"), "Kodni to'liq kiriting");
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await apiRequest("/api/sms/verify", "POST", { phone, code });
-      if (data.success) {
-        await refetchUser();
-      }
-    } catch (err: any) {
-      Alert.alert(t("common.error"), err.message || "Kod noto'g'ri");
-    } finally {
-      setLoading(false);
-    }
+    router.replace("/(tabs)" as any);
   };
 
   return (
