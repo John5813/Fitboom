@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Fitboom",
+    "slug": "fitboom",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "fitboom",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B7A8C"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Yaqin atrofdagi zallarni ko'rsatish uchun joylashuvingiz kerak",
+        "NSCameraUsageDescription": "Chek rasmini tushirish uchun kamera kerak",
+        "NSPhotoLibraryUsageDescription": "Chek rasmini yuborish uchun rasmlar kerak",
+        "NSLocationAlwaysUsageDescription": "Yaqin atrofdagi zallarni ko'rsatish uchun joylashuvingiz kerak"
+      }
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Chek rasmini yuborish uchun ruxsat kerak",
+          "cameraPermission": "Chek rasmini tushirish uchun ruxsat kerak"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
