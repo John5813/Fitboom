@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { getGyms } from "@/services/api";
 import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
 
@@ -40,7 +40,9 @@ export default function GymsScreen() {
 
   const { data, refetch } = useQuery({
     queryKey: ["/api/gyms"],
-    queryFn: () => apiRequest("/api/gyms"),
+    queryFn: () => getGyms(),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
   });
 
   const gyms = data?.gyms || [];

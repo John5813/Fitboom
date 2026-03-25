@@ -22,7 +22,7 @@ type Step = "welcome" | "phone" | "code";
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, login } = useAuth();
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>("welcome");
   const [phone, setPhone] = useState("+998");
@@ -51,11 +51,24 @@ export default function AuthScreen() {
       Alert.alert(t("common.error"), "Telefon raqamni kiriting");
       return;
     }
-    router.replace("/(tabs)" as any);
+    setStep("code");
+    setCountdown(60);
   };
 
   const verifyCode = async () => {
-    router.replace("/(tabs)" as any);
+    if (code.length < 4) {
+      Alert.alert(t("common.error"), "Tasdiqlash kodini kiriting");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login({ phone, code });
+    } catch (error: any) {
+      Alert.alert(t("common.error"), error?.message || "Kirishda xatolik");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (step === "welcome") {

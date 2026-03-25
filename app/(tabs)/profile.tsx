@@ -18,7 +18,13 @@ import { Image } from "expo-image";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  updateUserProfile,
+  adminLogin,
+  getCreditHistory,
+  getTopupHistory,
+} from "@/services/api";
 import Colors from "@/constants/Colors";
 
 const LANGUAGES = [
@@ -51,6 +57,28 @@ export default function ProfileScreen() {
       )
     : null;
 
+  const {
+    data: creditHistoryData,
+    isLoading: creditHistoryLoading,
+    refetch: refetchCreditHistory,
+  } = useQuery({
+    queryKey: ["/api/credits/history"],
+    queryFn: () => getCreditHistory(),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
+  });
+
+  const {
+    data: topupHistoryData,
+    isLoading: topupHistoryLoading,
+    refetch: refetchTopupHistory,
+  } = useQuery({
+    queryKey: ["/api/credits/topups"],
+    queryFn: () => getTopupHistory(),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
+  });
+
   const handleSaveProfile = async () => {
     const ageNum = parseInt(editAge, 10);
     if (!editName.trim() || !editAge || isNaN(ageNum) || !editGender) {
@@ -59,11 +87,7 @@ export default function ProfileScreen() {
     }
     setSaving(true);
     try {
-      await apiRequest("/api/user/profile", "PATCH", {
-        name: editName.trim(),
-        age: ageNum,
-        gender: editGender,
-      });
+      await updateUserProfile({ name: editName.trim(), age: ageNum, gender: editGender });
       await refetchUser();
       setEditModal(false);
     } catch (err: any) {
@@ -75,10 +99,8 @@ export default function ProfileScreen() {
 
   const handleAdminLogin = async () => {
     try {
-      const data = await apiRequest("/api/admin/login", "POST", {
-        password: adminPassword,
-      });
-      if (data.success) {
+      const data = await adminLogin({ password: adminPassword });
+      if ((data as any).success) {
         setAdminModal(false);
         Alert.alert(t("common.success"), "Admin sifatida kirdingiz");
       }
@@ -220,6 +242,40 @@ export default function ProfileScreen() {
             <Text style={styles.topupBtnText}>{t("home.topup")}</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.historyCard}>
+        <Text style={styles.sectionTitle}>{t("profile.credit_history")}</Text>
+        {creditHistoryLoading ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : creditHistoryData?.creditHistory?.length ? (
+          creditHistoryData.creditHistory.slice(0, 4).map((item: any) => (
+            <View key={item.id || item.date + item.amount} style={styles.historyItem}>
+              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
+              <Text style={styles.historySubText}>{item.date || "-"}</Text>
+              <Text style={styles.historyAmount}>{item.amount} {t("profile.credits")}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyHistoryText}>{t("profile.no_credit_history")}</Text>
+        )}
+      </View>
+
+      <View style={styles.historyCard}>
+        <Text style={styles.sectionTitle}>{t("profile.topup_history")}</Text>
+        {topupHistoryLoading ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : topupHistoryData?.topupHistory?.length ? (
+          topupHistoryData.topupHistory.slice(0, 4).map((item: any) => (
+            <View key={item.id || item.date + item.amount} style={styles.historyItem}>
+              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
+              <Text style={styles.historySubText}>{item.date || "-"}</Text>
+              <Text style={styles.historyAmount}>+{item.amount} {t("profile.credits")}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyHistoryText}>{t("profile.no_topup_history")}</Text>
+        )}
       </View>
 
       <View style={styles.menuCard}>
@@ -511,6 +567,51 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontFamily: "Inter_600SemiBold",
     fontSize: 13,
+  },
+  historyCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    marginBottom: 10,
+  },
+  historyItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  historyText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.text,
+    fontFamily: "Inter_400Regular",
+  },
+  historySubText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginHorizontal: 8,
+    fontFamily: "Inter_400Regular",
+  },
+  historyAmount: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
+  emptyHistoryText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    textAlign: "center",
   },
   menuCard: {
     backgroundColor: Colors.card,

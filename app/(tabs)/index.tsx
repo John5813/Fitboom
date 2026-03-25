@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { getGyms } from "@/services/api";
 import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
 
@@ -28,7 +28,9 @@ export default function HomeScreen() {
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
     queryKey: ["/api/gyms"],
-    queryFn: () => apiRequest("/api/gyms"),
+    queryFn: () => getGyms(),
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
   });
 
   const gyms = gymsData?.gyms?.slice(0, 3) || [];

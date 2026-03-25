@@ -21,7 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { getGymById, getGymSlots, bookGym } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
@@ -41,7 +41,7 @@ export default function GymDetailScreen() {
 
   const { data: gymData, isLoading } = useQuery({
     queryKey: [`/api/gyms/${id}`],
-    queryFn: () => apiRequest(`/api/gyms/${id}`),
+    queryFn: () => (id ? getGymById(id) : Promise.resolve(null)),
     enabled: !!id,
   });
 
@@ -53,7 +53,7 @@ export default function GymDetailScreen() {
 
   const { data: slotsData } = useQuery({
     queryKey: [`/api/gyms/${id}/slots`],
-    queryFn: () => apiRequest(`/api/gyms/${id}/slots`),
+    queryFn: () => (id ? getGymSlots(id) : Promise.resolve({ slots: [] })),
     enabled: !!id,
   });
 
@@ -62,7 +62,7 @@ export default function GymDetailScreen() {
   );
 
   const bookMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/bookings", "POST", data),
+    mutationFn: (data: any) => bookGym(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       refetchUser();

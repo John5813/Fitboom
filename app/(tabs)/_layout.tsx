@@ -21,11 +21,9 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const TAB_BOTTOM_INSET = Platform.OS === "web" ? 0 : insets.bottom;
 
   const tabs = [
-    { name: "index",    icon: "home",     label: t("nav.home") },
-    { name: "gyms",     icon: "activity", label: t("nav.gyms") },
-    { name: "scanner",  icon: "camera",   label: t("nav.scanner"), isCenter: true },
-    { name: "courses",  icon: "video",    label: t("nav.classes") },
-    { name: "bookings", icon: "calendar", label: t("nav.bookings") },
+    { name: "index", icon: "home", label: t("nav.home") },
+    { name: "gyms", icon: "activity", label: t("nav.gyms") },
+    { name: "profile", icon: "user", label: t("nav.profile") },
   ] as const;
 
   const visibleRoutes = state.routes.filter((r) =>
@@ -178,13 +176,9 @@ export default function TabLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" />
+        <Tabs.Screen name="index" />
       <Tabs.Screen name="gyms" />
-      <Tabs.Screen name="scanner" />
-      <Tabs.Screen name="courses" />
-      <Tabs.Screen name="bookings" />
-      <Tabs.Screen name="map" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
