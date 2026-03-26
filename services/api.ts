@@ -105,12 +105,21 @@ export async function request<T = unknown>(
 ): Promise<T> {
   let token = options.skipAuth ? null : await getAccessToken();
 
-  let response = await rawRequest(path, options, token);
+  let response: Response;
+  try {
+    response = await rawRequest(path, options, token);
+  } catch {
+    throw new Error("API ishlamadi");
+  }
 
   if (response.status === 401 && !options.skipAuth) {
     const newToken = await tryRefreshToken();
     if (newToken) {
-      response = await rawRequest(path, options, newToken);
+      try {
+        response = await rawRequest(path, options, newToken);
+      } catch {
+        throw new Error("API ishlamadi");
+      }
     } else {
       throw new Error("SESSION_EXPIRED");
     }
