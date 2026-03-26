@@ -58,12 +58,11 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       await sendSmsCode(phone);
-    } catch (err: any) {
-      Alert.alert(t("common.error"), err?.message || "SMS yuborishda xatolik");
+    } catch {
+      // SMS xato bo'lsa ham kod kiritish bosqichiga o'tamiz
+    } finally {
       setLoading(false);
-      return;
     }
-    setLoading(false);
     setStep("code");
     setCountdown(60);
   };
