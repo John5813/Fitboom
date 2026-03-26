@@ -16,7 +16,7 @@ import { Image } from "expo-image";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { request } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CoursesScreen() {
@@ -27,13 +27,13 @@ export default function CoursesScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data } = useQuery({
-    queryKey: ["/api/video-collections"],
-    queryFn: () => apiRequest("/api/video-collections"),
+    queryKey: ["/video-collections"],
+    queryFn: () => request("/video-collections"),
   });
 
   const { data: purchasesData } = useQuery({
-    queryKey: ["/api/user/purchases"],
-    queryFn: () => apiRequest("/api/user/purchases"),
+    queryKey: ["/user/purchases"],
+    queryFn: () => request("/user/purchases"),
     enabled: !!user,
   });
 
@@ -43,9 +43,9 @@ export default function CoursesScreen() {
 
   const buyMutation = useMutation({
     mutationFn: (collectionId: string) =>
-      apiRequest("/api/user/purchases", "POST", { collectionId }),
+      request("/user/purchases", { method: "POST", body: { collectionId } }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["/user/purchases"] });
       Alert.alert(t("common.success"), "Kurs muvaffaqiyatli sotib olindi!");
     },
     onError: (err: any) => {

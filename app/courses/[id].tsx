@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { request } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CourseDetailScreen() {
@@ -25,8 +25,8 @@ export default function CourseDetailScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data, isLoading } = useQuery({
-    queryKey: [`/api/video-collections/${id}`],
-    queryFn: () => apiRequest(`/api/video-collections/${id}`),
+    queryKey: [`/video-collections/${id}`],
+    queryFn: () => request(`/video-collections/${id}`),
     enabled: !!id,
   });
 
