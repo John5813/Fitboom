@@ -107,13 +107,6 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => router.push("/(tabs)/profile" as any)}
-            activeOpacity={0.7}
-          >
-            <Feather name="settings" size={20} color="#555" />
-          </TouchableOpacity>
         </View>
       </View>
 
