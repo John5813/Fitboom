@@ -23,6 +23,7 @@ import VideoPlayerPage from "@/pages/VideoPlayerPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import MapPage from "@/pages/MapPage";
 import GymOwnerPage from "@/pages/GymOwnerPage";
+import MobilePayPage from "@/pages/MobilePayPage";
 import NotFound from "@/pages/not-found";
 import InstallPrompt from "@/components/InstallPrompt";
 
@@ -112,6 +113,7 @@ function Router() {
           <HomePage />
         </ProtectedRoute>
       </Route>
+      <Route path="/mobile-pay" component={MobilePayPage} />
       <Route component={NotFound} />
     </Switch>
   );
