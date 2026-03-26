@@ -97,8 +97,10 @@ app.use((req, res, next) => {
     reusePort: true,
   }, async () => {
     log(`serving on port ${port}`);
-    
-    await setupTelegramWebhook();
+
+    if (process.env.NODE_ENV === 'production') {
+      await setupTelegramWebhook();
+    }
     setupCreditExpiryScheduler(storage);
   });
 })();
