@@ -1,26 +1,86 @@
-/// <reference lib="es2015.promise" />
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const BASE_API_PATH = "/api/mobile/v1";
 
 function resolveBaseUrl(): string {
   const domain =
-    (globalThis as any)?.EXPO_PUBLIC_API_BASE_URL ||
-    (globalThis as any)?.EXPO_PUBLIC_DOMAIN ||
-    (globalThis as any)?.API_BASE_URL;
-
+    (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_DOMAIN) ||
+    (globalThis as any)?.EXPO_PUBLIC_DOMAIN;
   if (!domain) return "https://fitboom.replit.app";
-
   if (domain.startsWith("http://") || domain.startsWith("https://")) {
     return domain.replace(/\/$/, "");
   }
-
   return `https://${domain}`;
 }
 
 export const API_BASE_URL = resolveBaseUrl();
-export const TOKEN_STORAGE_KEY = "fitboom_jwt_token";
+const BASE = "/api/mobile/v1";
+
+const ACCESS_TOKEN_KEY = "fitboom_access_token";
+const REFRESH_TOKEN_KEY = "fitboom_refresh_token";
+
+export async function getAccessToken(): Promise<string | null> {
+  return AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export async function setTokens(accessToken: string, refreshToken: string): Promise<void> {
+  await AsyncStorage.multiSet([
+    [ACCESS_TOKEN_KEY, accessToken],
+    [REFRESH_TOKEN_KEY, refreshToken],
+  ]);
+}
+
+export async function clearTokens(): Promise<void> {
+  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]);
+}
+
+export async function getToken(): Promise<string | null> {
+  return getAccessToken();
+}
+
+export async function setToken(token: string | null): Promise<void> {
+  if (token) {
+    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
+  } else {
+    await clearTokens();
+  }
+}
+
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshToken(): Promise<string | null> {
+  if (isRefreshing && refreshPromise) return refreshPromise;
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return null;
+      const res = await fetch(`${API_BASE_URL}${BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) {
+        await clearTokens();
+        return null;
+      }
+      const json = await res.json();
+      const newToken = json?.data?.accessToken || json?.accessToken;
+      if (newToken) {
+        await AsyncStorage.setItem(ACCESS_TOKEN_KEY, newToken);
+        return newToken;
+      }
+      await clearTokens();
+      return null;
+    } catch {
+      await clearTokens();
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -28,28 +88,15 @@ export interface ApiRequestOptions {
   method?: HTTPMethod;
   body?: unknown;
   headers?: Record<string, string>;
+  skipAuth?: boolean;
 }
 
-export async function setToken(token: string | null): Promise<void> {
-  if (token) {
-    await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
-  } else {
-    await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
-  }
-}
-
-export async function getToken(): Promise<string | null> {
-  return AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-export async function request<T = unknown>(
+async function rawRequest(
   path: string,
-  options: ApiRequestOptions = {}
-): Promise<T> {
+  options: ApiRequestOptions = {},
+  token?: string | null
+): Promise<Response> {
   const url = `${API_BASE_URL}${path}`;
-
-  const token = await getToken();
-
   const fetchOptions: RequestInit = {
     method: options.method ?? "GET",
     headers: {
@@ -58,37 +105,52 @@ export async function request<T = unknown>(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   };
-
   if (options.body !== undefined) {
     fetchOptions.body = JSON.stringify(options.body);
   }
-
-  const response = await fetch(url, fetchOptions);
-
-  if (!response.ok) {
-    const text = await response.text();
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const json = JSON.parse(text);
-      if (json?.message) {
-        errorMessage = json.message;
-      }
-    } catch {
-      if (text) errorMessage = text;
-    }
-    throw new Error(errorMessage);
-  }
-
-  const contentType = response.headers.get("Content-Type");
-  if (contentType && contentType.indexOf("application/json") !== -1) {
-    return response.json();
-  }
-
-  return (await response.text()) as unknown as T;
+  return fetch(url, fetchOptions);
 }
 
-export function buildQueryKey(path: string): string[] {
-  return [API_BASE_URL + path];
+export async function request<T = unknown>(
+  path: string,
+  options: ApiRequestOptions = {}
+): Promise<T> {
+  let token = options.skipAuth ? null : await getAccessToken();
+
+  let response = await rawRequest(path, options, token);
+
+  if (response.status === 401 && !options.skipAuth) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      response = await rawRequest(path, options, newToken);
+    } else {
+      throw new Error("SESSION_EXPIRED");
+    }
+  }
+
+  const text = await response.text();
+  let json: any;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return text as unknown as T;
+  }
+
+  if (!response.ok) {
+    const msg =
+      json?.error ||
+      json?.message ||
+      json?.data?.message ||
+      `HTTP ${response.status}`;
+    throw new Error(msg);
+  }
+
+  if (json?.success === false) {
+    throw new Error(json?.error || "Xatolik yuz berdi");
+  }
+
+  return (json?.data !== undefined ? json.data : json) as T;
 }
 
 export interface LoginPayload {
@@ -97,53 +159,95 @@ export interface LoginPayload {
 }
 
 export const sendSmsCode = async (phone: string) =>
-  request<{ message: string; expiresIn: number }>(`${BASE_API_PATH}/auth/sms/send`, {
+  request<{ message: string }>(`${BASE}/auth/sms/send`, {
     method: "POST",
     body: { phone },
+    skipAuth: true,
   });
+
+export interface VerifyResponse {
+  accessToken: string;
+  refreshToken: string;
+  isNewUser: boolean;
+  user: {
+    id: string;
+    phone: string;
+    name: string | null;
+    profileCompleted: boolean;
+    credits: number;
+  };
+}
 
 export const verifySmsCode = async (phone: string, code: string) =>
-  request<{ token: string; user: any }>(`${BASE_API_PATH}/auth/sms/verify`, {
+  request<VerifyResponse>(`${BASE}/auth/sms/verify`, {
     method: "POST",
     body: { phone, code },
+    skipAuth: true,
   });
 
-export const loginApi = async (payload: LoginPayload) =>
-  request<{ token: string; user?: any }>(`${BASE_API_PATH}/auth/login`, {
+export const verifyTelegramCode = async (code: string) =>
+  request<VerifyResponse>(`${BASE}/auth/telegram/verify`, {
     method: "POST",
-    body: payload,
+    body: { code },
+    skipAuth: true,
+  });
+
+export const refreshAuthToken = async (refreshToken: string) =>
+  request<{ accessToken: string; user: any }>(`${BASE}/auth/refresh`, {
+    method: "POST",
+    body: { refreshToken },
+    skipAuth: true,
   });
 
 export const logoutApi = async () =>
-  request(`${BASE_API_PATH}/auth/logout`, { method: "POST" });
+  request(`${BASE}/auth/logout`, { method: "POST" });
+
+export const loginApi = async (payload: LoginPayload) =>
+  request<{ token: string; user?: any }>(`${BASE}/auth/login`, {
+    method: "POST",
+    body: payload,
+    skipAuth: true,
+  });
 
 export const getUser = async () =>
-  request<{ user: any }>(`${BASE_API_PATH}/user/me`);
+  request<{ user: any }>(`${BASE}/user/me`);
 
 export const updateProfile = async (payload: {
   name?: string;
   age?: number;
   gender?: string;
   profileImageUrl?: string;
-}) => request(`${BASE_API_PATH}/user/me`, { method: "PUT", body: payload });
+}) => request(`${BASE}/user/me`, { method: "PUT", body: payload });
+
+export const completeProfile = async (payload: {
+  name: string;
+  age: number;
+  gender: "Erkak" | "Ayol";
+}) =>
+  request<{ user: any }>(`${BASE}/auth/complete-profile`, {
+    method: "POST",
+    body: payload,
+  });
 
 export const updateUserProfile = async (payload: {
   name: string;
   age: number;
   gender: string;
-}) => request(`${BASE_API_PATH}/user/profile`, { method: "PATCH", body: payload });
+}) => request(`${BASE}/user/profile`, { method: "PATCH", body: payload });
 
 export const getGyms = async () =>
-  request<{ gyms: any[] }>(`${BASE_API_PATH}/gyms`);
+  request<{ gyms: any[] }>(`${BASE}/gyms`);
 
 export const getGymById = async (gymId: string) =>
-  request<{ gym: any }>(`${BASE_API_PATH}/gyms/${gymId}`);
+  request<{ gym: any }>(`${BASE}/gyms/${gymId}`);
 
 export const getGymSlots = async (gymId: string, date?: string) =>
-  request<{ slots: any[] }>(`${BASE_API_PATH}/gyms/${gymId}/slots${date ? `?date=${date}` : ""}`);
+  request<{ slots: any[] }>(
+    `${BASE}/gyms/${gymId}/slots${date ? `?date=${date}` : ""}`
+  );
 
 export const getBookings = async () =>
-  request<{ bookings: any[] }>(`${BASE_API_PATH}/bookings`);
+  request<{ bookings: any[] }>(`${BASE}/bookings`);
 
 export const bookGym = async (payload: {
   gymId: string;
@@ -151,35 +255,36 @@ export const bookGym = async (payload: {
   scheduledDate: string;
   startTime?: string;
   endTime?: string;
-}) => request(`${BASE_API_PATH}/bookings`, { method: "POST", body: payload });
+}) => request(`${BASE}/bookings`, { method: "POST", body: payload });
 
 export const cancelBooking = async (bookingId: string) =>
-  request(`${BASE_API_PATH}/bookings/${bookingId}`, { method: "DELETE" });
+  request(`${BASE}/bookings/${bookingId}`, { method: "DELETE" });
 
 export const getCreditHistory = async () =>
-  request<{ creditHistory: any[] }>(`${BASE_API_PATH}/credits/history`);
+  request<{ creditHistory: any[] }>(`${BASE}/credits/history`);
 
 export const getTopupHistory = async () =>
-  request<{ topupHistory: any[] }>(`${BASE_API_PATH}/credits/topups`);
+  request<{ topupHistory: any[] }>(`${BASE}/credits/topups`);
 
 export const getCreditPackages = async () =>
-  request<{ packages: any[] }>(`${BASE_API_PATH}/payments/packages`);
+  request<{ packages: any[] }>(`${BASE}/payments/packages`);
 
 export const getPaymentConfig = async () =>
-  request<{ cardNumber: string; packages: any[] }>(`${BASE_API_PATH}/payments/config`);
+  request<{ cardNumber: string; packages: any[] }>(`${BASE}/payments/config`);
 
 export const uploadReceipt = async (payload: {
   amountCredits: number;
   amountUzs: number;
   receiptUrl?: string;
 }) =>
-  request(`${BASE_API_PATH}/payments/upload-receipt`, {
+  request(`${BASE}/payments/upload-receipt`, {
     method: "POST",
     body: payload,
   });
 
 export const adminLogin = async (payload: { password: string }) =>
-  request<{ token: string; user: any }>(`${BASE_API_PATH}/auth/admin-login`, {
+  request<{ token: string; user: any }>(`${BASE}/auth/admin-login`, {
     method: "POST",
     body: payload,
+    skipAuth: true,
   });

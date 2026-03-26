@@ -16,17 +16,21 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { sendSmsCode } from "@/services/api";
 import Colors from "@/constants/Colors";
 
-type Step = "welcome" | "phone" | "code";
+type Step = "welcome" | "phone" | "code" | "telegram";
+type AuthMethod = "sms" | "telegram";
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
-  const { user, isLoading, login } = useAuth();
+  const { user, isLoading, verifyOtp, verifyTelegram } = useAuth();
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>("welcome");
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("sms");
   const [phone, setPhone] = useState("+998");
   const [code, setCode] = useState("");
+  const [telegramCode, setTelegramCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
@@ -53,26 +57,50 @@ export default function AuthScreen() {
     }
     setLoading(true);
     try {
-      const { sendSmsCode } = await import("@/services/api");
       await sendSmsCode(phone);
-    } catch {
-      // still show code input - in dev the code is printed to server logs
-    } finally {
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err?.message || "SMS yuborishda xatolik");
       setLoading(false);
+      return;
     }
+    setLoading(false);
     setStep("code");
     setCountdown(60);
   };
 
-  const verifyCode = async () => {
+  const verifySms = async () => {
     if (code.length < 4) {
       Alert.alert(t("common.error"), "Tasdiqlash kodini kiriting");
       return;
     }
-
     setLoading(true);
     try {
-      await login({ phone, code });
+      const { isNewUser } = await verifyOtp(phone, code);
+      if (isNewUser) {
+        router.replace("/complete-profile" as any);
+      } else {
+        router.replace("/(tabs)" as any);
+      }
+    } catch (error: any) {
+      Alert.alert(t("common.error"), error?.message || "Kirishda xatolik");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyTg = async () => {
+    if (telegramCode.trim().length < 6) {
+      Alert.alert(t("common.error"), "Telegram kodni kiriting");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { isNewUser } = await verifyTelegram(telegramCode.trim().toUpperCase());
+      if (isNewUser) {
+        router.replace("/complete-profile" as any);
+      } else {
+        router.replace("/(tabs)" as any);
+      }
     } catch (error: any) {
       Alert.alert(t("common.error"), error?.message || "Kirishda xatolik");
     } finally {
@@ -88,10 +116,7 @@ export default function AuthScreen() {
 
         <View style={styles.welcomeContent}>
           <View style={styles.logoRow}>
-            <LinearGradient
-              colors={["#fb923c", "#f97316"]}
-              style={styles.logoIcon}
-            >
+            <LinearGradient colors={["#fb923c", "#f97316"]} style={styles.logoIcon}>
               <Feather name="zap" size={28} color="#fff" />
             </LinearGradient>
             <Text style={styles.logoText}>
@@ -123,9 +148,30 @@ export default function AuthScreen() {
             ))}
           </View>
 
+          <View style={styles.authMethodRow}>
+            <TouchableOpacity
+              style={[styles.methodBtn, authMethod === "sms" && styles.methodBtnActive]}
+              onPress={() => setAuthMethod("sms")}
+            >
+              <Feather name="message-circle" size={16} color={authMethod === "sms" ? "#fff" : "rgba(255,255,255,0.5)"} />
+              <Text style={[styles.methodBtnText, authMethod === "sms" && styles.methodBtnTextActive]}>
+                SMS orqali
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.methodBtn, authMethod === "telegram" && styles.methodBtnActive]}
+              onPress={() => setAuthMethod("telegram")}
+            >
+              <Feather name="send" size={16} color={authMethod === "telegram" ? "#fff" : "rgba(255,255,255,0.5)"} />
+              <Text style={[styles.methodBtnText, authMethod === "telegram" && styles.methodBtnTextActive]}>
+                Telegram orqali
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={styles.startBtn}
-            onPress={() => setStep("phone")}
+            onPress={() => setStep(authMethod === "sms" ? "phone" : "telegram")}
             activeOpacity={0.85}
           >
             <LinearGradient
@@ -147,6 +193,66 @@ export default function AuthScreen() {
     );
   }
 
+  if (step === "telegram") {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.authInner}
+        >
+          <TouchableOpacity style={styles.backRow} onPress={() => setStep("welcome")}>
+            <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.backText}>{t("common.back")}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.authLogoRow}>
+            <LinearGradient colors={["#fb923c", "#f97316"]} style={styles.authLogoIcon}>
+              <Feather name="zap" size={20} color="#fff" />
+            </LinearGradient>
+            <Text style={styles.authLogoText}>
+              <Text style={{ color: "#fff" }}>Fit</Text>
+              <Text style={{ color: Colors.primary }}>Boom</Text>
+            </Text>
+          </View>
+
+          <View style={styles.authCard}>
+            <View style={styles.telegramInfo}>
+              <Feather name="send" size={24} color="#29B6F6" />
+              <Text style={styles.cardTitle}>Telegram orqali kirish</Text>
+            </View>
+            <Text style={styles.telegramDesc}>
+              @uzfitboom_bot ga <Text style={styles.telegramBold}>/start</Text> yozing va bot bergan kodni kiriting.
+            </Text>
+            <TextInput
+              style={[styles.input, styles.codeInput]}
+              value={telegramCode}
+              onChangeText={setTelegramCode}
+              placeholder="AB12CD34"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              autoCapitalize="characters"
+              maxLength={8}
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[styles.button, (loading || telegramCode.length < 6) && styles.buttonDisabled]}
+              onPress={verifyTg}
+              disabled={loading || telegramCode.length < 6}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Tasdiqlash</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setStep("welcome")} style={styles.switchLink}>
+              <Text style={styles.switchLinkText}>SMS orqali kirish →</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
@@ -162,10 +268,7 @@ export default function AuthScreen() {
         </TouchableOpacity>
 
         <View style={styles.authLogoRow}>
-          <LinearGradient
-            colors={["#fb923c", "#f97316"]}
-            style={styles.authLogoIcon}
-          >
+          <LinearGradient colors={["#fb923c", "#f97316"]} style={styles.authLogoIcon}>
             <Feather name="zap" size={20} color="#fff" />
           </LinearGradient>
           <Text style={styles.authLogoText}>
@@ -198,12 +301,15 @@ export default function AuthScreen() {
                   <Text style={styles.buttonText}>{t("auth.send_code")}</Text>
                 )}
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setAuthMethod("telegram"); setStep("telegram"); }} style={styles.switchLink}>
+                <Text style={styles.switchLinkText}>Telegram orqali kirish →</Text>
+              </TouchableOpacity>
             </>
           ) : (
             <>
               <Text style={styles.cardTitle}>{t("auth.code_label")}</Text>
               <Text style={styles.codeHint}>
-                {phone} ga kod yuborildi
+                {phone} raqamiga SMS kod yuborildi
               </Text>
               <TextInput
                 style={[styles.input, styles.codeInput]}
@@ -217,7 +323,7 @@ export default function AuthScreen() {
               />
               <TouchableOpacity
                 style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={verifyCode}
+                onPress={verifySms}
                 disabled={loading}
               >
                 {loading ? (
@@ -249,10 +355,7 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   glowTop: {
     position: "absolute",
     top: -100,
@@ -276,13 +379,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 28,
-    gap: 28,
+    gap: 24,
   },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoIcon: {
     width: 52,
     height: 52,
@@ -290,14 +389,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoText: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-  },
-  headlineBox: {
-    alignItems: "center",
-    gap: 14,
-  },
+  logoText: { fontSize: 28, fontFamily: "Inter_700Bold" },
+  headlineBox: { alignItems: "center", gap: 14 },
   headline: {
     fontSize: 34,
     fontFamily: "Inter_700Bold",
@@ -306,9 +399,7 @@ const styles = StyleSheet.create({
     lineHeight: 42,
     letterSpacing: -0.5,
   },
-  headlineOrange: {
-    color: Colors.primary,
-  },
+  headlineOrange: { color: Colors.primary },
   heroDesc: {
     fontSize: 16,
     fontFamily: "Inter_400Regular",
@@ -339,12 +430,31 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: "rgba(255,255,255,0.75)",
   },
-  startBtn: {
-    width: "100%",
-    maxWidth: 280,
-    borderRadius: 16,
-    overflow: "hidden",
+  authMethodRow: {
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 14,
+    padding: 4,
   },
+  methodBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  methodBtnActive: { backgroundColor: Colors.primary },
+  methodBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.5)",
+  },
+  methodBtnTextActive: { color: "#fff" },
+  startBtn: { width: "100%", maxWidth: 280, borderRadius: 16, overflow: "hidden" },
   startBtnGrad: {
     flexDirection: "row",
     alignItems: "center",
@@ -352,11 +462,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  startBtnText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
+  startBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" },
   freeText: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
@@ -368,11 +474,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 24,
   },
-  backRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   backText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
@@ -392,10 +494,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  authLogoText: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-  },
+  authLogoText: { fontSize: 24, fontFamily: "Inter_700Bold" },
   authCard: {
     backgroundColor: Colors.card,
     borderRadius: 20,
@@ -404,11 +503,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+  telegramInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
+  telegramDesc: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 21,
+  },
+  telegramBold: {
+    fontFamily: "Inter_700Bold",
+    color: "#29B6F6",
+  },
+  cardTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.text },
   codeHint: {
     fontSize: 13,
     color: Colors.textSecondary,
@@ -440,11 +550,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
+  buttonText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
   resendRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -459,5 +565,11 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: "Inter_500Medium",
     fontSize: 14,
+  },
+  switchLink: { alignItems: "center", paddingTop: 4 },
+  switchLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primary,
   },
 });

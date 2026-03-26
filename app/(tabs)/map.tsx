@@ -14,7 +14,7 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { getGyms } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function MapScreen() {
@@ -29,7 +29,7 @@ export default function MapScreen() {
 
   const { data } = useQuery({
     queryKey: ["/api/gyms"],
-    queryFn: () => apiRequest("/api/gyms"),
+    queryFn: getGyms,
   });
 
   const gyms = (data?.gyms || []).filter(

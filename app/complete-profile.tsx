@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { updateUserProfile } from "@/services/api";
+import { completeProfile } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CompleteProfileScreen() {
@@ -43,10 +43,10 @@ export default function CompleteProfileScreen() {
     }
     setLoading(true);
     try {
-      await updateUserProfile({
+      await completeProfile({
         name: name.trim(),
         age: ageNum,
-        gender,
+        gender: gender as "Erkak" | "Ayol",
       });
       await refetchUser();
       router.replace("/(tabs)" as any);
