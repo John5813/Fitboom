@@ -2,6 +2,7 @@
   "expo": {
     "name": "Fitboom",
     "slug": "fitboom",
+    "owner": "Javlon5813",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -23,6 +24,7 @@
       }
     },
     "android": {
+      "package": "com.javlon5813.fitboom",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
