@@ -62,7 +62,7 @@ export default function ProfileScreen() {
     isLoading: creditHistoryLoading,
     refetch: refetchCreditHistory,
   } = useQuery({
-    queryKey: ["/api/credits/history"],
+    queryKey: ["/credits"],
     queryFn: () => getCreditHistory(),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,

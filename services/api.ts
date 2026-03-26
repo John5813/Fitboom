@@ -269,17 +269,16 @@ export const bookGym = async (payload: {
 export const cancelBooking = async (bookingId: string) =>
   request(`/bookings/${bookingId}`, { method: "DELETE" });
 
-export const getCreditHistory = async () =>
-  request<{ creditHistory: any[] }>("/credits/history");
+export const getCredits = async () =>
+  request<{ credits: number; packages: any[] }>("/credits");
 
-export const getTopupHistory = async () =>
-  request<{ topupHistory: any[] }>("/credits/topups");
+export const getCreditHistory = async () => getCredits();
 
-export const getCreditPackages = async () =>
-  request<{ packages: any[] }>("/payments/packages");
+export const getTopupHistory = async () => getCredits();
 
-export const getPaymentConfig = async () =>
-  request<{ cardNumber: string; packages: any[] }>("/payments/config");
+export const getCreditPackages = async () => getCredits();
+
+export const getPaymentConfig = async () => getCredits();
 
 export const uploadReceipt = async (payload: {
   amountCredits: number;

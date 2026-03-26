@@ -25,8 +25,8 @@ export default function CourseDetailScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data, isLoading } = useQuery({
-    queryKey: [`/video-collections/${id}`],
-    queryFn: () => request(`/video-collections/${id}`),
+    queryKey: [`/collections/${id}`],
+    queryFn: () => request(`/collections/${id}`),
     enabled: !!id,
   });
 
