@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getGyms } from "@/services/api";
 import GymCard from "@/components/GymCard";
+import PaymentMethodModal from "@/components/PaymentMethodModal";
 
 const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
 
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const { user, refetchUser } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
     queryKey: ["/api/gyms"],
@@ -139,7 +141,7 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           style={styles.topupBtn}
-          onPress={() => router.push("/payment" as any)}
+          onPress={() => setPaymentModalVisible(true)}
           activeOpacity={0.85}
         >
           <Text style={styles.topupBtnText}>
@@ -174,6 +176,11 @@ export default function HomeScreen() {
           />
         ))
       )}
+
+      <PaymentMethodModal
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+      />
     </ScrollView>
   );
 }
