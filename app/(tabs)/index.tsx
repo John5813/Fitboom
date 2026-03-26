@@ -17,13 +17,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getGyms } from "@/services/api";
-import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
+
+const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
-  const { t, language, setLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
@@ -33,7 +34,9 @@ export default function HomeScreen() {
     refetchInterval: 60000,
   });
 
-  const gyms = gymsData?.gyms?.slice(0, 3) || [];
+  const gyms = (gymsData?.gyms || [])
+    .filter((g: any) => g.name !== "Velodrom")
+    .slice(0, 3);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -51,10 +54,7 @@ export default function HomeScreen() {
     : null;
 
   const isExpired = daysLeft !== null && daysLeft <= 0;
-  const isExpiringSoon = daysLeft !== null && daysLeft > 0 && daysLeft <= 5;
 
-  const LANG_FLAGS: Record<string, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
-  const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
   const nextLang = (): "uz" | "ru" | "en" => {
     if (language === "uz") return "ru";
     if (language === "ru") return "en";
@@ -72,32 +72,28 @@ export default function HomeScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={Colors.primary}
+          tintColor="#16a34a"
         />
       }
       showsVerticalScrollIndicator={false}
     >
       {/* ─── Header ─── */}
       <View style={styles.header}>
-        {/* FitBoom Logo */}
-        <View style={styles.logoRow}>
-          <View style={styles.logoIcon}>
-            <Feather name="zap" size={18} color="#fff" />
-          </View>
+        <View>
           <Text style={styles.logoText}>
             <Text style={styles.logoFit}>Fit</Text>
             <Text style={styles.logoBoom}>Boom</Text>
           </Text>
+          <Text style={styles.logoSubtitle}>Sport hayotingizni boshqaring</Text>
         </View>
 
-        {/* Right icons */}
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.langBtn}
             onPress={() => setLanguage(nextLang())}
             activeOpacity={0.7}
           >
-            <Text style={styles.langFlag}>{LANG_FLAGS[language]}</Text>
+            <Feather name="globe" size={14} color="#555" />
             <Text style={styles.langLabel}>{LANG_LABELS[language]}</Text>
           </TouchableOpacity>
 
@@ -107,7 +103,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.avatarCircle}>
-              <Feather name="user" size={16} color={Colors.primary} />
+              <Feather name="user" size={16} color="#555" />
             </View>
           </TouchableOpacity>
 
@@ -116,51 +112,34 @@ export default function HomeScreen() {
             onPress={() => router.push("/(tabs)/profile" as any)}
             activeOpacity={0.7}
           >
-            <Feather name="settings" size={20} color="rgba(255,255,255,0.7)" />
+            <Feather name="settings" size={20} color="#555" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ─── Green Credit Card ─── */}
+      {/* ─── Kredit Kartasi ─── */}
       <LinearGradient
-        colors={
-          isExpired
-            ? ["#ef4444", "#b91c1c"]
-            : ["#4ade80", "#16a34a", "#166534"]
-        }
+        colors={isExpired ? ["#ef4444", "#b91c1c"] : ["#22c55e", "#16a34a", "#15803d"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.creditCard}
       >
         <View style={styles.creditLeft}>
-          <Text style={styles.creditKeyEmoji}>🔑</Text>
-          <View style={styles.creditInfo}>
-            <Text style={styles.creditLabel}>{t("profile.credits_title")}</Text>
-            <View style={styles.creditAmountRow}>
-              <Text style={styles.creditAmount}>{user?.credits ?? 0}</Text>
-              <Text style={styles.creditUnit}> {t("profile.credits_count")}</Text>
-            </View>
+          <Text style={styles.keyEmoji}>🔑</Text>
+          <View>
+            <Text style={styles.creditLabel}>Kredit balansi</Text>
+            <Text style={styles.creditValue}>
+              Kredit balansi:{" "}
+              <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
+            </Text>
             {daysLeft !== null && !isExpired && (
-              <View style={styles.creditDaysRow}>
-                <Feather
-                  name={isExpiringSoon ? "alert-triangle" : "clock"}
-                  size={12}
-                  color={isExpiringSoon ? "#fde68a" : "rgba(255,255,255,0.7)"}
-                />
-                <Text
-                  style={[
-                    styles.creditDays,
-                    isExpiringSoon && { color: "#fde68a" },
-                  ]}
-                >
-                  {daysLeft} {t("profile.days_left")}
-                </Text>
+              <View style={styles.daysRow}>
+                <Feather name="clock" size={12} color="rgba(255,255,255,0.85)" />
+                <Text style={styles.daysText}>{daysLeft} kun qoldi</Text>
               </View>
             )}
             {isExpired && (
-              <Text style={[styles.creditDays, { color: "#fde68a" }]}>
-                {t("profile.expired_message")}
-              </Text>
+              <Text style={styles.daysText}>Muddati o'tgan</Text>
             )}
           </View>
         </View>
@@ -168,198 +147,156 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.topupBtn}
           onPress={() => router.push("/payment" as any)}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           <Text style={styles.topupBtnText}>
-            {isExpired ? t("profile.renew") : t("profile.topup")}
+            {isExpired ? "Yangilash" : "To'ldirish"}
           </Text>
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* ─── Nearby Gyms Section ─── */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>{t("home.near_gyms")}</Text>
-            <Text style={styles.sectionSubtitle}>{t("home.sorted_by_distance")}</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/gyms" as any)}>
-            <Text style={styles.viewAll}>{t("home.view_all")}</Text>
-          </TouchableOpacity>
+      {/* ─── Yaqin Zallar ─── */}
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={styles.sectionTitle}>Sizga eng yaqin{"\n"}zallar</Text>
+          <Text style={styles.sectionSubtitle}>Masofaga qarab saralangan</Text>
         </View>
-
-        {gyms.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather name="activity" size={40} color={Colors.textSecondary} />
-            <Text style={styles.emptyText}>{t("common.loading")}</Text>
-          </View>
-        ) : (
-          gyms.map((gym: any) => (
-            <GymCard
-              key={gym.id}
-              gym={gym}
-              onPress={() => router.push(`/gym/${gym.id}` as any)}
-              onBook={() => router.push(`/gym/${gym.id}` as any)}
-            />
-          ))
-        )}
+        <TouchableOpacity onPress={() => router.push("/(tabs)/gyms" as any)}>
+          <Text style={styles.viewAll}>Barchasini ko'rish{"\n"}{">"}</Text>
+        </TouchableOpacity>
       </View>
+
+      {gyms.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Feather name="activity" size={36} color="#ccc" />
+          <Text style={styles.emptyText}>Yuklanmoqda...</Text>
+        </View>
+      ) : (
+        gyms.map((gym: any) => (
+          <GymCard
+            key={gym.id}
+            gym={gym}
+            onPress={() => router.push(`/gym/${gym.id}` as any)}
+            onBook={() => router.push(`/gym/${gym.id}` as any)}
+          />
+        ))
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  content: { paddingHorizontal: 16 },
 
   /* Header */
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 18,
   },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  logoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  logoText: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-  },
-  logoFit: {
-    color: "#fff",
-  },
-  logoBoom: {
-    color: Colors.primary,
+  logoText: { fontSize: 26, fontFamily: "Inter_700Bold" },
+  logoFit: { color: "#111" },
+  logoBoom: { color: "#F97316" },
+  logoSubtitle: {
+    fontSize: 13,
+    color: "#888",
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    marginTop: 4,
   },
   langBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  langFlag: {
-    fontSize: 14,
+    borderColor: "#e5e5e5",
   },
   langLabel: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+    color: "#444",
   },
   iconBtn: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.card,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#f5f5f5",
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: "#e5e5e5",
     alignItems: "center",
     justifyContent: "center",
   },
 
   /* Credit Card */
   creditCard: {
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 28,
+    marginBottom: 24,
     shadowColor: "#16a34a",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   creditLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
-  creditKeyEmoji: {
-    fontSize: 36,
-  },
-  creditInfo: {
-    gap: 2,
-  },
+  keyEmoji: { fontSize: 38 },
   creditLabel: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.75)",
+    fontFamily: "Inter_400Regular",
+    marginBottom: 2,
   },
-  creditAmountRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
+  creditValue: {
+    fontSize: 14,
+    color: "#fff",
+    fontFamily: "Inter_600SemiBold",
   },
-  creditAmount: {
-    fontSize: 32,
+  creditNumber: {
+    fontSize: 28,
     fontFamily: "Inter_700Bold",
     color: "#fff",
-    lineHeight: 38,
   },
-  creditUnit: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "rgba(255,255,255,0.8)",
-  },
-  creditDaysRow: {
+  daysRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 2,
+    marginTop: 4,
   },
-  creditDays: {
+  daysText: {
     fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.75)",
   },
   topupBtn: {
     backgroundColor: "#fbbf24",
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    shadowColor: "#fbbf24",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
   },
   topupBtnText: {
     color: "#1a1a1a",
@@ -368,46 +305,43 @@ const styles = StyleSheet.create({
   },
 
   /* Section */
-  section: {
-    marginBottom: 24,
-  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: "#111",
+    lineHeight: 26,
   },
   sectionSubtitle: {
     fontSize: 12,
+    color: "#888",
     fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    marginTop: 2,
+    marginTop: 3,
   },
   viewAll: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: Colors.primary,
-    marginTop: 3,
+    color: "#2563EB",
+    textAlign: "right",
+    lineHeight: 18,
   },
 
   /* Empty */
   emptyState: {
     alignItems: "center",
     paddingVertical: 40,
-    gap: 12,
-    backgroundColor: Colors.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    gap: 10,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 16,
   },
   emptyText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+    fontSize: 13,
+    color: "#aaa",
     fontFamily: "Inter_400Regular",
   },
 });

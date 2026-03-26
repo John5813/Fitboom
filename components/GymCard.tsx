@@ -9,10 +9,9 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
-import Colors from "@/constants/Colors";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 const { width } = Dimensions.get("window");
+const CARD_WIDTH = width - 32;
 
 interface Gym {
   id: string;
@@ -37,223 +36,207 @@ interface GymCardProps {
 }
 
 export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
-  const { t } = useLanguage();
-  const rating = gym.avgRating ?? gym.rating ?? 0;
+  const imageCount = gym.images?.length ?? 1;
 
   const distanceText =
     typeof gym.distance === "number"
-      ? `${gym.distance.toFixed(1)} km uzoqlikda`
+      ? `Sizdan ${gym.distance.toFixed(1)} km uzoqlikda`
       : gym.distance
-      ? `${gym.distance} uzoqlikda`
-      : null;
+      ? `Sizdan ${gym.distance} uzoqlikda`
+      : gym.address || null;
+
+  const categoriesText = (gym.categories || []).join(", ");
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: gym.imageUrl }}
-          style={styles.image}
-          contentFit="cover"
-          transition={300}
-        />
+    <View style={styles.card}>
+      {/* Image section */}
+      <TouchableOpacity onPress={onPress} activeOpacity={0.95}>
+        <View style={styles.imageWrapper}>
+          <Image
+            source={{ uri: gym.imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+            transition={300}
+          />
 
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.85)"]}
-          style={styles.gradient}
-        />
+          {/* Dark gradient overlay */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.82)"]}
+            style={StyleSheet.absoluteFillObject}
+          />
 
-        <View style={styles.creditBadge}>
-          <Feather name="key" size={11} color="#fff" />
-          <Text style={styles.creditBadgeText}>
-            {gym.credits} {t("profile.credits_count")}
-          </Text>
-        </View>
-
-        {rating > 0 && (
-          <View style={styles.ratingBadge}>
-            <Feather name="star" size={11} color="#F59E0B" />
-            <Text style={styles.ratingText}>{Number(rating).toFixed(1)}</Text>
-          </View>
-        )}
-
-        <View style={styles.overlay}>
-          <Text style={styles.gymName} numberOfLines={1}>
-            {gym.name}
-          </Text>
-
-          {distanceText && (
-            <View style={styles.distanceRow}>
-              <Feather name="map-pin" size={12} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.distanceText}>{distanceText}</Text>
+          {/* Top-left: image count badge */}
+          {imageCount > 0 && (
+            <View style={styles.imageCountBadge}>
+              <Feather name="image" size={11} color="#fff" />
+              <Text style={styles.imageCountText}>{imageCount} ta rasm</Text>
             </View>
           )}
 
-          <View style={styles.categoriesRow}>
-            {(gym.categories || []).slice(0, 3).map((cat) => (
-              <View key={cat} style={styles.categoryChip}>
-                <Text style={styles.categoryChipText}>{cat}</Text>
+          {/* Bottom overlay: name, distance, categories */}
+          <View style={styles.overlay}>
+            <Text style={styles.gymName} numberOfLines={1}>
+              {gym.name}
+            </Text>
+
+            {distanceText && (
+              <View style={styles.locationRow}>
+                <Feather name="map-pin" size={13} color="rgba(255,255,255,0.9)" />
+                <Text style={styles.locationText}>{distanceText}</Text>
               </View>
-            ))}
+            )}
+
+            {categoriesText.length > 0 && (
+              <Text style={styles.categoriesText} numberOfLines={1}>
+                {categoriesText}
+              </Text>
+            )}
           </View>
 
-          <View style={styles.btnRow}>
-            <TouchableOpacity
-              style={styles.btnDetail}
-              onPress={onPress}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.btnDetailText}>Batafsil</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.btnBook}
-              onPress={() => (onBook ? onBook(gym.id) : onPress())}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.btnBookText}>Band qilish</Text>
-            </TouchableOpacity>
+          {/* Bottom-left: kredit badge */}
+          <View style={styles.creditBadge}>
+            <Text style={styles.creditBadgeText}>{gym.credits} kredit</Text>
           </View>
         </View>
+      </TouchableOpacity>
+
+      {/* Action buttons */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={styles.btnDetail}
+          onPress={onPress}
+          activeOpacity={0.8}
+        >
+          <Feather name="info" size={15} color="#444" />
+          <Text style={styles.btnDetailText}>Batafsil</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.btnBook}
+          onPress={() => (onBook ? onBook(gym.id) : onPress())}
+          activeOpacity={0.8}
+        >
+          <Feather name="calendar" size={15} color="#fff" />
+          <Text style={styles.btnBookText}>Band qilish</Text>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
+    width: CARD_WIDTH,
+    borderRadius: 16,
     overflow: "hidden",
+    backgroundColor: "#fff",
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  imageContainer: {
-    height: 230,
-    position: "relative",
-    backgroundColor: Colors.card,
+
+  imageWrapper: {
+    width: CARD_WIDTH,
+    height: 240,
+    backgroundColor: "#e0e0e0",
   },
   image: {
     ...StyleSheet.absoluteFillObject,
   },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  creditBadge: {
+
+  imageCountBadge: {
     position: "absolute",
-    top: 14,
-    right: 14,
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    top: 12,
+    left: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 8,
+    paddingHorizontal: 9,
     paddingVertical: 5,
+  },
+  imageCountText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+
+  overlay: {
+    position: "absolute",
+    bottom: 44,
+    left: 14,
+    right: 14,
+    gap: 4,
+  },
+  gymName: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  locationText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.9)",
+    fontFamily: "Inter_400Regular",
+  },
+  categoriesText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    fontFamily: "Inter_400Regular",
+  },
+
+  creditBadge: {
+    position: "absolute",
+    bottom: 10,
+    left: 14,
+    backgroundColor: "#16a34a",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   creditBadgeText: {
     color: "#fff",
     fontSize: 12,
     fontFamily: "Inter_700Bold",
   },
-  ratingBadge: {
-    position: "absolute",
-    top: 14,
-    left: 14,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+
+  /* Action row */
+  actionRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  ratingText: {
-    color: "#fff",
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
-  overlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    gap: 8,
-  },
-  gymName: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  distanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  distanceText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.85)",
-  },
-  categoriesRow: {
-    flexDirection: "row",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  categoryChip: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  categoryChipText: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-  },
-  btnRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
   },
   btnDetail: {
     flex: 1,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    paddingVertical: 13,
+    borderRightWidth: 1,
+    borderRightColor: "#f0f0f0",
   },
   btnDetailText: {
-    color: "#fff",
+    color: "#333",
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
   btnBook: {
     flex: 1,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: Colors.primary,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
+    gap: 6,
+    paddingVertical: 13,
+    backgroundColor: "#2563EB",
   },
   btnBookText: {
     color: "#fff",
