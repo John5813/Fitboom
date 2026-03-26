@@ -17,7 +17,7 @@ import QRCode from "react-native-qrcode-svg";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiRequest } from "@/lib/api";
+import { getBookings, cancelBooking } from "@/services/api";
 import Colors from "@/constants/Colors";
 import BookingCard from "@/components/BookingCard";
 
@@ -31,8 +31,8 @@ export default function BookingsScreen() {
   const [qrBooking, setQrBooking] = useState<any>(null);
 
   const { data, refetch } = useQuery({
-    queryKey: ["/api/bookings"],
-    queryFn: () => apiRequest("/api/bookings"),
+    queryKey: ["bookings"],
+    queryFn: getBookings,
   });
 
   const allBookings = data?.bookings || [];
@@ -44,9 +44,9 @@ export default function BookingsScreen() {
   );
 
   const cancelMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/bookings/${id}`, "DELETE"),
+    mutationFn: (id: string) => cancelBooking(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();
     },
     onError: (err: any) => {

@@ -2,14 +2,24 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const fallbackBaseUrl = "https://api.fitboom.uz";
+const BASE_API_PATH = "/api/mobile/v1";
 
-const managedEnvBaseUrl =
-  (globalThis as any)?.EXPO_PUBLIC_API_BASE_URL ||
-  (globalThis as any)?.EXPO_PUBLIC_DOMAIN ||
-  (globalThis as any)?.API_BASE_URL;
+function resolveBaseUrl(): string {
+  const domain =
+    (globalThis as any)?.EXPO_PUBLIC_API_BASE_URL ||
+    (globalThis as any)?.EXPO_PUBLIC_DOMAIN ||
+    (globalThis as any)?.API_BASE_URL;
 
-export const API_BASE_URL = managedEnvBaseUrl || fallbackBaseUrl;
+  if (!domain) return "https://fitboom.replit.app";
+
+  if (domain.startsWith("http://") || domain.startsWith("https://")) {
+    return domain.replace(/\/$/, "");
+  }
+
+  return `https://${domain}`;
+}
+
+export const API_BASE_URL = resolveBaseUrl();
 export const TOKEN_STORAGE_KEY = "fitboom_jwt_token";
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -84,57 +94,89 @@ export function buildQueryKey(path: string): string[] {
 export interface LoginPayload {
   phone?: string;
   code?: string;
-  email?: string;
-  password?: string;
 }
 
-export const loginApi = async (payload: LoginPayload) =>
-  request<{ token: string; user?: any; }>("/api/auth/login", { method: "POST", body: payload });
+export const sendSmsCode = async (phone: string) =>
+  request<{ message: string; expiresIn: number }>(`${BASE_API_PATH}/auth/sms/send`, {
+    method: "POST",
+    body: { phone },
+  });
 
-export const getUser = async () => request<{ user: any }>("/api/user/me");
-export const getGyms = async () => request<{ gyms: any[] }>("/api/gyms");
+export const verifySmsCode = async (phone: string, code: string) =>
+  request<{ token: string; user: any }>(`${BASE_API_PATH}/auth/sms/verify`, {
+    method: "POST",
+    body: { phone, code },
+  });
+
+export const loginApi = async (payload: LoginPayload) =>
+  request<{ token: string; user?: any }>(`${BASE_API_PATH}/auth/login`, {
+    method: "POST",
+    body: payload,
+  });
+
+export const logoutApi = async () =>
+  request(`${BASE_API_PATH}/auth/logout`, { method: "POST" });
+
+export const getUser = async () =>
+  request<{ user: any }>(`${BASE_API_PATH}/user/me`);
+
+export const updateProfile = async (payload: {
+  name?: string;
+  age?: number;
+  gender?: string;
+  profileImageUrl?: string;
+}) => request(`${BASE_API_PATH}/user/me`, { method: "PUT", body: payload });
+
+export const updateUserProfile = async (payload: {
+  name: string;
+  age: number;
+  gender: string;
+}) => request(`${BASE_API_PATH}/user/profile`, { method: "PATCH", body: payload });
+
+export const getGyms = async () =>
+  request<{ gyms: any[] }>(`${BASE_API_PATH}/gyms`);
+
 export const getGymById = async (gymId: string) =>
-  request<{ gym: any }>(`/api/gyms/${gymId}`);
-export const getGymSlots = async (gymId: string) =>
-  request<{ slots: any[] }>(`/api/gyms/${gymId}/slots`);
+  request<{ gym: any }>(`${BASE_API_PATH}/gyms/${gymId}`);
+
+export const getGymSlots = async (gymId: string, date?: string) =>
+  request<{ slots: any[] }>(`${BASE_API_PATH}/gyms/${gymId}/slots${date ? `?date=${date}` : ""}`);
+
+export const getBookings = async () =>
+  request<{ bookings: any[] }>(`${BASE_API_PATH}/bookings`);
+
 export const bookGym = async (payload: {
   gymId: string;
   timeSlotId?: string | null;
   scheduledDate: string;
   startTime?: string;
   endTime?: string;
-}) => request("/api/bookings", { method: "POST", body: payload });
+}) => request(`${BASE_API_PATH}/bookings`, { method: "POST", body: payload });
 
-export const getBookings = async () => request<{ bookings: any[] }>("/api/bookings");
+export const cancelBooking = async (bookingId: string) =>
+  request(`${BASE_API_PATH}/bookings/${bookingId}`, { method: "DELETE" });
+
 export const getCreditHistory = async () =>
-  request<{ creditHistory: any[] }>("/api/credits/history");
-export const getTopupHistory = async () =>
-  request<{ topupHistory: any[] }>("/api/credits/topups");
-export const logoutApi = async () => request("/api/auth/logout", { method: "POST" });
-export const updateProfile = async (payload: {
-  name?: string;
-  age?: number;
-  gender?: string;
-  profileImageUrl?: string;
-}) => request("/api/user/me", { method: "PUT", body: payload });
-export const updateUserProfile = async (payload: {
-  name: string;
-  age: number;
-  gender: string;
-}) => request("/api/user/profile", { method: "PATCH", body: payload });
+  request<{ creditHistory: any[] }>(`${BASE_API_PATH}/credits/history`);
 
-export const uploadReceipt = async (formData: FormData) => {
-  const url = `${API_BASE_URL}/api/payments/upload-receipt`;
-  const response = await fetch(url, {
+export const getTopupHistory = async () =>
+  request<{ topupHistory: any[] }>(`${BASE_API_PATH}/credits/topups`);
+
+export const getCreditPackages = async () =>
+  request<{ packages: any[] }>(`${BASE_API_PATH}/payments/packages`);
+
+export const uploadReceipt = async (payload: {
+  amountCredits: number;
+  amountUzs: number;
+  receiptUrl?: string;
+}) =>
+  request(`${BASE_API_PATH}/payments/upload-receipt`, {
     method: "POST",
-    body: formData,
-    headers: {
-      ...(await getToken() ? { Authorization: `Bearer ${await getToken()}` } : {}),
-    },
+    body: payload,
   });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `HTTP ${response.status}`);
-  }
-  return response.json();
-};
+
+export const adminLogin = async (payload: { password: string }) =>
+  request<{ token: string; user: any }>(`${BASE_API_PATH}/auth/admin-login`, {
+    method: "POST",
+    body: payload,
+  });

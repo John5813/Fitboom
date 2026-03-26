@@ -51,6 +51,15 @@ export default function AuthScreen() {
       Alert.alert(t("common.error"), "Telefon raqamni kiriting");
       return;
     }
+    setLoading(true);
+    try {
+      const { sendSmsCode } = await import("@/services/api");
+      await sendSmsCode(phone);
+    } catch {
+      // still show code input - in dev the code is printed to server logs
+    } finally {
+      setLoading(false);
+    }
     setStep("code");
     setCountdown(60);
   };

@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { updateUserProfile } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CompleteProfileScreen() {
