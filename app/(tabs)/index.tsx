@@ -156,7 +156,7 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Sizga eng yaqin{"\n"}zallar</Text>
           <Text style={styles.sectionSubtitle}>Masofaga qarab saralangan</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/gyms" as any)}>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/map" as any)}>
           <Text style={styles.viewAll}>Barchasini ko'rish{"\n"}{">"}</Text>
         </TouchableOpacity>
       </View>
