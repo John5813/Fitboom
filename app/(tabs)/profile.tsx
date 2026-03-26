@@ -73,7 +73,7 @@ export default function ProfileScreen() {
     isLoading: topupHistoryLoading,
     refetch: refetchTopupHistory,
   } = useQuery({
-    queryKey: ["/api/credits/topups"],
+    queryKey: ["/credits"],
     queryFn: () => getTopupHistory(),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,

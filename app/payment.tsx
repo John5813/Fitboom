@@ -20,9 +20,9 @@ import { getPaymentConfig, uploadReceipt } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 const FALLBACK_PACKAGES = [
-  { credits: 6, priceUzs: 120000, label: "Boshlang'ich" },
-  { credits: 13, priceUzs: 250000, label: "Mashhur", popular: true },
-  { credits: 24, priceUzs: 450000, label: "Premium" },
+  { credits: 60, price: 60000, priceFormatted: "60 000 so'm" },
+  { credits: 130, price: 130000, priceFormatted: "130 000 so'm" },
+  { credits: 240, price: 240000, priceFormatted: "240 000 so'm" },
 ];
 
 const FALLBACK_CARD = "9860 1234 5678 9012";
@@ -35,12 +35,12 @@ export default function PaymentScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data: configData } = useQuery({
-    queryKey: ["payment-config"],
+    queryKey: ["/credits"],
     queryFn: getPaymentConfig,
   });
 
   const PACKAGES = configData?.packages || FALLBACK_PACKAGES;
-  const cardNumber = configData?.cardNumber || FALLBACK_CARD;
+  const cardNumber = FALLBACK_CARD;
   const [selectedPkg, setSelectedPkg] = useState<any>(null);
   const currentPkg = selectedPkg || PACKAGES[1] || PACKAGES[0];
 
