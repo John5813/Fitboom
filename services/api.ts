@@ -1,17 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-function resolveBaseUrl(): string {
-  const domain =
-    (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_DOMAIN) ||
-    (globalThis as any)?.EXPO_PUBLIC_DOMAIN;
-  if (!domain) return "https://fitboom.replit.app";
-  if (domain.startsWith("http://") || domain.startsWith("https://")) {
-    return domain.replace(/\/$/, "");
-  }
-  return `https://${domain}`;
-}
-
-export const API_BASE_URL = resolveBaseUrl();
+export const API_BASE_URL = "https://fitboom.replit.app";
 const BASE = "/api/mobile/v1";
 
 const ACCESS_TOKEN_KEY = "fitboom_access_token";
