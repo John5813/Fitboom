@@ -13,6 +13,7 @@ import Stripe from "stripe";
 import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl } from "./telegram";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
+import { registerMobileRoutes } from "./mobileRoutes";
 
 export function registerHealthCheck(app: Express) {
   app.get('/api/health', (_req, res) => {
@@ -2267,6 +2268,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "CAC hisoblashda xatolik" });
     }
   });
+
+  registerMobileRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
