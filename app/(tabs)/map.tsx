@@ -11,65 +11,21 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import { WebView } from "react-native-webview";
+import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 
 import { getGyms } from "@/services/api";
 
-const TASHKENT = { lat: 41.2995, lng: 69.2401 };
-
-function buildMapHtml(gyms: any[], userLat?: number, userLng?: number) {
-  const markers = gyms
-    .filter((g) => g.latitude && g.longitude)
-    .map(
-      (g) =>
-        `L.marker([${parseFloat(g.latitude)}, ${parseFloat(g.longitude)}])
-          .addTo(map)
-          .bindPopup("<b>${g.name}</b><br>${g.credits} kredit");`
-    )
-    .join("\n");
-
-  const userMarker =
-    userLat && userLng
-      ? `L.circleMarker([${userLat}, ${userLng}], {
-            radius: 8, color: '#fff', weight: 3,
-            fillColor: '#3b82f6', fillOpacity: 1
-          }).addTo(map).bindPopup("Siz bu yerdasiz");`
-      : "";
-
-  const centerLat = userLat || TASHKENT.lat;
-  const centerLng = userLng || TASHKENT.lng;
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body, #map { width: 100%; height: 100%; }
-</style>
-</head>
-<body>
-<div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-  var map = L.map('map').setView([${centerLat}, ${centerLng}], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
-  ${markers}
-  ${userMarker}
-</script>
-</body>
-</html>`;
-}
+const TASHKENT = { latitude: 41.2995, longitude: 69.2401 };
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const webViewRef = useRef<WebView>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const mapRef = useRef<MapView>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [locating, setLocating] = useState(false);
 
   const { data } = useQuery({
@@ -86,8 +42,16 @@ export default function MapScreen() {
       if (Platform.OS === "web") {
         navigator.geolocation?.getCurrentPosition(
           (pos) => {
-            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            const loc = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            };
             setUserLocation(loc);
+            mapRef.current?.animateToRegion({
+              ...loc,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            });
           },
           () => Alert.alert("Xatolik", "Joylashuv aniqlanmadi")
         );
@@ -98,28 +62,34 @@ export default function MapScreen() {
           return;
         }
         const pos = await Location.getCurrentPositionAsync({});
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const loc = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+        setUserLocation(loc);
+        mapRef.current?.animateToRegion({
+          ...loc,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
       }
     } finally {
       setLocating(false);
     }
   };
 
-  const mapHtml = buildMapHtml(
-    allGyms,
-    userLocation?.lat,
-    userLocation?.lng
-  );
-
   const topPad = Platform.OS === "web" ? 16 : insets.top + 8;
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: topPad, paddingBottom: 100 }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: topPad, paddingBottom: 100 },
+      ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
+      {/* Back button */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="x" size={20} color="#333" />
@@ -127,11 +97,13 @@ export default function MapScreen() {
       </View>
 
       <Text style={styles.title}>Eng Yaqin Zallar</Text>
-      <Text style={styles.subtitle}>Haritada sport zallarni ko'ring va tanlang</Text>
+      <Text style={styles.subtitle}>
+        Haritada sport zallarni ko'ring va tanlang
+      </Text>
 
       {/* Locate button */}
       <TouchableOpacity
-        style={styles.locateBtn}
+        style={[styles.locateBtn, locating && { opacity: 0.7 }]}
         onPress={handleLocate}
         disabled={locating}
         activeOpacity={0.85}
@@ -142,17 +114,35 @@ export default function MapScreen() {
         </Text>
       </TouchableOpacity>
 
-      {/* Map */}
+      {/* Map card */}
       <View style={styles.mapCard}>
-        <WebView
-          ref={webViewRef}
-          source={{ html: mapHtml }}
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_DEFAULT}
           style={styles.map}
-          originWhitelist={["*"]}
-          javaScriptEnabled
-          domStorageEnabled
-          scrollEnabled={false}
-        />
+          initialRegion={{
+            ...TASHKENT,
+            latitudeDelta: 0.12,
+            longitudeDelta: 0.12,
+          }}
+          showsUserLocation
+          showsMyLocationButton={false}
+          scrollEnabled
+          zoomEnabled
+        >
+          {gymsWithCoords.map((gym: any) => (
+            <Marker
+              key={gym.id}
+              coordinate={{
+                latitude: parseFloat(gym.latitude),
+                longitude: parseFloat(gym.longitude),
+              }}
+              title={gym.name}
+              description={`${gym.credits} kredit`}
+              onPress={() => router.push(`/gym/${gym.id}` as any)}
+            />
+          ))}
+        </MapView>
       </View>
 
       {/* Status */}
