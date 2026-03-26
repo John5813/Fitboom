@@ -12,7 +12,6 @@ run = ["bash", "-c", "NODE_ENV=production node dist/migrate.js && NODE_ENV=produ
 
 [[ports]]
 localPort = 5000
-externalPort = 80
 
 [env]
 PORT = "5000"
