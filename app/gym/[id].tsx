@@ -49,16 +49,16 @@ export default function GymDetailScreen() {
 
   const selectedDate = new Date();
   selectedDate.setDate(selectedDate.getDate() + selectedDayOffset);
-  const dayOfWeek = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1;
+  const selectedDateStr = selectedDate.toISOString().split("T")[0];
 
   const { data: slotsData } = useQuery({
-    queryKey: [`/api/gyms/${id}/slots`],
-    queryFn: () => (id ? getGymSlots(id) : Promise.resolve({ slots: [] })),
+    queryKey: [`/api/gyms/${id}/slots`, selectedDateStr],
+    queryFn: () => (id ? getGymSlots(id, selectedDateStr) : Promise.resolve({ slots: [] })),
     enabled: !!id,
   });
 
   const slots = (slotsData?.slots || []).filter(
-    (s: any) => s.dayOfWeek === String(dayOfWeek) || s.dayOfWeek === DAYS[dayOfWeek]
+    (s: any) => s.date === selectedDateStr
   );
 
   const bookMutation = useMutation({
@@ -98,13 +98,10 @@ export default function GymDetailScreen() {
   };
 
   const confirmBooking = () => {
-    const bookingDate = new Date();
-    bookingDate.setDate(bookingDate.getDate() + selectedDayOffset);
-
     bookMutation.mutate({
       gymId: id,
       timeSlotId: selectedSlot?.id || null,
-      scheduledDate: bookingDate.toISOString(),
+      scheduledDate: selectedDateStr,
       startTime: selectedSlot?.startTime,
       endTime: selectedSlot?.endTime,
     });

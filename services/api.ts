@@ -165,6 +165,9 @@ export const getTopupHistory = async () =>
 export const getCreditPackages = async () =>
   request<{ packages: any[] }>(`${BASE_API_PATH}/payments/packages`);
 
+export const getPaymentConfig = async () =>
+  request<{ cardNumber: string; packages: any[] }>(`${BASE_API_PATH}/payments/config`);
+
 export const uploadReceipt = async (payload: {
   amountCredits: number;
   amountUzs: number;

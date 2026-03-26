@@ -43,7 +43,7 @@ export default function CompleteProfileScreen() {
     }
     setLoading(true);
     try {
-      await apiRequest("/api/user/profile", "PATCH", {
+      await updateUserProfile({
         name: name.trim(),
         age: ageNum,
         gender,

@@ -13,88 +13,56 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/api";
+import { getPaymentConfig, uploadReceipt } from "@/services/api";
 import Colors from "@/constants/Colors";
 
-const PACKAGES = [
-  { credits: 6, price: 120000, label: "Boshlang'ich" },
-  { credits: 13, price: 250000, label: "Mashhur", popular: true },
-  { credits: 24, price: 450000, label: "Premium" },
+const FALLBACK_PACKAGES = [
+  { credits: 6, priceUzs: 120000, label: "Boshlang'ich" },
+  { credits: 13, priceUzs: 250000, label: "Mashhur", popular: true },
+  { credits: 24, priceUzs: 450000, label: "Premium" },
 ];
 
-const CARD_NUMBER = "9860 1234 5678 9012";
+const FALLBACK_CARD = "9860 1234 5678 9012";
 
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [selectedPkg, setSelectedPkg] = useState(PACKAGES[1]);
   const [uploading, setUploading] = useState(false);
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data: settingsData } = useQuery({
-    queryKey: ["/api/admin/settings"],
-    queryFn: () => apiRequest("/api/admin/settings"),
+  const { data: configData } = useQuery({
+    queryKey: ["payment-config"],
+    queryFn: getPaymentConfig,
   });
 
-  const cardNumber =
-    settingsData?.settings?.find((s: any) => s.settingKey === "payment_card")
-      ?.settingValue || CARD_NUMBER;
+  const PACKAGES = configData?.packages || FALLBACK_PACKAGES;
+  const cardNumber = configData?.cardNumber || FALLBACK_CARD;
+  const [selectedPkg, setSelectedPkg] = useState<any>(null);
+  const currentPkg = selectedPkg || PACKAGES[1] || PACKAGES[0];
 
   const copyCard = () => {
     Clipboard.setString(cardNumber.replace(/\s/g, ""));
     Alert.alert("Nusxa olindi", "Karta raqami nusxa olindi");
   };
 
-  const uploadReceipt = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(t("common.error"), "Rasm kiritishga ruxsat berilmadi");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
+  const handleUploadReceipt = async () => {
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("receipt", {
-        uri: result.assets[0].uri,
-        type: "image/jpeg",
-        name: "receipt.jpg",
-      } as any);
-      formData.append("credits", String(selectedPkg.credits));
-      formData.append("price", String(selectedPkg.price));
-
-      const baseUrl = process.env.EXPO_PUBLIC_DOMAIN
-        ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-        : "";
-
-      const res = await fetch(`${baseUrl}/api/payments/upload-receipt`, {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-        headers: { "Content-Type": "multipart/form-data" },
+      await uploadReceipt({
+        amountCredits: currentPkg.credits,
+        amountUzs: currentPkg.priceUzs || currentPkg.price,
       });
-
-      if (res.ok) {
-        Alert.alert(
-          t("common.success"),
-          t("payment.receipt_sent"),
-          [{ text: "OK", onPress: () => router.back() }]
-        );
-      } else {
-        throw new Error("Upload failed");
-      }
+      Alert.alert(
+        t("common.success"),
+        t("payment.receipt_sent"),
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     } catch (err: any) {
-      Alert.alert(t("common.error"), "Chekni yuborishda xatolik yuz berdi");
+      Alert.alert(t("common.error"), err?.message || "Chekni yuborishda xatolik yuz berdi");
     } finally {
       setUploading(false);
     }
@@ -122,54 +90,58 @@ export default function PaymentScreen() {
 
         <Text style={styles.sectionTitle}>Paket tanlang</Text>
         <View style={styles.packages}>
-          {PACKAGES.map((pkg) => (
-            <TouchableOpacity
-              key={pkg.credits}
-              style={[
-                styles.packageCard,
-                selectedPkg.credits === pkg.credits && styles.packageCardActive,
-                pkg.popular && styles.packageCardPopular,
-              ]}
-              onPress={() => setSelectedPkg(pkg)}
-            >
-              {pkg.popular && (
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularBadgeText}>Mashhur</Text>
+          {PACKAGES.map((pkg: any) => {
+            const isActive = currentPkg.credits === pkg.credits;
+            const price = pkg.priceUzs || pkg.price;
+            return (
+              <TouchableOpacity
+                key={pkg.credits}
+                style={[
+                  styles.packageCard,
+                  isActive && styles.packageCardActive,
+                  pkg.popular && styles.packageCardPopular,
+                ]}
+                onPress={() => setSelectedPkg(pkg)}
+              >
+                {pkg.popular && (
+                  <View style={styles.popularBadge}>
+                    <Text style={styles.popularBadgeText}>Mashhur</Text>
+                  </View>
+                )}
+                <View style={styles.packageIconRow}>
+                  <Feather
+                    name="key"
+                    size={20}
+                    color={isActive ? "#fff" : Colors.primary}
+                  />
                 </View>
-              )}
-              <View style={styles.packageIconRow}>
-                <Feather
-                  name="key"
-                  size={20}
-                  color={selectedPkg.credits === pkg.credits ? "#fff" : Colors.primary}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.packageCredits,
-                  selectedPkg.credits === pkg.credits && styles.packageCreditsActive,
-                ]}
-              >
-                {pkg.credits}
-              </Text>
-              <Text
-                style={[
-                  styles.packageLabel,
-                  selectedPkg.credits === pkg.credits && { color: "rgba(255,255,255,0.8)" },
-                ]}
-              >
-                kredit
-              </Text>
-              <Text
-                style={[
-                  styles.packagePrice,
-                  selectedPkg.credits === pkg.credits && { color: "#fff" },
-                ]}
-              >
-                {(pkg.price / 1000).toFixed(0)}K so'm
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.packageCredits,
+                    isActive && styles.packageCreditsActive,
+                  ]}
+                >
+                  {pkg.credits}
+                </Text>
+                <Text
+                  style={[
+                    styles.packageLabel,
+                    isActive && { color: "rgba(255,255,255,0.8)" },
+                  ]}
+                >
+                  kredit
+                </Text>
+                <Text
+                  style={[
+                    styles.packagePrice,
+                    isActive && { color: "#fff" },
+                  ]}
+                >
+                  {((price) / 1000).toFixed(0)}K so'm
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.instructionCard}>
@@ -177,7 +149,7 @@ export default function PaymentScreen() {
           <Text style={styles.instructionText}>
             Quyidagi karta raqamiga{" "}
             <Text style={styles.instructionHighlight}>
-              {selectedPkg.price.toLocaleString()} so'm
+              {(currentPkg.priceUzs || currentPkg.price || 0).toLocaleString()} so'm
             </Text>{" "}
             o'tkazing va chek rasmini yuboring.
           </Text>
@@ -195,14 +167,14 @@ export default function PaymentScreen() {
           <View style={styles.amountRow}>
             <Text style={styles.amountLabel}>Miqdor:</Text>
             <Text style={styles.amountValue}>
-              {selectedPkg.price.toLocaleString()} so'm
+              {(currentPkg.priceUzs || currentPkg.price || 0).toLocaleString()} so'm
             </Text>
           </View>
         </View>
 
         <TouchableOpacity
           style={[styles.uploadBtn, uploading && { opacity: 0.7 }]}
-          onPress={uploadReceipt}
+          onPress={handleUploadReceipt}
           disabled={uploading}
         >
           <Feather name={uploading ? "loader" : "upload"} size={20} color="#fff" />
