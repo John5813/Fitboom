@@ -125,13 +125,19 @@ export async function request<T = unknown>(
     }
   }
 
+  const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
+
+  if (!contentType.includes("application/json")) {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    throw new Error("API ishlamadi");
+  }
+
   let json: any;
   try {
     json = JSON.parse(text);
   } catch {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return text as unknown as T;
+    throw new Error("API ishlamadi");
   }
 
   if (!response.ok) {
