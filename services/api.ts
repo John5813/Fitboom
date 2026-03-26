@@ -155,12 +155,20 @@ export interface LoginPayload {
   code?: string;
 }
 
-export const sendSmsCode = async (phone: string) =>
-  request<{ message: string }>("/auth/sms/send", {
-    method: "POST",
-    body: { phone },
-    skipAuth: true,
-  });
+export const sendSmsCode = async (phone: string) => {
+  try {
+    const result = await request<{ message: string }>("/auth/sms/send", {
+      method: "POST",
+      body: { phone },
+      skipAuth: true,
+    });
+    console.log("[SMS send] success:", result);
+    return result;
+  } catch (err) {
+    console.log("[SMS send] error:", err);
+    throw err;
+  }
+};
 
 export interface VerifyResponse {
   accessToken: string;
