@@ -250,11 +250,11 @@ export function registerMobileRoutes(app: Express) {
       if (!name || !age || !gender) {
         return mobileError(res, "Ism, yosh va jins talab qilinadi");
       }
-      if (typeof age !== 'number' || age < 5 || age > 120) {
-        return mobileError(res, "Yosh 5 dan 120 gacha bo'lishi kerak");
+      if (typeof age !== 'number' || age < 10 || age > 100) {
+        return mobileError(res, "Yosh 10 dan 100 gacha bo'lishi kerak");
       }
-      if (!['male', 'female'].includes(gender)) {
-        return mobileError(res, "Jins 'male' yoki 'female' bo'lishi kerak");
+      if (!['Erkak', 'Ayol'].includes(gender)) {
+        return mobileError(res, "Jins 'Erkak' yoki 'Ayol' bo'lishi kerak");
       }
 
       const updated = await storage.completeUserProfile(mobileUser.id, { name, age, gender });
@@ -326,14 +326,14 @@ export function registerMobileRoutes(app: Express) {
       const updateData: any = {};
       if (name !== undefined) updateData.name = name;
       if (age !== undefined) {
-        if (typeof age !== 'number' || age < 5 || age > 120) {
-          return mobileError(res, "Yosh 5 dan 120 gacha bo'lishi kerak");
+        if (typeof age !== 'number' || age < 10 || age > 100) {
+          return mobileError(res, "Yosh 10 dan 100 gacha bo'lishi kerak");
         }
         updateData.age = age;
       }
       if (gender !== undefined) {
-        if (!['male', 'female'].includes(gender)) {
-          return mobileError(res, "Jins 'male' yoki 'female' bo'lishi kerak");
+        if (!['Erkak', 'Ayol'].includes(gender)) {
+          return mobileError(res, "Jins 'Erkak' yoki 'Ayol' bo'lishi kerak");
         }
         updateData.gender = gender;
       }

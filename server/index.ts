@@ -6,7 +6,18 @@ import { setupTelegramWebhook, setupCreditExpiryScheduler } from './telegram';
 import { storage } from './storage';
 
 process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught Exception:', err.message, err.stack);
+  const msg = err.message || '';
+  // Neon serverless DB ulanish uzilishi — bu normal holat, server ishini davom ettiradi
+  if (
+    msg.includes('terminating connection') ||
+    msg.includes('Connection terminated') ||
+    msg.includes('connection timeout') ||
+    msg.includes('ECONNRESET')
+  ) {
+    console.warn('[WARN] DB connection reset (normal for serverless):', msg);
+    return;
+  }
+  console.error('[FATAL] Uncaught Exception:', msg, err.stack);
   setTimeout(() => process.exit(1), 1000);
 });
 
