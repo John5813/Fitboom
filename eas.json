@@ -6,23 +6,17 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "image": "latest"
-      }
+      "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
       "android": {
         "buildType": "apk",
         "image": "latest"
-      }
+      },
+      "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true,
-      "android": {
-        "image": "latest"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {

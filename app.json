@@ -1,22 +1,12 @@
 {
   "expo": {
-    "name": "FitBoom",
-    "slug": "fitboom",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "android": {
-      "package": "com.javlon5813.restexpress",
-      "adaptiveIcon": {
-        "backgroundColor": "#000000"
-      }
-    },
     "extra": {
       "eas": {
         "projectId": "9e38ba4b-ea40-402b-9133-b1dcb4dbc7b6"
       }
     },
-    "plugins": []
+    "android": {
+      "package": "com.javlon5813.restexpress"
+    }
   }
 }
