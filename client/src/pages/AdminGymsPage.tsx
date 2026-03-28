@@ -1530,7 +1530,7 @@ export default function AdminGymsPage() {
             </DialogHeader>
           </div>
 
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             <div className="p-5 space-y-5">
 
               {/* Section 1: Asosiy ma'lumotlar */}
@@ -1881,7 +1881,7 @@ export default function AdminGymsPage() {
                 </div>
               </div>
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="border-t p-4 flex gap-3 shrink-0 bg-background">
             <Button
