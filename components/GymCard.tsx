@@ -9,7 +9,6 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
-import { fixImageUrl } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
@@ -40,7 +39,7 @@ interface GymCardProps {
 export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
   const [imgError, setImgError] = useState(false);
   const imageCount = gym.images?.length ?? 1;
-  const fixedUrl = fixImageUrl(gym.imageUrl);
+  const imageUrl = gym.imageUrl;
 
   const distanceText =
     typeof gym.distance === "number"
@@ -56,7 +55,7 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
         .join(", ")
     : "";
 
-  const showImage = !!fixedUrl && !imgError;
+  const showImage = !!imageUrl && !imgError;
 
   return (
     <View style={styles.card}>
@@ -64,7 +63,7 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
         <View style={styles.imageWrapper}>
           {showImage ? (
             <Image
-              source={{ uri: fixedUrl }}
+              source={{ uri: imageUrl }}
               style={styles.image}
               contentFit="cover"
               transition={300}

@@ -16,7 +16,7 @@ import { Image } from "expo-image";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { request, fixImageUrl } from "@/services/api";
+import { request } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CoursesScreen() {
@@ -97,7 +97,7 @@ export default function CoursesScreen() {
             return (
               <View key={col.id} style={styles.courseCard}>
                 <Image
-                  source={{ uri: fixImageUrl(col.thumbnailUrl) }}
+                  source={{ uri: col.thumbnailUrl }}
                   style={styles.thumbnail}
                   contentFit="cover"
                   transition={300}

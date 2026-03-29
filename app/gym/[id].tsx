@@ -21,7 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getGymById, getGymSlots, bookGym, fixImageUrl } from "@/services/api";
+import { getGymById, getGymSlots, bookGym } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
@@ -145,7 +145,7 @@ export default function GymDetailScreen() {
   };
 
   const images = gym
-    ? [gym.imageUrl, ...(gym.images || [])].filter(Boolean).map((u: string) => fixImageUrl(u) || u)
+    ? [gym.imageUrl, ...(gym.images || [])].filter(Boolean)
     : [];
 
   if (isLoading) {
