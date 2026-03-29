@@ -28,6 +28,12 @@ const { width } = Dimensions.get("window");
 
 const DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 
+function getCategoryLabel(cat: any): string {
+  if (!cat) return "";
+  if (typeof cat === "string") return cat;
+  return cat.name || cat.id || "";
+}
+
 export default function GymDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -53,13 +59,12 @@ export default function GymDetailScreen() {
 
   const { data: slotsData } = useQuery({
     queryKey: [`/api/gyms/${id}/slots`, selectedDateStr],
-    queryFn: () => (id ? getGymSlots(id, selectedDateStr) : Promise.resolve({ slots: [] })),
+    queryFn: () => (id ? getGymSlots(id, selectedDateStr) : Promise.resolve({ slots: [], is_day_off: false })),
     enabled: !!id,
   });
 
-  const slots = (slotsData?.slots || []).filter(
-    (s: any) => s.date === selectedDateStr
-  );
+  const isDayOff = slotsData?.is_day_off === true || slotsData?.isClosed === true;
+  const slots = slotsData?.slots || [];
 
   const bookMutation = useMutation({
     mutationFn: (data: any) => bookGym(data),
@@ -202,13 +207,15 @@ export default function GymDetailScreen() {
             )}
           </View>
 
-          <View style={styles.categoriesRow}>
-            {(gym.categories || []).map((cat: string) => (
-              <View key={cat} style={styles.categoryTag}>
-                <Text style={styles.categoryTagText}>{cat}</Text>
-              </View>
-            ))}
-          </View>
+          {(gym.categories || []).length > 0 && (
+            <View style={styles.categoriesRow}>
+              {(gym.categories || []).map((cat: any, i: number) => (
+                <View key={i} style={styles.categoryTag}>
+                  <Text style={styles.categoryTagText}>{getCategoryLabel(cat)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
@@ -244,9 +251,9 @@ export default function GymDetailScreen() {
           )}
 
           {gym.facilities && (
-            <View style={styles.facilitiesCard}>
-              <Text style={styles.facilitiesTitle}>{t("gym.facilities")}</Text>
-              <Text style={styles.facilitiesText}>{gym.facilities}</Text>
+            <View style={styles.descCard}>
+              <Text style={styles.descTitle}>{t("gym.facilities")}</Text>
+              <Text style={styles.descText}>{gym.facilities}</Text>
             </View>
           )}
 
@@ -257,9 +264,7 @@ export default function GymDetailScreen() {
       <View
         style={[
           styles.bottomBar,
-          {
-            paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16,
-          },
+          { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16 },
         ]}
       >
         <View style={styles.bottomCreditInfo}>
@@ -331,7 +336,14 @@ export default function GymDetailScreen() {
             </ScrollView>
 
             <Text style={styles.sectionLabel}>{t("gym.select_slot")}</Text>
-            {slots.length === 0 ? (
+
+            {isDayOff ? (
+              <View style={styles.dayOffBox}>
+                <Feather name="moon" size={24} color={Colors.textSecondary} />
+                <Text style={styles.dayOffText}>Dam olish kuni</Text>
+                <Text style={styles.dayOffSub}>Bu kunda zal yopiq</Text>
+              </View>
+            ) : slots.length === 0 ? (
               <Text style={styles.noSlotsText}>{t("gym.no_slots")}</Text>
             ) : (
               <View style={styles.slotsGrid}>
@@ -370,22 +382,24 @@ export default function GymDetailScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                bookMutation.isPending && { opacity: 0.7 },
-              ]}
-              onPress={confirmBooking}
-              disabled={bookMutation.isPending}
-            >
-              {bookMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.confirmBtnText}>
-                  {t("gym.confirm_booking")} ({gym.credits} kredit)
-                </Text>
-              )}
-            </TouchableOpacity>
+            {!isDayOff && (
+              <TouchableOpacity
+                style={[
+                  styles.confirmBtn,
+                  bookMutation.isPending && { opacity: 0.7 },
+                ]}
+                onPress={confirmBooking}
+                disabled={bookMutation.isPending}
+              >
+                {bookMutation.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>
+                    {t("gym.confirm_booking")} ({gym.credits} kredit)
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -470,7 +484,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: "rgba(245,158,11,0.12)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
@@ -493,7 +507,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   infoCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
@@ -530,7 +544,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   descCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 16,
     gap: 8,
@@ -543,25 +557,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   descText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 21,
-  },
-  facilitiesCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  facilitiesTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
-  },
-  facilitiesText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
@@ -580,6 +575,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.cardBorder,
     gap: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 10,
   },
   bottomCreditInfo: { flex: 1 },
   bottomCreditLabel: {
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalSheet: {
@@ -664,6 +664,25 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   dayBtnDateActive: { color: Colors.primary },
+  dayOffBox: {
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  dayOffText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  dayOffSub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+  },
   noSlotsText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",

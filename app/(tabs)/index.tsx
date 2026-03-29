@@ -123,10 +123,7 @@ export default function HomeScreen() {
           <Text style={styles.keyEmoji}>🔑</Text>
           <View>
             <Text style={styles.creditLabel}>Kredit balansi</Text>
-            <Text style={styles.creditValue}>
-              Kredit balansi:{" "}
-              <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
-            </Text>
+            <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
             {daysLeft !== null && !isExpired && (
               <View style={styles.daysRow}>
                 <Feather name="clock" size={12} color="rgba(255,255,255,0.85)" />
@@ -156,8 +153,12 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Sizga eng yaqin{"\n"}zallar</Text>
           <Text style={styles.sectionSubtitle}>Masofaga qarab saralangan</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/map" as any)}>
-          <Text style={styles.viewAll}>Barchasini ko'rish{"\n"}{">"}</Text>
+        <TouchableOpacity
+          style={styles.viewAllBtn}
+          onPress={() => router.push("/(tabs)/gyms" as any)}
+        >
+          <Text style={styles.viewAll}>Barchasini ko'rish</Text>
+          <Feather name="arrow-right" size={14} color="#F97316" />
         </TouchableOpacity>
       </View>
 
@@ -323,12 +324,15 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 3,
   },
+  viewAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   viewAll: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: "#2563EB",
-    textAlign: "right",
-    lineHeight: 18,
+    color: "#F97316",
   },
 
   /* Empty */

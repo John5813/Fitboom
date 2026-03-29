@@ -15,32 +15,29 @@ import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getGyms } from "@/services/api";
+import { getGyms, getCategories } from "@/services/api";
 import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
-
-const CATEGORIES = [
-  "all",
-  "fitness",
-  "swimming",
-  "yoga",
-  "boxing",
-  "crossfit",
-  "basketball",
-  "tennis",
-];
 
 export default function GymsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const { data: catData } = useQuery({
+    queryKey: ["/api/categories"],
+    queryFn: () => getCategories(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const categories: { id: string; name: string; icon?: string }[] =
+    catData?.categories || [];
+
   const { data, refetch } = useQuery({
-    queryKey: ["/api/gyms"],
-    queryFn: () => getGyms(),
+    queryKey: ["/api/gyms", selectedCategoryId],
+    queryFn: () => getGyms(selectedCategoryId ?? undefined),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,
   });
@@ -48,20 +45,13 @@ export default function GymsScreen() {
   const gyms = data?.gyms || [];
 
   const filtered = useMemo(() => {
-    return gyms.filter((gym: any) => {
-      const matchSearch =
-        !search ||
-        gym.name.toLowerCase().includes(search.toLowerCase()) ||
-        (gym.address || "").toLowerCase().includes(search.toLowerCase());
-      const matchCategory =
-        category === "all" ||
-        (gym.categories || []).some((c: string) =>
-          c.toLowerCase().includes(category.toLowerCase())
-        );
-      const matchPrice = !maxPrice || gym.credits <= maxPrice;
-      return matchSearch && matchCategory && matchPrice;
-    });
-  }, [gyms, search, category, maxPrice]);
+    if (!search) return gyms;
+    const q = search.toLowerCase();
+    return gyms.filter((gym: any) =>
+      gym.name.toLowerCase().includes(q) ||
+      (gym.address || "").toLowerCase().includes(q)
+    );
+  }, [gyms, search]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -73,13 +63,7 @@ export default function GymsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: topPadding + 12 },
-        ]}
-      >
+      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
         <Text style={styles.title}>{t("gyms.title")}</Text>
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
@@ -99,36 +83,51 @@ export default function GymsScreen() {
           </View>
         </View>
 
-        {/* Category Filter */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.categoriesScroll}
           contentContainerStyle={styles.categoriesContent}
         >
-          {CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            style={[
+              styles.categoryChip,
+              selectedCategoryId === null && styles.categoryChipActive,
+            ]}
+            onPress={() => setSelectedCategoryId(null)}
+          >
+            <Text
+              style={[
+                styles.categoryChipText,
+                selectedCategoryId === null && styles.categoryChipTextActive,
+              ]}
+            >
+              {t("gyms.all")}
+            </Text>
+          </TouchableOpacity>
+
+          {categories.map((cat) => (
             <TouchableOpacity
-              key={cat}
+              key={cat.id}
               style={[
                 styles.categoryChip,
-                category === cat && styles.categoryChipActive,
+                selectedCategoryId === cat.id && styles.categoryChipActive,
               ]}
-              onPress={() => setCategory(cat)}
+              onPress={() => setSelectedCategoryId(cat.id)}
             >
               <Text
                 style={[
                   styles.categoryChipText,
-                  category === cat && styles.categoryChipTextActive,
+                  selectedCategoryId === cat.id && styles.categoryChipTextActive,
                 ]}
               >
-                {cat === "all" ? t("gyms.all") : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {cat.icon ? `${cat.icon} ` : ""}{cat.name}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Gyms List */}
       <ScrollView
         contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
         refreshControl={
@@ -183,7 +182,7 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -198,12 +197,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   categoriesScroll: { marginHorizontal: -16 },
-  categoriesContent: { paddingHorizontal: 16, gap: 8 },
+  categoriesContent: { paddingHorizontal: 16, gap: 8, paddingVertical: 4 },
   categoryChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
   },
