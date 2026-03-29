@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
@@ -73,7 +74,6 @@ export default function ScannerScreen() {
       <Text style={styles.subtitle}>{t("scanner.desc")}</Text>
 
       <View style={styles.scannerFrame}>
-        {/* Corner decorators */}
         <View style={[styles.corner, styles.cornerTL]} />
         <View style={[styles.corner, styles.cornerTR]} />
         <View style={[styles.corner, styles.cornerBL]} />
@@ -92,7 +92,6 @@ export default function ScannerScreen() {
             <View style={styles.scanInner}>
               <Feather name="grid" size={32} color={Colors.primary} style={styles.qrIcon} />
             </View>
-            {/* Animated scan line */}
             <Animated.View
               style={[
                 styles.scanLine,
@@ -108,6 +107,34 @@ export default function ScannerScreen() {
           ? "Skanerlash uchun kameraga ruxsat bering"
           : "QR kodni ramka ichiga joylashtiring"}
       </Text>
+
+      {/* Quick navigation buttons */}
+      <View style={[styles.quickNav, { paddingBottom: insets.bottom + 80 }]}>
+        <Text style={styles.quickNavLabel}>Tezkor o'tish</Text>
+        <View style={styles.quickNavRow}>
+          <TouchableOpacity
+            style={styles.quickNavBtn}
+            onPress={() => router.push("/(tabs)" as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.quickNavIcon, { backgroundColor: Colors.primaryLight }]}>
+              <Feather name="home" size={22} color={Colors.primary} />
+            </View>
+            <Text style={styles.quickNavBtnText}>Bosh sahifa</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickNavBtn}
+            onPress={() => router.push("/(tabs)/gyms" as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.quickNavIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
+              <Feather name="activity" size={22} color="#10b981" />
+            </View>
+            <Text style={styles.quickNavBtnText}>Zallar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -126,10 +153,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: Colors.text,
     marginBottom: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
   },
   subtitle: {
     fontSize: 14,
@@ -175,10 +198,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     borderRadius: 1,
   },
-  noPermBox: {
-    alignItems: "center",
-    gap: 12,
-  },
+  noPermBox: { alignItems: "center", gap: 12 },
   noPermText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
@@ -196,10 +216,57 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   hint: {
-    marginTop: 32,
+    marginTop: 28,
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
+  },
+  quickNav: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    alignItems: "center",
+    gap: 12,
+  },
+  quickNavLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
+  quickNavRow: {
+    flexDirection: "row",
+    gap: 16,
+    width: "100%",
+  },
+  quickNavBtn: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  quickNavIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quickNavBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
   },
 });
