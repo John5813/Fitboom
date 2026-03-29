@@ -2,6 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BASE_URL = "https://fitboom--gangster5813.replit.app/api/mobile/v1";
 
+export function fixImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  return url.replace("https://fitboom--gangster5813.replit.app/api/images/", "https://fitboom--gangster5813.replit.app/images/");
+}
+
 const ACCESS_TOKEN_KEY = "fitboom_access_token";
 const REFRESH_TOKEN_KEY = "fitboom_refresh_token";
 

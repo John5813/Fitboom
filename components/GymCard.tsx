@@ -9,6 +9,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
+import { fixImageUrl } from "@/services/api";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -53,7 +54,7 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
       <TouchableOpacity onPress={onPress} activeOpacity={0.95}>
         <View style={styles.imageWrapper}>
           <Image
-            source={{ uri: gym.imageUrl }}
+            source={{ uri: fixImageUrl(gym.imageUrl) }}
             style={styles.image}
             contentFit="cover"
             transition={300}

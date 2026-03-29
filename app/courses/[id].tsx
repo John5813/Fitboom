@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
 import { useLanguage } from "@/contexts/LanguageContext";
-import { request } from "@/services/api";
+import { request, fixImageUrl } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CourseDetailScreen() {
@@ -65,7 +65,7 @@ export default function CourseDetailScreen() {
       >
         {collection?.thumbnailUrl && (
           <Image
-            source={{ uri: collection.thumbnailUrl }}
+            source={{ uri: fixImageUrl(collection.thumbnailUrl) }}
             style={styles.thumbnail}
             contentFit="cover"
             transition={300}
@@ -97,7 +97,7 @@ export default function CourseDetailScreen() {
               <View style={styles.videoThumbnail}>
                 {video.thumbnailUrl ? (
                   <Image
-                    source={{ uri: video.thumbnailUrl }}
+                    source={{ uri: fixImageUrl(video.thumbnailUrl) }}
                     style={styles.videoThumb}
                     contentFit="cover"
                   />
