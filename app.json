@@ -2,7 +2,6 @@
   "expo": {
     "name": "Fitboom",
     "slug": "fitboom",
-    "owner": "Javlon5813",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -26,10 +25,11 @@
     "android": {
       "package": "com.javlon5813.fitboom",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -56,6 +56,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4d77dde7-6475-40f8-b380-e10951c3e0c4"
+      }
+    },
+    "owner": "javlon5813"
   }
 }

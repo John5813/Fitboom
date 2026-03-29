@@ -156,6 +156,63 @@ export async function request<T = unknown>(
   return (json?.data !== undefined ? json.data : json) as T;
 }
 
+async function multipartRequest<T = unknown>(
+  path: string,
+  formData: FormData
+): Promise<T> {
+  const token = await getAccessToken();
+  const url = `${BASE_URL}${path}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+  } catch {
+    throw new Error("API ishlamadi");
+  }
+
+  if (response.status === 401) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${newToken}` },
+          body: formData,
+        });
+      } catch {
+        throw new Error("API ishlamadi");
+      }
+    } else {
+      throw new Error("SESSION_EXPIRED");
+    }
+  }
+
+  const text = await response.text();
+  let json: any;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("API ishlamadi");
+  }
+
+  if (!response.ok) {
+    const msg = json?.error || json?.message || json?.data?.message || `HTTP ${response.status}`;
+    throw new Error(msg);
+  }
+
+  if (json?.success === false) {
+    throw new Error(json?.error || "Xatolik yuz berdi");
+  }
+
+  return (json?.data !== undefined ? json.data : json) as T;
+}
+
 export interface LoginPayload {
   phone?: string;
   code?: string;
@@ -220,6 +277,13 @@ export const loginApi = async (payload: LoginPayload) =>
     skipAuth: true,
   });
 
+export const adminLogin = async (payload: { password: string }) =>
+  request<{ token: string; user: any }>("/auth/admin-login", {
+    method: "POST",
+    body: payload,
+    skipAuth: true,
+  });
+
 export const getUser = async () =>
   request<{ user: any }>("/user/me");
 
@@ -246,14 +310,35 @@ export const updateUserProfile = async (payload: {
   gender: string;
 }) => request("/user/profile", { method: "PATCH", body: payload });
 
-export const getGyms = async () =>
-  request<{ gyms: any[] }>("/gyms");
+export const uploadAvatar = async (imageUri: string): Promise<{ imageUrl: string; user: any }> => {
+  const formData = new FormData();
+  formData.append("image", {
+    uri: imageUri,
+    type: "image/jpeg",
+    name: "avatar.jpg",
+  } as any);
+  return multipartRequest<{ imageUrl: string; user: any }>("/user/avatar", formData);
+};
+
+export const getCategories = async (): Promise<{ categories: any[] }> =>
+  request<{ categories: any[] }>("/categories");
+
+export const getGyms = async (category?: string) =>
+  request<{ gyms: any[] }>(`/gyms${category ? `?category=${category}` : ""}`);
 
 export const getGymById = async (gymId: string) =>
   request<{ gym: any }>(`/gyms/${gymId}`);
 
 export const getGymSlots = async (gymId: string, date?: string) =>
-  request<{ slots: any[] }>(`/gyms/${gymId}/slots${date ? `?date=${date}` : ""}`);
+  request<{
+    date: string;
+    dayOfWeek: string;
+    dayNum: number;
+    is_day_off: boolean;
+    isClosed: boolean;
+    slots: any[];
+    message?: string;
+  }>(`/gyms/${gymId}/slots${date ? `?date=${date}` : ""}`);
 
 export const getBookings = async () =>
   request<{ bookings: any[] }>("/bookings");
@@ -270,15 +355,50 @@ export const cancelBooking = async (bookingId: string) =>
   request(`/bookings/${bookingId}`, { method: "DELETE" });
 
 export const getCredits = async () =>
-  request<{ credits: number; packages: any[] }>("/credits");
+  request<{ credits: number; creditExpiryDate?: string; daysUntilExpiry?: number; packages: any[] }>("/credits");
 
 export const getCreditHistory = async () => getCredits();
-
 export const getTopupHistory = async () => getCredits();
-
 export const getCreditPackages = async () => getCredits();
-
 export const getPaymentConfig = async () => getCredits();
+
+export interface PurchaseResponse {
+  paymentId: string;
+  credits: number;
+  price: number;
+  message: string;
+}
+
+export const purchaseCredits = async (
+  credits: number,
+  receiptUri: string,
+  price?: number
+): Promise<PurchaseResponse> => {
+  const formData = new FormData();
+  formData.append("receipt", {
+    uri: receiptUri,
+    type: "image/jpeg",
+    name: "receipt.jpg",
+  } as any);
+  formData.append("credits", String(credits));
+  if (price !== undefined) {
+    formData.append("price", String(price));
+  }
+  return multipartRequest<PurchaseResponse>("/credits/purchase", formData);
+};
+
+export interface PaymentStatusResponse {
+  paymentId: string;
+  status: "pending" | "approved" | "rejected" | "partial";
+  credits: number;
+  price: number;
+  remainingAmount: number;
+  currentBalance: number;
+  creditExpiryDate?: string;
+}
+
+export const getPaymentStatus = async (paymentId: string): Promise<PaymentStatusResponse> =>
+  request<PaymentStatusResponse>(`/credits/payment/${paymentId}/status`);
 
 export const uploadReceipt = async (payload: {
   amountCredits: number;
@@ -288,11 +408,4 @@ export const uploadReceipt = async (payload: {
   request("/payments/upload-receipt", {
     method: "POST",
     body: payload,
-  });
-
-export const adminLogin = async (payload: { password: string }) =>
-  request<{ token: string; user: any }>("/auth/admin-login", {
-    method: "POST",
-    body: payload,
-    skipAuth: true,
   });

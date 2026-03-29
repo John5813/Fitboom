@@ -19,11 +19,13 @@ import { Image } from "expo-image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import {
   updateUserProfile,
   adminLogin,
   getCreditHistory,
   getTopupHistory,
+  uploadAvatar,
 } from "@/services/api";
 import Colors from "@/constants/Colors";
 
@@ -47,6 +49,7 @@ export default function ProfileScreen() {
     (user?.gender as "Erkak" | "Ayol") || ""
   );
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
@@ -94,6 +97,30 @@ export default function ProfileScreen() {
       Alert.alert(t("common.error"), err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Ruxsat kerak", "Rasmlar kutubxonasiga ruxsat bering");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setAvatarUploading(true);
+    try {
+      await uploadAvatar(result.assets[0].uri);
+      await refetchUser();
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err?.message || "Rasm yuklanmadi");
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -171,19 +198,26 @@ export default function ProfileScreen() {
     >
       <View style={styles.profileCard}>
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            {user?.profileImageUrl ? (
-              <Image
-                source={{ uri: user.profileImageUrl }}
-                style={styles.avatarImage}
-                contentFit="cover"
-              />
-            ) : (
-              <Text style={styles.avatarInitials}>
-                {user?.name?.charAt(0)?.toUpperCase() || "U"}
-              </Text>
-            )}
-          </View>
+          <TouchableOpacity onPress={handleAvatarUpload} style={styles.avatarWrapper}>
+            <View style={styles.avatar}>
+              {avatarUploading ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : user?.profileImageUrl ? (
+                <Image
+                  source={{ uri: user.profileImageUrl }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <Text style={styles.avatarInitials}>
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </Text>
+              )}
+            </View>
+            <View style={styles.avatarCameraBtn}>
+              <Feather name="camera" size={12} color="#fff" />
+            </View>
+          </TouchableOpacity>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user?.name || "Foydalanuvchi"}</Text>
             <Text style={styles.userPhone}>{user?.phone || ""}</Text>
@@ -467,6 +501,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
   },
   avatarSection: { flexDirection: "row", alignItems: "center", gap: 16, flex: 1 },
+  avatarWrapper: { position: "relative" },
+  avatarCameraBtn: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
   avatar: {
     width: 64,
     height: 64,
