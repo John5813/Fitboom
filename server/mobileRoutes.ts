@@ -29,6 +29,20 @@ import {
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const avatarUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+function fixImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${getAppUrl()}${url}`;
+}
+
+function fixGymImages(gym: any): any {
+  return {
+    ...gym,
+    imageUrl: fixImageUrl(gym.imageUrl),
+    images: (gym.images || []).map((img: string) => fixImageUrl(img)),
+  };
+}
+
 const ALLOWED_CREDIT_PACKAGES = [60, 130, 240];
 
 const CREDIT_PRICES: Record<number, number> = {
@@ -85,7 +99,7 @@ function formatUser(user: any) {
     name: user.name,
     age: user.age,
     gender: user.gender,
-    profileImageUrl: user.profileImageUrl,
+    profileImageUrl: fixImageUrl(user.profileImageUrl),
     credits: user.credits,
     creditExpiryDate: user.creditExpiryDate,
     isAdmin: user.isAdmin,
@@ -431,6 +445,8 @@ export function registerMobileRoutes(app: Express) {
         storage.getGyms(),
         storage.getGymAverageRatings(),
       ]);
+      const { CATEGORIES } = await import('@shared/categories');
+      const catMap = new Map(CATEGORIES.map((c: any) => [c.id, c]));
 
       const ratingsMap = new Map(avgRatings.map(r => [r.gymId, r]));
 
@@ -450,8 +466,12 @@ export function registerMobileRoutes(app: Express) {
           distanceKm = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
         }
 
+        const categoryObjects = (gym.categories || []).map((id: string) => catMap.get(id) || { id, name: id, icon: 'dumbbell' });
+
         return {
-          ...gym,
+          ...fixGymImages(gym),
+          categoryIds: gym.categories,
+          categories: categoryObjects,
           avgRating: ratingInfo?.average ?? null,
           ratingCount: ratingInfo?.count ?? 0,
           distanceKm,
@@ -459,7 +479,10 @@ export function registerMobileRoutes(app: Express) {
       });
 
       if (category) {
-        result = result.filter(g => g.categories.some(c => c.toLowerCase() === category.toLowerCase()));
+        result = result.filter(g =>
+          (g.categoryIds || []).some((c: string) => c.toLowerCase() === category.toLowerCase()) ||
+          (g.categories || []).some((c: any) => (c.name || '').toLowerCase() === category.toLowerCase())
+        );
       }
       if (search) {
         const q = search.toLowerCase();
@@ -481,7 +504,7 @@ export function registerMobileRoutes(app: Express) {
    */
   router.get('/gyms/:id', async (req, res) => {
     try {
-      const [gym, timeSlots, ratings] = await Promise.all([
+      const [gym, allSlots, ratings] = await Promise.all([
         storage.getGym(req.params.id),
         storage.getTimeSlots(req.params.id),
         storage.getGymRatings(req.params.id),
@@ -489,17 +512,36 @@ export function registerMobileRoutes(app: Express) {
 
       if (!gym) return mobileError(res, 'Sport zal topilmadi', 404);
 
+      const { CATEGORIES } = await import('@shared/categories');
+      const catMap = new Map(CATEGORIES.map((c: any) => [c.id, c]));
+      const categoryObjects = (gym.categories || []).map((id: string) => catMap.get(id) || { id, name: id, icon: 'dumbbell' });
+
       const avgRating = ratings.length
         ? Math.round((ratings.reduce((s, r) => s + r.rating, 0) / ratings.length) * 10) / 10
         : null;
 
+      const DAY_NAMES = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+      const weeklySchedule = DAY_NAMES.map((dayName, dayNum) => {
+        const isDayOff = (gym.closedDays || []).includes(String(dayNum));
+        const daySlots = isDayOff ? [] : allSlots.filter((s: any) => s.dayOfWeek === dayName);
+        return {
+          dayNum,
+          dayName,
+          is_day_off: isDayOff,
+          slots: daySlots.map((s: any) => ({ ...s, isAvailable: s.availableSpots > 0 })),
+        };
+      });
+
       mobileSuccess(res, {
         gym: {
-          ...gym,
+          ...fixGymImages(gym),
+          categoryIds: gym.categories,
+          categories: categoryObjects,
           avgRating,
           ratingCount: ratings.length,
         },
-        timeSlots,
+        weeklySchedule,
+        timeSlots: allSlots,
       });
     } catch (err: any) {
       mobileError(res, 'Sport zal ma\'lumotlarini olishda xatolik', 500);
@@ -525,10 +567,14 @@ export function registerMobileRoutes(app: Express) {
       const dayOfWeek = dayNames[dateObj.getDay()];
       const dayNum = dateObj.getDay();
 
-      if ((gym.closedDays || []).includes(String(dayNum))) {
+      const isDayOff = (gym.closedDays || []).includes(String(dayNum));
+
+      if (isDayOff) {
         return mobileSuccess(res, {
           date,
           dayOfWeek,
+          dayNum,
+          is_day_off: true,
           isClosed: true,
           slots: [],
           message: "Bu kun sport zal yopiq",
@@ -541,6 +587,8 @@ export function registerMobileRoutes(app: Express) {
       mobileSuccess(res, {
         date,
         dayOfWeek,
+        dayNum,
+        is_day_off: false,
         isClosed: false,
         slots: daySlots.map(slot => ({
           ...slot,
@@ -1007,6 +1055,31 @@ export function registerMobileRoutes(app: Express) {
       });
     } catch (err: any) {
       mobileError(res, 'Qoldiq chek yuborishda xatolik', 500);
+    }
+  });
+
+  /**
+   * GET /api/mobile/v1/credits/payment/:id/status
+   * To'lov holati va yangilangan balans
+   * Auth: Bearer token
+   */
+  router.get('/credits/payment/:id/status', requireMobileAuth, async (req, res) => {
+    try {
+      const mobileUser = (req as any).mobileUser;
+      const payment = await storage.getCreditPayment(req.params.id);
+      if (!payment || payment.userId !== mobileUser.id) return mobileError(res, 'To\'lov topilmadi', 404);
+      const currentUser = await storage.getUser(mobileUser.id);
+      mobileSuccess(res, {
+        paymentId: payment.id,
+        status: payment.status,
+        credits: payment.credits,
+        price: payment.price,
+        remainingAmount: payment.remainingAmount,
+        currentBalance: currentUser?.credits ?? 0,
+        creditExpiryDate: currentUser?.creditExpiryDate ?? null,
+      });
+    } catch (err: any) {
+      mobileError(res, 'To\'lov holatini olishda xatolik', 500);
     }
   });
 
