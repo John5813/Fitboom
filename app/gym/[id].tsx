@@ -28,6 +28,26 @@ const { width } = Dimensions.get("window");
 
 const DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 
+function ImageWithFallback({ uri, style }: { uri: string; style: any }) {
+  const [error, setError] = useState(false);
+  if (error) {
+    return (
+      <View style={[style, { backgroundColor: "#2c3e5a", justifyContent: "center", alignItems: "center" }]}>
+        <Feather name="activity" size={64} color="rgba(255,255,255,0.3)" />
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={{ uri }}
+      style={style}
+      contentFit="cover"
+      transition={300}
+      onError={() => setError(true)}
+    />
+  );
+}
+
 function getCategoryLabel(cat: any): string {
   if (!cat) return "";
   if (typeof cat === "string") return cat;
@@ -148,24 +168,28 @@ export default function GymDetailScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              setImageIndex(Math.round(e.nativeEvent.contentOffset.x / width));
-            }}
-          >
-            {images.map((img: string, idx: number) => (
-              <Image
-                key={idx}
-                source={{ uri: img }}
-                style={[styles.image, { width }]}
-                contentFit="cover"
-                transition={300}
-              />
-            ))}
-          </ScrollView>
+          {images.length === 0 ? (
+            <View style={[styles.image, { width, backgroundColor: "#2c3e5a", justifyContent: "center", alignItems: "center" }]}>
+              <Feather name="activity" size={64} color="rgba(255,255,255,0.3)" />
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                setImageIndex(Math.round(e.nativeEvent.contentOffset.x / width));
+              }}
+            >
+              {images.map((img: string, idx: number) => (
+                <ImageWithFallback
+                  key={idx}
+                  uri={img}
+                  style={[styles.image, { width }]}
+                />
+              ))}
+            </ScrollView>
+          )}
 
           <TouchableOpacity
             style={[styles.backBtn, { top: (Platform.OS === "web" ? 67 : insets.top) + 8 }]}

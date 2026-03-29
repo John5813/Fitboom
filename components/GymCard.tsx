@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { fixImageUrl } from "@/services/api";
+import Colors from "@/constants/Colors";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -37,7 +38,9 @@ interface GymCardProps {
 }
 
 export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
+  const [imgError, setImgError] = useState(false);
   const imageCount = gym.images?.length ?? 1;
+  const fixedUrl = fixImageUrl(gym.imageUrl);
 
   const distanceText =
     typeof gym.distance === "number"
@@ -46,28 +49,41 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
       ? `Sizdan ${gym.distance} uzoqlikda`
       : gym.address || null;
 
-  const categoriesText = (gym.categories || []).join(", ");
+  const categoriesText = Array.isArray(gym.categories)
+    ? gym.categories
+        .map((c: any) => (typeof c === "string" ? c : c?.name || ""))
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  const showImage = !!fixedUrl && !imgError;
 
   return (
     <View style={styles.card}>
-      {/* Image section */}
       <TouchableOpacity onPress={onPress} activeOpacity={0.95}>
         <View style={styles.imageWrapper}>
-          <Image
-            source={{ uri: fixImageUrl(gym.imageUrl) }}
-            style={styles.image}
-            contentFit="cover"
-            transition={300}
-          />
+          {showImage ? (
+            <Image
+              source={{ uri: fixedUrl }}
+              style={styles.image}
+              contentFit="cover"
+              transition={300}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Feather name="activity" size={48} color="rgba(255,255,255,0.4)" />
+            </View>
+          )}
 
-          {/* Dark gradient overlay */}
+          {/* Gradient overlay — always on top */}
           <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.82)"]}
+            colors={["transparent", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.78)"]}
             style={StyleSheet.absoluteFillObject}
           />
 
-          {/* Top-left: image count badge */}
-          {imageCount > 0 && (
+          {/* Image count badge */}
+          {imageCount > 0 && showImage && (
             <View style={styles.imageCountBadge}>
               <Feather name="image" size={11} color="#fff" />
               <Text style={styles.imageCountText}>{imageCount} ta rasm</Text>
@@ -79,14 +95,12 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
             <Text style={styles.gymName} numberOfLines={1}>
               {gym.name}
             </Text>
-
             {distanceText && (
               <View style={styles.locationRow}>
                 <Feather name="map-pin" size={13} color="rgba(255,255,255,0.9)" />
                 <Text style={styles.locationText}>{distanceText}</Text>
               </View>
             )}
-
             {categoriesText.length > 0 && (
               <Text style={styles.categoriesText} numberOfLines={1}>
                 {categoriesText}
@@ -94,7 +108,7 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
             )}
           </View>
 
-          {/* Bottom-left: kredit badge */}
+          {/* Credit badge */}
           <View style={styles.creditBadge}>
             <Text style={styles.creditBadgeText}>{gym.credits} kredit</Text>
           </View>
@@ -138,16 +152,21 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-
   imageWrapper: {
     width: CARD_WIDTH,
     height: 240,
-    backgroundColor: "#e0e0e0",
+    position: "relative",
+    overflow: "hidden",
   },
   image: {
     ...StyleSheet.absoluteFillObject,
   },
-
+  imagePlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#2c3e5a",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   imageCountBadge: {
     position: "absolute",
     top: 12,
@@ -165,7 +184,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_500Medium",
   },
-
   overlay: {
     position: "absolute",
     bottom: 44,
@@ -193,7 +211,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontFamily: "Inter_400Regular",
   },
-
   creditBadge: {
     position: "absolute",
     bottom: 10,
@@ -208,8 +225,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_700Bold",
   },
-
-  /* Action row */
   actionRow: {
     flexDirection: "row",
     borderTopWidth: 1,
@@ -237,7 +252,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 13,
-    backgroundColor: "#2563EB",
+    backgroundColor: Colors.primary,
   },
   btnBookText: {
     color: "#fff",
