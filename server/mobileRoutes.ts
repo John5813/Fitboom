@@ -72,12 +72,37 @@ function getTashkentTimeStr(d?: Date): string {
 
 async function uploadToObjectStorage(file: Express.Multer.File, folder = 'images'): Promise<string> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+  const ext = path.extname(file.originalname) ||
+    (file.mimetype === 'image/png' ? '.png' :
+     file.mimetype === 'image/gif' ? '.gif' :
+     file.mimetype === 'image/webp' ? '.webp' : '.jpg');
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
+
+  let savedToOS = false;
   if (bucketId) {
-    const bucket = objectStorageClient.bucket(bucketId);
-    const blob = bucket.file(`${folder}/${uniqueName}`);
-    await blob.save(file.buffer, { contentType: file.mimetype, metadata: { cacheControl: 'public, max-age=31536000' } });
+    try {
+      const bucket = objectStorageClient.bucket(bucketId);
+      const blob = bucket.file(`${folder}/${uniqueName}`);
+      await blob.save(file.buffer, { contentType: file.mimetype, metadata: { cacheControl: 'public, max-age=31536000' } });
+      const [exists] = await blob.exists();
+      if (exists) {
+        savedToOS = true;
+      } else {
+        console.error(`[Mobile Upload] Object Storage ga saqlandi lekin topilmadi: ${folder}/${uniqueName}`);
+      }
+    } catch (osErr: any) {
+      console.error(`[Mobile Upload] Object Storage xatoligi, lokal diskka saqlanadi:`, osErr.message);
+    }
   }
+
+  if (!savedToOS) {
+    const { mkdir, writeFile } = await import('fs/promises');
+    const uploadsDir = path.join(process.cwd(), 'uploads', folder);
+    await mkdir(uploadsDir, { recursive: true });
+    await writeFile(path.join(uploadsDir, uniqueName), file.buffer);
+    console.log(`[Mobile Upload] Lokal diskka saqlandi: ${folder}/${uniqueName}`);
+  }
+
   return `/api/images/${uniqueName}`;
 }
 

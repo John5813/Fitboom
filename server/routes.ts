@@ -102,18 +102,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   async function uploadToObjectStorage(file: Express.Multer.File): Promise<string> {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+    const ext = path.extname(file.originalname) ||
+      (file.mimetype === 'image/png' ? '.png' :
+       file.mimetype === 'image/gif' ? '.gif' :
+       file.mimetype === 'image/webp' ? '.webp' : '.jpg');
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
+
+    let savedToOS = false;
     if (bucketId) {
-      const blob = getOSBucket().file(`images/${uniqueName}`);
-      await blob.save(file.buffer, {
-        contentType: file.mimetype,
-        metadata: { cacheControl: 'public, max-age=31536000' },
-      });
-    } else {
+      try {
+        const blob = getOSBucket().file(`images/${uniqueName}`);
+        await blob.save(file.buffer, {
+          contentType: file.mimetype,
+          metadata: { cacheControl: 'public, max-age=31536000' },
+        });
+        const [exists] = await blob.exists();
+        if (exists) {
+          savedToOS = true;
+        } else {
+          console.error(`[Upload] Object Storage ga saqlandi lekin topilmadi: images/${uniqueName}`);
+        }
+      } catch (osErr: any) {
+        console.error(`[Upload] Object Storage xatoligi, lokal diskka saqlanadi:`, osErr.message);
+      }
+    }
+
+    if (!savedToOS) {
       const imagesDir = path.join(uploadsDir, 'images');
       await fs.mkdir(imagesDir, { recursive: true });
       await fs.writeFile(path.join(imagesDir, uniqueName), file.buffer);
+      console.log(`[Upload] Lokal diskka saqlandi: ${uniqueName}`);
     }
+
     return `/api/images/${uniqueName}`;
   }
 
@@ -160,9 +180,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
             res.setHeader('Cache-Control', 'public, max-age=31536000');
             return blob.createReadStream().pipe(res);
+          } else {
+            console.warn(`[Serve] Object Storage da topilmadi: images/${filename}`);
           }
-        } catch {
-          // Object Storage unavailable — fall through to local
+        } catch (osErr: any) {
+          console.error(`[Serve] Object Storage o'qishda xatolik:`, osErr.message);
         }
       }
 
@@ -177,6 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.setHeader('Cache-Control', 'public, max-age=31536000');
         return res.sendFile(localPath);
       } catch {
+        console.warn(`[Serve] Lokal diskda ham topilmadi: ${localPath}`);
         return res.status(404).json({ error: "Rasm topilmadi" });
       }
     } catch (error: any) {
