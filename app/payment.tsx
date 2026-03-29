@@ -32,6 +32,8 @@ const FALLBACK_PACKAGES = [
   { credits: 240, price: 240000, priceFormatted: "240 000 so'm" },
 ];
 
+const FALLBACK_CARD = "8600 0000 0000 0000";
+
 type Step = "select" | "receipt" | "pending" | "done" | "rejected";
 
 export default function PaymentScreen() {
@@ -55,6 +57,7 @@ export default function PaymentScreen() {
 
   const PACKAGES = configData?.packages?.length ? configData.packages : FALLBACK_PACKAGES;
   const currentPkg = selectedPkg || PACKAGES[1] || PACKAGES[0];
+  const cardNumber: string = configData?.cardNumber || FALLBACK_CARD;
 
   useEffect(() => {
     return () => {
@@ -273,8 +276,12 @@ export default function PaymentScreen() {
 
             <View style={styles.instructionCard}>
               <Text style={styles.instructionTitle}>To'lov ko'rsatmalari</Text>
+              <View style={styles.cardNumberBox}>
+                <Feather name="credit-card" size={18} color={Colors.primary} />
+                <Text style={styles.cardNumberText}>{cardNumber}</Text>
+              </View>
               <Text style={styles.instructionText}>
-                1. Quyidagi karta raqamiga{" "}
+                1. Yuqoridagi karta raqamiga{" "}
                 <Text style={styles.instructionHighlight}>
                   {currentPkg.priceFormatted || `${(currentPkg.price || 0).toLocaleString()} so'm`}
                 </Text>{" "}
@@ -413,6 +420,24 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
   },
   instructionTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text },
+  cardNumberBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  cardNumberText: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+    letterSpacing: 1,
+    flex: 1,
+  },
   instructionText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textSecondary, lineHeight: 22 },
   instructionHighlight: { color: Colors.primary, fontFamily: "Inter_700Bold" },
   pickRow: { flexDirection: "row", gap: 12 },

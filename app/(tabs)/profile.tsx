@@ -23,8 +23,7 @@ import * as ImagePicker from "expo-image-picker";
 import {
   updateUserProfile,
   adminLogin,
-  getCreditHistory,
-  getTopupHistory,
+  getPaymentConfig,
   uploadAvatar,
 } from "@/services/api";
 import Colors from "@/constants/Colors";
@@ -60,27 +59,13 @@ export default function ProfileScreen() {
       )
     : null;
 
-  const {
-    data: creditHistoryData,
-    isLoading: creditHistoryLoading,
-    refetch: refetchCreditHistory,
-  } = useQuery({
+  const { data: creditsConfig } = useQuery({
     queryKey: ["/credits"],
-    queryFn: () => getCreditHistory(),
-    refetchOnWindowFocus: true,
-    refetchInterval: 60000,
+    queryFn: () => getPaymentConfig(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const {
-    data: topupHistoryData,
-    isLoading: topupHistoryLoading,
-    refetch: refetchTopupHistory,
-  } = useQuery({
-    queryKey: ["/credits"],
-    queryFn: () => getTopupHistory(),
-    refetchOnWindowFocus: true,
-    refetchInterval: 60000,
-  });
+  const packages: any[] = creditsConfig?.packages || [];
 
   const handleSaveProfile = async () => {
     const ageNum = parseInt(editAge, 10);
@@ -278,39 +263,25 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.historyCard}>
-        <Text style={styles.sectionTitle}>{t("profile.credit_history")}</Text>
-        {creditHistoryLoading ? (
-          <ActivityIndicator color={Colors.primary} />
-        ) : creditHistoryData?.creditHistory?.length ? (
-          creditHistoryData.creditHistory.slice(0, 4).map((item: any) => (
-            <View key={item.id || item.date + item.amount} style={styles.historyItem}>
-              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
-              <Text style={styles.historySubText}>{item.date || "-"}</Text>
-              <Text style={styles.historyAmount}>{item.amount} {t("profile.credits")}</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.emptyHistoryText}>{t("profile.no_credit_history")}</Text>
-        )}
-      </View>
-
-      <View style={styles.historyCard}>
-        <Text style={styles.sectionTitle}>{t("profile.topup_history")}</Text>
-        {topupHistoryLoading ? (
-          <ActivityIndicator color={Colors.primary} />
-        ) : topupHistoryData?.topupHistory?.length ? (
-          topupHistoryData.topupHistory.slice(0, 4).map((item: any) => (
-            <View key={item.id || item.date + item.amount} style={styles.historyItem}>
-              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
-              <Text style={styles.historySubText}>{item.date || "-"}</Text>
-              <Text style={styles.historyAmount}>+{item.amount} {t("profile.credits")}</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.emptyHistoryText}>{t("profile.no_topup_history")}</Text>
-        )}
-      </View>
+      {packages.length > 0 && (
+        <View style={styles.historyCard}>
+          <Text style={styles.sectionTitle}>Kredit paketlari</Text>
+          {packages.map((pkg: any) => (
+            <TouchableOpacity
+              key={pkg.credits}
+              style={styles.packageRow}
+              onPress={() => router.push("/payment" as any)}
+            >
+              <Feather name="key" size={16} color={Colors.primary} />
+              <Text style={styles.historyText}>{pkg.credits} kredit</Text>
+              <Text style={styles.historyAmount}>
+                {pkg.priceFormatted || `${((pkg.price || 0) / 1000).toFixed(0)}K so'm`}
+              </Text>
+              <Feather name="chevron-right" size={14} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <View style={styles.menuCard}>
         {menuItems.map((item, idx) => (
@@ -655,11 +626,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.primary,
   },
-  emptyHistoryText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    textAlign: "center",
+  packageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   menuCard: {
     backgroundColor: Colors.card,
