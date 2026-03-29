@@ -263,25 +263,39 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {packages.length > 0 && (
-        <View style={styles.historyCard}>
-          <Text style={styles.sectionTitle}>Kredit paketlari</Text>
-          {packages.map((pkg: any) => (
-            <TouchableOpacity
-              key={pkg.credits}
-              style={styles.packageRow}
-              onPress={() => router.push("/payment" as any)}
-            >
-              <Feather name="key" size={16} color={Colors.primary} />
-              <Text style={styles.historyText}>{pkg.credits} kredit</Text>
-              <Text style={styles.historyAmount}>
-                {pkg.priceFormatted || `${((pkg.price || 0) / 1000).toFixed(0)}K so'm`}
-              </Text>
-              <Feather name="chevron-right" size={14} color={Colors.textSecondary} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      <View style={styles.historyCard}>
+        <Text style={styles.sectionTitle}>Kredit tarixi</Text>
+        {creditsConfig === undefined ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : (creditsConfig?.creditHistory || []).length > 0 ? (
+          (creditsConfig.creditHistory as any[]).slice(0, 5).map((item: any, i: number) => (
+            <View key={item.id || i} style={styles.historyItem}>
+              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
+              <Text style={styles.historySubText}>{item.date || "-"}</Text>
+              <Text style={styles.historyAmount}>{item.amount} kredit</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyHistoryText}>Kredit tarixi mavjud emas</Text>
+        )}
+      </View>
+
+      <View style={styles.historyCard}>
+        <Text style={styles.sectionTitle}>To'ldirish tarixi</Text>
+        {creditsConfig === undefined ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : (creditsConfig?.topupHistory || []).length > 0 ? (
+          (creditsConfig.topupHistory as any[]).slice(0, 5).map((item: any, i: number) => (
+            <View key={item.id || i} style={styles.historyItem}>
+              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
+              <Text style={styles.historySubText}>{item.date || "-"}</Text>
+              <Text style={styles.historyAmount}>+{item.amount} kredit</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyHistoryText}>To'ldirish tarixi mavjud emas</Text>
+        )}
+      </View>
 
       <View style={styles.menuCard}>
         {menuItems.map((item, idx) => (

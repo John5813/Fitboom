@@ -33,7 +33,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  const uri = token ? `${PAY_BASE}?token=${token}` : PAY_BASE;
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
   return (
     <Modal
@@ -43,7 +43,6 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>To'lov</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -51,14 +50,13 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* WebView yoki loading */}
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#F97316" />
           </View>
         ) : (
           <WebView
-            source={{ uri }}
+            source={{ uri: PAY_BASE, headers }}
             style={styles.webview}
             startInLoadingState
             renderLoading={() => (
@@ -76,10 +74,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -90,22 +85,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ebebeb",
     position: "relative",
   },
-  title: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#111",
-  },
-  closeBtn: {
-    position: "absolute",
-    right: 16,
-    padding: 4,
-  },
-  webview: {
-    flex: 1,
-  },
-  loadingBox: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  title: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#111" },
+  closeBtn: { position: "absolute", right: 16, padding: 4 },
+  webview: { flex: 1 },
+  loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
 });
