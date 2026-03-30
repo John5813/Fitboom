@@ -878,14 +878,9 @@ export function registerMobileRoutes(app: Express) {
     }
   });
 
-  /**
-   * DELETE /api/mobile/v1/bookings/:id
-   * Bronni bekor qilish (2 soatdan oldin — kredit qaytariladi)
-   * Auth: Bearer token
-   */
-  router.delete('/bookings/:id', requireMobileAuth, async (req, res) => {
+  const cancelBookingHandler = async (req: any, res: any) => {
     try {
-      const mobileUser = (req as any).mobileUser;
+      const mobileUser = req.mobileUser;
       const booking = await storage.getBooking(req.params.id);
 
       if (!booking) return mobileError(res, 'Bron topilmadi', 404);
@@ -935,9 +930,19 @@ export function registerMobileRoutes(app: Express) {
         creditsRefunded: refunded ? gym.credits : 0,
       });
     } catch (err: any) {
+      console.error('[Mobile] Cancel booking error:', err);
       mobileError(res, 'Bronni bekor qilishda xatolik', 500);
     }
-  });
+  };
+
+  /**
+   * DELETE /api/mobile/v1/bookings/:id
+   * POST /api/mobile/v1/bookings/:id/cancel
+   * Bronni bekor qilish (2 soatdan oldin — kredit qaytariladi)
+   * Auth: Bearer token
+   */
+  router.delete('/bookings/:id', requireMobileAuth, cancelBookingHandler);
+  router.post('/bookings/:id/cancel', requireMobileAuth, cancelBookingHandler);
 
   /**
    * POST /api/mobile/v1/bookings/verify-qr
