@@ -749,7 +749,7 @@ export function registerMobileRoutes(app: Express) {
 
       const gymId = body.gymId || body.gym_id;
       const timeSlotId = body.timeSlotId || body.slotId || body.slot_id || body.time_slot_id;
-      const date = body.date || body.bookingDate || body.booking_date;
+      const date = body.date || body.scheduledDate || body.bookingDate || body.booking_date;
 
       if (!gymId || !timeSlotId || !date) {
         console.log('[Mobile] Booking missing fields - gymId:', gymId, 'timeSlotId:', timeSlotId, 'date:', date);
