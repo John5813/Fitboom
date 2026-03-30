@@ -18,14 +18,14 @@ interface BookingCardProps {
 
 function getStatusInfo(status: string) {
   switch (status) {
-    case "confirmed":
-      return { label: "Tasdiqlangan", bg: "rgba(16,185,129,0.12)", text: "#10b981" };
     case "pending":
       return { label: "Kutilmoqda", bg: "rgba(245,158,11,0.12)", text: "#f59e0b" };
+    case "completed":
+      return { label: "Tashrif buyurildi", bg: "rgba(16,185,129,0.12)", text: "#10b981" };
+    case "missed":
+      return { label: "Kelmadi", bg: "rgba(239,68,68,0.07)", text: "#f97316" };
     case "cancelled":
       return { label: "Bekor qilindi", bg: "rgba(239,68,68,0.1)", text: Colors.error };
-    case "completed":
-      return { label: "Tugallandi", bg: Colors.surface, text: Colors.textSecondary };
     default:
       return { label: status, bg: Colors.surface, text: Colors.textSecondary };
   }
@@ -53,13 +53,14 @@ export default function BookingCard({
       })
     : "";
 
-  const isActive = booking.status === "confirmed" || booking.status === "pending";
+  const isActive = booking.status === "pending";
   const statusInfo = getStatusInfo(booking.status || "pending");
 
   const stripeColor =
-    booking.status === "confirmed" ? "#10b981" :
     booking.status === "pending" ? "#f59e0b" :
+    booking.status === "completed" ? "#10b981" :
     booking.status === "cancelled" ? Colors.error :
+    booking.status === "missed" ? "#f97316" :
     Colors.textSecondary;
 
   return (

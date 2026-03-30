@@ -50,22 +50,21 @@ export default function BookingsScreen() {
 
   const upcoming = allBookings.filter((b) => {
     const bookingDate = new Date(b.scheduledDate || b.date || 0);
-    const isActiveStatus = b.status === "pending" || b.status === "confirmed";
-    return isActiveStatus && bookingDate >= today();
+    return b.status === "pending" && bookingDate >= today();
   });
 
   const past = allBookings.filter((b) => {
     const bookingDate = new Date(b.scheduledDate || b.date || 0);
-    const isActiveStatus = b.status === "pending" || b.status === "confirmed";
-    return !isActiveStatus || bookingDate < today();
+    return b.status !== "pending" || bookingDate < today();
   });
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => cancelBooking(id),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();
-      Alert.alert("✓ Bekor qilindi", "Bron bekor qilindi. Kredit qaytarildi.");
+      const msg = data?.message || "Bron bekor qilindi.";
+      Alert.alert("Bekor qilindi", msg);
     },
     onError: (err: any) => {
       Alert.alert(t("common.error"), err.message || "Bron bekor qilinmadi");
@@ -153,12 +152,12 @@ export default function BookingsScreen() {
               key={booking.id}
               booking={booking}
               onScan={
-                (booking.status === "pending" || booking.status === "confirmed")
+                booking.status === "pending"
                   ? () => router.push("/(tabs)/scanner" as any)
                   : undefined
               }
               onCancel={
-                (booking.status === "pending" || booking.status === "confirmed")
+                booking.status === "pending"
                   ? () => confirmCancel(booking)
                   : undefined
               }
