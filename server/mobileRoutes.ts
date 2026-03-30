@@ -16,7 +16,7 @@ import path from 'path';
 import { storage } from './storage';
 import { sendSmsCode, verifySmsCode, normalizePhone } from './sms';
 import { sendPaymentReceiptToAdmin, getAppUrl } from './telegram';
-import { objectStorageClient } from './replit_integrations/object_storage';
+import { Client as ObjectStorageClient } from '@replit/object-storage';
 import {
   requireMobileAuth,
   generateTokenPair,
@@ -28,6 +28,24 @@ import {
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const avatarUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+let _osClientPromise: Promise<ObjectStorageClient | null> | null = null;
+function getOsClient(): Promise<ObjectStorageClient | null> {
+  if (!_osClientPromise) {
+    _osClientPromise = (async () => {
+      try {
+        const client = new ObjectStorageClient();
+        const stateP = (client as any).state?.promise;
+        if (stateP) await stateP;
+        return client;
+      } catch (e: any) {
+        console.warn('[Mobile Storage] Object Storage mavjud emas:', e.message);
+        return null;
+      }
+    })();
+  }
+  return _osClientPromise;
+}
 
 function fixImageUrl(url: string | null | undefined): string {
   if (!url) return '';
@@ -71,74 +89,60 @@ function getTashkentTimeStr(d?: Date): string {
 }
 
 async function uploadToObjectStorage(file: Express.Multer.File, folder = 'images'): Promise<string> {
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   const ext = path.extname(file.originalname) ||
     (file.mimetype === 'image/png' ? '.png' :
      file.mimetype === 'image/gif' ? '.gif' :
      file.mimetype === 'image/webp' ? '.webp' : '.jpg');
   const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
 
-  let savedToOS = false;
-  if (bucketId) {
-    try {
-      const bucket = objectStorageClient.bucket(bucketId);
-      const blob = bucket.file(`${folder}/${uniqueName}`);
-      await blob.save(file.buffer, { contentType: file.mimetype, metadata: { cacheControl: 'public, max-age=31536000' } });
-      const [exists] = await blob.exists();
-      if (exists) {
-        savedToOS = true;
-      } else {
-        console.error(`[Mobile Upload] Object Storage ga saqlandi lekin topilmadi: ${folder}/${uniqueName}`);
+  try {
+    const client = await getOsClient();
+    if (client) {
+      const result = await client.uploadFromBytes(`${folder}/${uniqueName}`, file.buffer, { contentType: file.mimetype });
+      if (result.ok) {
+        console.log(`[Mobile Upload] Object Storage ga saqlandi: ${folder}/${uniqueName}`);
+        return `/api/images/${uniqueName}`;
       }
-    } catch (osErr: any) {
-      console.error(`[Mobile Upload] Object Storage xatoligi, lokal diskka saqlanadi:`, osErr.message);
+      console.error(`[Mobile Upload] OS xatoligi: ${result.error}`);
     }
+  } catch (osErr: any) {
+    console.error(`[Mobile Upload] OS exception:`, osErr.message);
   }
 
-  if (!savedToOS) {
-    const { mkdir, writeFile } = await import('fs/promises');
-    const uploadsDir = path.join(process.cwd(), 'uploads', folder);
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, uniqueName), file.buffer);
-    console.log(`[Mobile Upload] Lokal diskka saqlandi: ${folder}/${uniqueName}`);
-  }
-
+  const { mkdir, writeFile } = await import('fs/promises');
+  const uploadsDir = path.join(process.cwd(), 'uploads', folder);
+  await mkdir(uploadsDir, { recursive: true });
+  await writeFile(path.join(uploadsDir, uniqueName), file.buffer);
+  console.log(`[Mobile Upload] Lokal diskka saqlandi: ${folder}/${uniqueName}`);
   return `/api/images/${uniqueName}`;
 }
 
 async function saveReceiptFile(file: Express.Multer.File): Promise<{ url: string; filename: string }> {
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   const ext = path.extname(file.originalname) ||
     (file.mimetype === 'image/png' ? '.png' :
      file.mimetype === 'image/gif' ? '.gif' :
      file.mimetype === 'image/webp' ? '.webp' : '.jpg');
   const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
 
-  let savedToOS = false;
-  if (bucketId) {
-    try {
-      const bucket = objectStorageClient.bucket(bucketId);
-      const blob = bucket.file(`receipts/${uniqueName}`);
-      await blob.save(file.buffer, { contentType: file.mimetype });
-      const [exists] = await blob.exists();
-      if (exists) {
-        savedToOS = true;
-      } else {
-        console.error(`[Receipt] OS ga saqlandi lekin topilmadi: receipts/${uniqueName}`);
+  try {
+    const client = await getOsClient();
+    if (client) {
+      const result = await client.uploadFromBytes(`receipts/${uniqueName}`, file.buffer, { contentType: file.mimetype });
+      if (result.ok) {
+        console.log(`[Receipt] Object Storage ga saqlandi: receipts/${uniqueName}`);
+        return { url: `/api/receipts/${uniqueName}`, filename: uniqueName };
       }
-    } catch (osErr: any) {
-      console.error(`[Receipt] OS xatoligi, lokal diskka saqlanadi:`, osErr.message);
+      console.error(`[Receipt] OS xatoligi: ${result.error}`);
     }
+  } catch (osErr: any) {
+    console.error(`[Receipt] OS exception:`, osErr.message);
   }
 
-  if (!savedToOS) {
-    const { mkdir, writeFile } = await import('fs/promises');
-    const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts');
-    await mkdir(receiptsDir, { recursive: true });
-    await writeFile(path.join(receiptsDir, uniqueName), file.buffer);
-    console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
-  }
-
+  const { mkdir, writeFile } = await import('fs/promises');
+  const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts');
+  await mkdir(receiptsDir, { recursive: true });
+  await writeFile(path.join(receiptsDir, uniqueName), file.buffer);
+  console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
   return { url: `/api/receipts/${uniqueName}`, filename: uniqueName };
 }
 

@@ -11,9 +11,28 @@ import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl } from "./telegram";
-import { objectStorageClient } from "./replit_integrations/object_storage";
+import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
+
+let _osClientPromise: Promise<ObjectStorageClient | null> | null = null;
+function getOsClient(): Promise<ObjectStorageClient | null> {
+  if (!_osClientPromise) {
+    _osClientPromise = (async () => {
+      try {
+        const client = new ObjectStorageClient();
+        const stateP = (client as any).state?.promise;
+        if (stateP) await stateP;
+        console.log('[Storage] Object Storage tayyor');
+        return client;
+      } catch (e: any) {
+        console.warn('[Storage] Object Storage mavjud emas:', e.message);
+        return null;
+      }
+    })();
+  }
+  return _osClientPromise;
+}
 
 export function registerHealthCheck(app: Express) {
   app.get('/api/health', (_req, res) => {
@@ -59,34 +78,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   app.use('/uploads', express.static(uploadsDir));
 
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  function getOSBucket() {
-    if (!bucketId) throw new Error("Object Storage bucket not configured");
-    return objectStorageClient.bucket(bucketId);
-  }
-
   async function saveReceiptFile(file: Express.Multer.File, uniqueName: string): Promise<string> {
-    let savedToOS = false;
-    if (bucketId) {
-      try {
-        const blob = getOSBucket().file(`receipts/${uniqueName}`);
-        await blob.save(file.buffer, { contentType: file.mimetype });
-        const [exists] = await blob.exists();
-        if (exists) {
-          savedToOS = true;
-        } else {
-          console.error(`[Receipt] OS ga saqlandi lekin topilmadi: receipts/${uniqueName}`);
+    try {
+      const client = await getOsClient();
+      if (client) {
+        const result = await client.uploadFromBytes(`receipts/${uniqueName}`, file.buffer, { contentType: file.mimetype });
+        if (result.ok) {
+          console.log(`[Receipt] Object Storage ga saqlandi: receipts/${uniqueName}`);
+          return `/api/receipts/${uniqueName}`;
         }
-      } catch (osErr: any) {
-        console.error(`[Receipt] OS xatoligi, lokal diskka saqlanadi:`, osErr.message);
+        console.error(`[Receipt] OS xatoligi: ${result.error}`);
       }
+    } catch (osErr: any) {
+      console.error(`[Receipt] OS exception:`, osErr.message);
     }
-    if (!savedToOS) {
-      const localDir = path.join(uploadsDir, 'receipts');
-      await fs.mkdir(localDir, { recursive: true });
-      await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
-      console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
-    }
+    const localDir = path.join(uploadsDir, 'receipts');
+    await fs.mkdir(localDir, { recursive: true });
+    await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
+    console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
     return `/api/receipts/${uniqueName}`;
   }
 
@@ -121,32 +130,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
        file.mimetype === 'image/webp' ? '.webp' : '.jpg');
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
 
-    let savedToOS = false;
-    if (bucketId) {
-      try {
-        const blob = getOSBucket().file(`images/${uniqueName}`);
-        await blob.save(file.buffer, {
-          contentType: file.mimetype,
-          metadata: { cacheControl: 'public, max-age=31536000' },
-        });
-        const [exists] = await blob.exists();
-        if (exists) {
-          savedToOS = true;
-        } else {
-          console.error(`[Upload] Object Storage ga saqlandi lekin topilmadi: images/${uniqueName}`);
+    try {
+      const client = await getOsClient();
+      if (client) {
+        const result = await client.uploadFromBytes(`images/${uniqueName}`, file.buffer, { contentType: file.mimetype });
+        if (result.ok) {
+          console.log(`[Upload] Object Storage ga saqlandi: images/${uniqueName}`);
+          return `/api/images/${uniqueName}`;
         }
-      } catch (osErr: any) {
-        console.error(`[Upload] Object Storage xatoligi, lokal diskka saqlanadi:`, osErr.message);
+        console.error(`[Upload] OS xatoligi: ${result.error}`);
       }
+    } catch (osErr: any) {
+      console.error(`[Upload] OS exception:`, osErr.message);
     }
 
-    if (!savedToOS) {
-      const imagesDir = path.join(uploadsDir, 'images');
-      await fs.mkdir(imagesDir, { recursive: true });
-      await fs.writeFile(path.join(imagesDir, uniqueName), file.buffer);
-      console.log(`[Upload] Lokal diskka saqlandi: ${uniqueName}`);
-    }
-
+    const imagesDir = path.join(uploadsDir, 'images');
+    await fs.mkdir(imagesDir, { recursive: true });
+    await fs.writeFile(path.join(imagesDir, uniqueName), file.buffer);
+    console.log(`[Upload] Lokal diskka saqlandi: ${uniqueName}`);
     return `/api/images/${uniqueName}`;
   }
 
@@ -184,21 +185,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const filename = req.params.filename;
 
-      if (bucketId) {
-        try {
-          const blob = getOSBucket().file(`images/${filename}`);
-          const [exists] = await blob.exists();
-          if (exists) {
-            const [metadata] = await blob.getMetadata();
-            res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=31536000');
-            return blob.createReadStream().pipe(res);
-          } else {
-            console.warn(`[Serve] Object Storage da topilmadi: images/${filename}`);
-          }
-        } catch (osErr: any) {
-          console.error(`[Serve] Object Storage o'qishda xatolik:`, osErr.message);
+      try {
+        const client = await getOsClient();
+        const result = client ? await client.downloadAsBytes(`images/${filename}`) : null;
+        if (result?.ok) {
+          let contentType = 'image/jpeg';
+          if (filename.endsWith('.png')) contentType = 'image/png';
+          else if (filename.endsWith('.gif')) contentType = 'image/gif';
+          else if (filename.endsWith('.webp')) contentType = 'image/webp';
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
+          return res.send(result.value[0]);
         }
+      } catch (osErr: any) {
+        console.error(`[Serve] Object Storage o'qishda xatolik:`, osErr.message);
       }
 
       const localPath = path.join(uploadsDir, 'images', filename);
@@ -224,22 +224,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/receipts/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
-      const localPath = path.join(uploadsDir, 'receipts', filename);
 
-      if (bucketId) {
-        try {
-          const blob = getOSBucket().file(`receipts/${filename}`);
-          const [exists] = await blob.exists();
-          if (exists) {
-            const [metadata] = await blob.getMetadata();
-            res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
-            return blob.createReadStream().pipe(res);
-          }
-        } catch {
-          // Object Storage unavailable — fall through to local
+      try {
+        const client = await getOsClient();
+        const result = client ? await client.downloadAsBytes(`receipts/${filename}`) : null;
+        if (result?.ok) {
+          let contentType = 'image/jpeg';
+          if (filename.endsWith('.png')) contentType = 'image/png';
+          res.setHeader('Content-Type', contentType);
+          return res.send(result.value[0]);
         }
+      } catch {
+        // Object Storage unavailable — fall through to local
       }
 
+      const localPath = path.join(uploadsDir, 'receipts', filename);
       try {
         await fs.access(localPath);
         return res.sendFile(localPath);
