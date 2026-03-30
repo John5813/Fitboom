@@ -729,7 +729,26 @@ export function registerMobileRoutes(app: Express) {
         return dateB - dateA;
       });
 
-      mobileSuccess(res, { bookings: sorted, total: sorted.length });
+      const gymCache: Record<string, any> = {};
+      const enriched = await Promise.all(sorted.map(async (booking) => {
+        if (booking.gymId && !gymCache[booking.gymId]) {
+          gymCache[booking.gymId] = await storage.getGym(booking.gymId);
+        }
+        const gym = booking.gymId ? gymCache[booking.gymId] : null;
+        return {
+          ...booking,
+          scheduledDate: booking.date,
+          gym: gym ? {
+            id: gym.id,
+            name: gym.name,
+            address: gym.address,
+            imageUrl: gym.imageUrl,
+            credits: gym.credits,
+          } : null,
+        };
+      }));
+
+      mobileSuccess(res, { bookings: enriched, total: enriched.length });
     } catch (err: any) {
       mobileError(res, 'Bronlarni olishda xatolik', 500);
     }
@@ -814,7 +833,17 @@ export function registerMobileRoutes(app: Express) {
       });
 
       mobileSuccess(res, {
-        booking,
+        booking: {
+          ...booking,
+          scheduledDate: booking.date,
+          gym: {
+            id: gym.id,
+            name: gym.name,
+            address: gym.address,
+            imageUrl: gym.imageUrl,
+            credits: gym.credits,
+          },
+        },
         creditsUsed: gym.credits,
         remainingCredits: currentUser.credits - gym.credits,
       }, 201);
