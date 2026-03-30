@@ -21,6 +21,12 @@ import { getBookings, cancelBooking } from "@/services/api";
 import Colors from "@/constants/Colors";
 import BookingCard from "@/components/BookingCard";
 
+const today = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 export default function BookingsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
@@ -35,13 +41,19 @@ export default function BookingsScreen() {
     queryFn: getBookings,
   });
 
-  const allBookings = data?.bookings || [];
-  const upcoming = allBookings.filter(
-    (b: any) => b.status === "confirmed" && new Date(b.scheduledDate) >= new Date(new Date().setHours(0, 0, 0, 0))
-  );
-  const past = allBookings.filter(
-    (b: any) => b.status !== "confirmed" || new Date(b.scheduledDate) < new Date(new Date().setHours(0, 0, 0, 0))
-  );
+  const allBookings: any[] = data?.bookings || [];
+
+  const upcoming = allBookings.filter((b) => {
+    const bookingDate = new Date(b.scheduledDate || b.date || 0);
+    const isActiveStatus = b.status === "pending" || b.status === "confirmed";
+    return isActiveStatus && bookingDate >= today();
+  });
+
+  const past = allBookings.filter((b) => {
+    const bookingDate = new Date(b.scheduledDate || b.date || 0);
+    const isActiveStatus = b.status === "pending" || b.status === "confirmed";
+    return !isActiveStatus || bookingDate < today();
+  });
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => cancelBooking(id),
@@ -78,6 +90,10 @@ export default function BookingsScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const list = tab === "upcoming" ? upcoming : past;
 
+  const gymName = qrBooking?.gym?.name || qrBooking?.gymName || "Zal";
+  const qrDate = qrBooking?.scheduledDate || qrBooking?.date || "";
+  const qrTime = qrBooking?.scheduledStartTime || qrBooking?.time || qrBooking?.startTime || "";
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
@@ -95,7 +111,9 @@ export default function BookingsScreen() {
                   tab === tabKey && styles.tabBtnTextActive,
                 ]}
               >
-                {t(`bookings.${tabKey}`)}
+                {tabKey === "upcoming"
+                  ? `Kelayotgan (${upcoming.length})`
+                  : `O'tgan (${past.length})`}
               </Text>
             </TouchableOpacity>
           ))}
@@ -103,7 +121,7 @@ export default function BookingsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: 110 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -115,10 +133,17 @@ export default function BookingsScreen() {
       >
         {list.length === 0 ? (
           <View style={styles.emptyState}>
-            <Feather name="calendar" size={40} color={Colors.textSecondary} />
+            <Feather name="calendar" size={48} color={Colors.textSecondary} />
             <Text style={styles.emptyTitle}>
-              {t(`bookings.no_${tab}`)}
+              {tab === "upcoming"
+                ? "Hozircha faol bronlar yo'q"
+                : "O'tgan bronlar yo'q"}
             </Text>
+            {tab === "upcoming" && (
+              <Text style={styles.emptyHint}>
+                Zal tanlang va bron qiling
+              </Text>
+            )}
           </View>
         ) : (
           list.map((booking: any) => (
@@ -127,7 +152,7 @@ export default function BookingsScreen() {
               booking={booking}
               onShowQR={() => setQrBooking(booking)}
               onCancel={
-                tab === "upcoming"
+                (booking.status === "pending" || booking.status === "confirmed")
                   ? () => confirmCancel(booking)
                   : undefined
               }
@@ -143,24 +168,26 @@ export default function BookingsScreen() {
         onRequestClose={() => setQrBooking(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.qrModal}>
+          <View style={[styles.qrModal, { paddingBottom: insets.bottom + 24 }]}>
             <TouchableOpacity
               style={styles.modalClose}
               onPress={() => setQrBooking(null)}
             >
               <Feather name="x" size={20} color={Colors.text} />
             </TouchableOpacity>
-            <Text style={styles.qrTitle}>{t("bookings.show_qr")}</Text>
+            <Text style={styles.qrTitle}>Bron QR-kodi</Text>
             {qrBooking && (
               <>
-                <Text style={styles.qrGymName}>
-                  {qrBooking.gymName || "Zal"}
-                </Text>
+                <Text style={styles.qrGymName}>{gymName}</Text>
                 <Text style={styles.qrDate}>
-                  {qrBooking.scheduledDate
-                    ? new Date(qrBooking.scheduledDate).toLocaleDateString("uz-UZ")
-                    : ""}{" "}
-                  {qrBooking.startTime || ""}
+                  {qrDate
+                    ? new Date(qrDate).toLocaleDateString("uz-UZ", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })
+                    : ""}
+                  {qrTime ? `  •  ${qrTime}` : ""}
                 </Text>
                 <View style={styles.qrContainer}>
                   <QRCode
@@ -170,8 +197,9 @@ export default function BookingsScreen() {
                     backgroundColor="#fff"
                   />
                 </View>
+                <Text style={styles.qrIdText}>#{qrBooking.id?.slice(0, 8).toUpperCase()}</Text>
                 <Text style={styles.qrHint}>
-                  Zal QR-kodini skanerlash uchun bu kodni ko'rsating
+                  Bu QR-kodni zalga kirishda ko'rsating
                 </Text>
               </>
             )}
@@ -190,6 +218,11 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.cardBorder,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   title: {
     fontSize: 24,
@@ -211,7 +244,7 @@ const styles = StyleSheet.create({
   },
   tabBtnActive: { backgroundColor: Colors.card },
   tabBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
   },
@@ -222,14 +255,21 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
   emptyState: {
     alignItems: "center",
-    paddingVertical: 60,
-    gap: 16,
+    paddingVertical: 80,
+    gap: 12,
   },
   emptyTitle: {
     fontSize: 16,
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
     textAlign: "center",
+  },
+  emptyHint: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    textAlign: "center",
+    opacity: 0.7,
   },
   modalOverlay: {
     flex: 1,
@@ -238,12 +278,11 @@ const styles = StyleSheet.create({
   },
   qrModal: {
     backgroundColor: Colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
     alignItems: "center",
-    gap: 12,
-    paddingBottom: 40,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: Colors.cardBorder,
   },
@@ -252,11 +291,14 @@ const styles = StyleSheet.create({
     top: 16,
     right: 16,
     padding: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
   },
   qrTitle: {
     fontSize: 20,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
+    marginTop: 8,
   },
   qrGymName: {
     fontSize: 16,
@@ -271,10 +313,19 @@ const styles = StyleSheet.create({
   qrContainer: {
     padding: 20,
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 20,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  qrIdText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSecondary,
+    letterSpacing: 1,
   },
   qrHint: {
     fontSize: 12,

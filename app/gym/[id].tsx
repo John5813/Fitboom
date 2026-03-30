@@ -89,7 +89,7 @@ export default function GymDetailScreen() {
   const bookMutation = useMutation({
     mutationFn: (data: any) => bookGym(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();
       setBookingModal(false);
       setSelectedSlot(null);

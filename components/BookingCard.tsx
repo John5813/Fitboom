@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,6 +16,21 @@ interface BookingCardProps {
   onCancel?: () => void;
 }
 
+function getStatusInfo(status: string) {
+  switch (status) {
+    case "confirmed":
+      return { label: "Tasdiqlangan", bg: "rgba(16,185,129,0.12)", text: "#10b981" };
+    case "pending":
+      return { label: "Kutilmoqda", bg: "rgba(245,158,11,0.12)", text: "#f59e0b" };
+    case "cancelled":
+      return { label: "Bekor qilindi", bg: "rgba(239,68,68,0.1)", text: Colors.error };
+    case "completed":
+      return { label: "Tugallandi", bg: Colors.surface, text: Colors.textSecondary };
+    default:
+      return { label: status, bg: Colors.surface, text: Colors.textSecondary };
+  }
+}
+
 export default function BookingCard({
   booking,
   compact,
@@ -25,52 +39,58 @@ export default function BookingCard({
 }: BookingCardProps) {
   const { t } = useLanguage();
 
-  const dateStr = booking.scheduledDate
-    ? new Date(booking.scheduledDate).toLocaleDateString("uz-UZ", {
+  const gymName = booking.gym?.name || booking.gymName || "Sport zal";
+  const gymAddress = booking.gym?.address || booking.address || "";
+
+  const startTime = booking.scheduledStartTime || booking.time || booking.startTime || "";
+  const endTime = booking.scheduledEndTime || booking.endTime || "";
+
+  const dateStr = booking.scheduledDate || booking.date
+    ? new Date(booking.scheduledDate || booking.date).toLocaleDateString("uz-UZ", {
         weekday: "short",
         day: "numeric",
         month: "short",
       })
     : "";
 
-  const isUpcoming = booking.status === "confirmed";
+  const isActive = booking.status === "confirmed" || booking.status === "pending";
+  const statusInfo = getStatusInfo(booking.status || "pending");
+
+  const stripeColor =
+    booking.status === "confirmed" ? "#10b981" :
+    booking.status === "pending" ? "#f59e0b" :
+    booking.status === "cancelled" ? Colors.error :
+    Colors.textSecondary;
 
   return (
     <View style={[styles.card, compact && styles.cardCompact]}>
-      <View style={styles.leftStripe} />
+      <View style={[styles.leftStripe, { backgroundColor: stripeColor }]} />
       <View style={styles.content}>
         <View style={styles.topRow}>
           <View style={styles.gymInfo}>
-            <Text style={styles.gymName} numberOfLines={1}>
-              {booking.gymName || "Sport zal"}
-            </Text>
+            <Text style={styles.gymName} numberOfLines={1}>{gymName}</Text>
+            {gymAddress ? (
+              <View style={styles.addressRow}>
+                <Feather name="map-pin" size={11} color={Colors.textSecondary} />
+                <Text style={styles.addressText} numberOfLines={1}>{gymAddress}</Text>
+              </View>
+            ) : null}
             <View style={styles.dateRow}>
               <Feather name="calendar" size={12} color={Colors.textSecondary} />
               <Text style={styles.dateText}>{dateStr}</Text>
-              {booking.startTime && (
+              {startTime ? (
                 <>
                   <Feather name="clock" size={12} color={Colors.textSecondary} />
                   <Text style={styles.dateText}>
-                    {booking.startTime}
-                    {booking.endTime ? ` - ${booking.endTime}` : ""}
+                    {startTime}{endTime ? ` - ${endTime}` : ""}
                   </Text>
                 </>
-              )}
+              ) : null}
             </View>
           </View>
-          <View
-            style={[
-              styles.statusBadge,
-              isUpcoming ? styles.statusActive : styles.statusPast,
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                isUpcoming ? styles.statusActiveText : styles.statusPastText,
-              ]}
-            >
-              {isUpcoming ? "Faol" : "O'tgan"}
+          <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+            <Text style={[styles.statusText, { color: statusInfo.text }]}>
+              {statusInfo.label}
             </Text>
           </View>
         </View>
@@ -84,7 +104,7 @@ export default function BookingCard({
           </View>
         )}
 
-        {!compact && isUpcoming && (
+        {!compact && isActive && (
           <View style={styles.actions}>
             {onShowQR && (
               <TouchableOpacity style={styles.qrBtn} onPress={onShowQR}>
@@ -112,6 +132,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   cardCompact: { borderRadius: 12 },
   leftStripe: {
@@ -128,17 +153,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  gymInfo: { flex: 1, gap: 4 },
+  gymInfo: { flex: 1, gap: 3, marginRight: 8 },
   gymName: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
+  },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  addressText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
   },
   dateRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     flexWrap: "wrap",
+    marginTop: 2,
   },
   dateText: {
     fontSize: 12,
@@ -149,13 +185,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    marginLeft: 8,
+    alignSelf: "flex-start",
   },
-  statusActive: { backgroundColor: Colors.primaryLight },
-  statusPast: { backgroundColor: Colors.surface },
   statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  statusActiveText: { color: Colors.primary },
-  statusPastText: { color: Colors.textSecondary },
   creditsRow: {
     flexDirection: "row",
     alignItems: "center",
