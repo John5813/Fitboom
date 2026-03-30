@@ -30,8 +30,16 @@ async function ensureTablesExist() {
       )
     `);
 
-    // Add any other columns or tables that were added incrementally:
-    // Example: ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...
+    // stored_files — persistent file storage in DB (images, receipts)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS stored_files (
+        name VARCHAR PRIMARY KEY,
+        data TEXT NOT NULL,
+        content_type VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
     console.log("ensureTablesExist: all checks passed.");
   } finally {
     client.release();

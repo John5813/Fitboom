@@ -96,24 +96,16 @@ async function uploadToObjectStorage(file: Express.Multer.File, folder = 'images
   const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
 
   try {
-    const client = await getOsClient();
-    if (client) {
-      const result = await client.uploadFromBytes(`${folder}/${uniqueName}`, file.buffer, { contentType: file.mimetype });
-      if (result.ok) {
-        console.log(`[Mobile Upload] Object Storage ga saqlandi: ${folder}/${uniqueName}`);
-        return `/api/images/${uniqueName}`;
-      }
-      console.error(`[Mobile Upload] OS xatoligi: ${result.error}`);
-    }
-  } catch (osErr: any) {
-    console.error(`[Mobile Upload] OS exception:`, osErr.message);
+    await storage.saveFile(`${folder}/${uniqueName}`, file.buffer, file.mimetype);
+    console.log(`[Mobile Upload] DB ga saqlandi: ${folder}/${uniqueName}`);
+  } catch (err: any) {
+    console.error(`[Mobile Upload] DB xatoligi:`, err.message);
+    const { mkdir, writeFile } = await import('fs/promises');
+    const uploadsDir = path.join(process.cwd(), 'uploads', folder);
+    await mkdir(uploadsDir, { recursive: true });
+    await writeFile(path.join(uploadsDir, uniqueName), file.buffer);
+    console.log(`[Mobile Upload] Lokal diskka saqlandi: ${folder}/${uniqueName}`);
   }
-
-  const { mkdir, writeFile } = await import('fs/promises');
-  const uploadsDir = path.join(process.cwd(), 'uploads', folder);
-  await mkdir(uploadsDir, { recursive: true });
-  await writeFile(path.join(uploadsDir, uniqueName), file.buffer);
-  console.log(`[Mobile Upload] Lokal diskka saqlandi: ${folder}/${uniqueName}`);
   return `/api/images/${uniqueName}`;
 }
 
@@ -125,24 +117,16 @@ async function saveReceiptFile(file: Express.Multer.File): Promise<{ url: string
   const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
 
   try {
-    const client = await getOsClient();
-    if (client) {
-      const result = await client.uploadFromBytes(`receipts/${uniqueName}`, file.buffer, { contentType: file.mimetype });
-      if (result.ok) {
-        console.log(`[Receipt] Object Storage ga saqlandi: receipts/${uniqueName}`);
-        return { url: `/api/receipts/${uniqueName}`, filename: uniqueName };
-      }
-      console.error(`[Receipt] OS xatoligi: ${result.error}`);
-    }
-  } catch (osErr: any) {
-    console.error(`[Receipt] OS exception:`, osErr.message);
+    await storage.saveFile(`receipts/${uniqueName}`, file.buffer, file.mimetype);
+    console.log(`[Receipt] DB ga saqlandi: receipts/${uniqueName}`);
+  } catch (err: any) {
+    console.error(`[Receipt] DB xatoligi:`, err.message);
+    const { mkdir, writeFile } = await import('fs/promises');
+    const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts');
+    await mkdir(receiptsDir, { recursive: true });
+    await writeFile(path.join(receiptsDir, uniqueName), file.buffer);
+    console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
   }
-
-  const { mkdir, writeFile } = await import('fs/promises');
-  const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts');
-  await mkdir(receiptsDir, { recursive: true });
-  await writeFile(path.join(receiptsDir, uniqueName), file.buffer);
-  console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
   return { url: `/api/receipts/${uniqueName}`, filename: uniqueName };
 }
 

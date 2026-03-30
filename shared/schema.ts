@@ -245,3 +245,11 @@ export type GymWithRating = Gym & {
   avgRating: number | null;
   ratingCount: number;
 };
+
+export const storedFiles = pgTable("stored_files", {
+  name: varchar("name").primaryKey(),
+  data: text("data").notNull(),
+  contentType: varchar("content_type", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type StoredFile = typeof storedFiles.$inferSelect;

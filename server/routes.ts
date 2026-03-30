@@ -80,22 +80,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function saveReceiptFile(file: Express.Multer.File, uniqueName: string): Promise<string> {
     try {
-      const client = await getOsClient();
-      if (client) {
-        const result = await client.uploadFromBytes(`receipts/${uniqueName}`, file.buffer, { contentType: file.mimetype });
-        if (result.ok) {
-          console.log(`[Receipt] Object Storage ga saqlandi: receipts/${uniqueName}`);
-          return `/api/receipts/${uniqueName}`;
-        }
-        console.error(`[Receipt] OS xatoligi: ${result.error}`);
-      }
-    } catch (osErr: any) {
-      console.error(`[Receipt] OS exception:`, osErr.message);
+      await storage.saveFile(`receipts/${uniqueName}`, file.buffer, file.mimetype);
+      console.log(`[Receipt] DB ga saqlandi: receipts/${uniqueName}`);
+    } catch (err: any) {
+      console.error(`[Receipt] DB xatoligi:`, err.message);
+      const localDir = path.join(uploadsDir, 'receipts');
+      await fs.mkdir(localDir, { recursive: true });
+      await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
+      console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
     }
-    const localDir = path.join(uploadsDir, 'receipts');
-    await fs.mkdir(localDir, { recursive: true });
-    await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
-    console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
     return `/api/receipts/${uniqueName}`;
   }
 
@@ -131,23 +124,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
 
     try {
-      const client = await getOsClient();
-      if (client) {
-        const result = await client.uploadFromBytes(`images/${uniqueName}`, file.buffer, { contentType: file.mimetype });
-        if (result.ok) {
-          console.log(`[Upload] Object Storage ga saqlandi: images/${uniqueName}`);
-          return `/api/images/${uniqueName}`;
-        }
-        console.error(`[Upload] OS xatoligi: ${result.error}`);
-      }
-    } catch (osErr: any) {
-      console.error(`[Upload] OS exception:`, osErr.message);
+      await storage.saveFile(`images/${uniqueName}`, file.buffer, file.mimetype);
+      console.log(`[Upload] DB ga saqlandi: images/${uniqueName}`);
+    } catch (err: any) {
+      console.error(`[Upload] DB xatoligi:`, err.message);
+      const imagesDir = path.join(uploadsDir, 'images');
+      await fs.mkdir(imagesDir, { recursive: true });
+      await fs.writeFile(path.join(imagesDir, uniqueName), file.buffer);
+      console.log(`[Upload] Lokal diskka saqlandi: ${uniqueName}`);
     }
-
-    const imagesDir = path.join(uploadsDir, 'images');
-    await fs.mkdir(imagesDir, { recursive: true });
-    await fs.writeFile(path.join(imagesDir, uniqueName), file.buffer);
-    console.log(`[Upload] Lokal diskka saqlandi: ${uniqueName}`);
     return `/api/images/${uniqueName}`;
   }
 
@@ -185,20 +170,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const filename = req.params.filename;
 
-      try {
-        const client = await getOsClient();
-        const result = client ? await client.downloadAsBytes(`images/${filename}`) : null;
-        if (result?.ok) {
-          let contentType = 'image/jpeg';
-          if (filename.endsWith('.png')) contentType = 'image/png';
-          else if (filename.endsWith('.gif')) contentType = 'image/gif';
-          else if (filename.endsWith('.webp')) contentType = 'image/webp';
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Cache-Control', 'public, max-age=31536000');
-          return res.send(result.value[0]);
-        }
-      } catch (osErr: any) {
-        console.error(`[Serve] Object Storage o'qishda xatolik:`, osErr.message);
+      const dbFile = await storage.getFile(`images/${filename}`);
+      if (dbFile) {
+        res.setHeader('Content-Type', dbFile.contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(dbFile.data);
       }
 
       const localPath = path.join(uploadsDir, 'images', filename);
@@ -209,10 +185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (filename.endsWith('.gif')) contentType = 'image/gif';
         else if (filename.endsWith('.webp')) contentType = 'image/webp';
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
         return res.sendFile(localPath);
       } catch {
-        console.warn(`[Serve] Lokal diskda ham topilmadi: ${localPath}`);
         return res.status(404).json({ error: "Rasm topilmadi" });
       }
     } catch (error: any) {
@@ -225,17 +200,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const filename = req.params.filename;
 
-      try {
-        const client = await getOsClient();
-        const result = client ? await client.downloadAsBytes(`receipts/${filename}`) : null;
-        if (result?.ok) {
-          let contentType = 'image/jpeg';
-          if (filename.endsWith('.png')) contentType = 'image/png';
-          res.setHeader('Content-Type', contentType);
-          return res.send(result.value[0]);
-        }
-      } catch {
-        // Object Storage unavailable — fall through to local
+      const dbFile = await storage.getFile(`receipts/${filename}`);
+      if (dbFile) {
+        res.setHeader('Content-Type', dbFile.contentType);
+        return res.send(dbFile.data);
       }
 
       const localPath = path.join(uploadsDir, 'receipts', filename);

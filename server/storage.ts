@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -96,6 +96,8 @@ export interface IStorage {
   }>;
   getAtRiskUsers(daysInactive: number): Promise<User[]>;
   getTopActiveUsers(limit: number): Promise<{ user: User; activityScore: number }[]>;
+  saveFile(name: string, data: Buffer, contentType: string): Promise<void>;
+  getFile(name: string): Promise<{ data: Buffer; contentType: string } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -758,6 +760,19 @@ export class DatabaseStorage implements IStorage {
       if (user) results.push({ user, activityScore: Number(row.score) });
     }
     return results;
+  }
+
+  async saveFile(name: string, data: Buffer, contentType: string): Promise<void> {
+    const base64 = data.toString('base64');
+    await db.insert(storedFiles)
+      .values({ name, data: base64, contentType })
+      .onConflictDoUpdate({ target: storedFiles.name, set: { data: base64, contentType } });
+  }
+
+  async getFile(name: string): Promise<{ data: Buffer; contentType: string } | null> {
+    const [file] = await db.select().from(storedFiles).where(eq(storedFiles.name, name));
+    if (!file) return null;
+    return { data: Buffer.from(file.data, 'base64'), contentType: file.contentType };
   }
 }
 
