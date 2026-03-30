@@ -109,32 +109,41 @@ export async function request<T = unknown>(
   options: ApiRequestOptions = {}
 ): Promise<T> {
   let token = options.skipAuth ? null : await getAccessToken();
+  console.log(`[API] ${options.method || "GET"} ${path} | token: ${token ? "yes(" + token.slice(0,8) + "...)" : "NO"}`);
 
   let response: Response;
   try {
     response = await rawRequest(path, options, token);
-  } catch {
-    throw new Error("API ishlamadi");
+  } catch (fetchErr) {
+    console.error(`[API] Network error for ${path}:`, fetchErr);
+    throw new Error("Internet aloqasi yo'q yoki server javob bermayapti");
   }
 
+  console.log(`[API] ${options.method || "GET"} ${path} => HTTP ${response.status}`);
+
   if (response.status === 401 && !options.skipAuth) {
+    console.log("[API] 401 — refreshing token...");
     const newToken = await tryRefreshToken();
     if (newToken) {
       try {
         response = await rawRequest(path, options, newToken);
-      } catch {
-        throw new Error("API ishlamadi");
+        console.log(`[API] Retry => HTTP ${response.status}`);
+      } catch (retryErr) {
+        console.error("[API] Retry network error:", retryErr);
+        throw new Error("Internet aloqasi yo'q yoki server javob bermayapti");
       }
     } else {
-      throw new Error("SESSION_EXPIRED");
+      console.error("[API] Token refresh failed — session expired");
+      throw new Error("Sessiya tugadi. Qayta tizimga kiring.");
     }
   }
 
   const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
+  console.log(`[API] ${options.method || "GET"} ${path} body:`, text.slice(0, 300));
 
   if (!text || text.trim() === "") {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Server xatosi (HTTP ${response.status})`);
     return null as T;
   }
 
@@ -142,9 +151,9 @@ export async function request<T = unknown>(
   try {
     json = JSON.parse(text);
   } catch {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Server xatosi (HTTP ${response.status})`);
     if (!contentType.includes("application/json")) return null as T;
-    throw new Error("API ishlamadi");
+    throw new Error("Server noto'g'ri javob qaytardi");
   }
 
   if (!response.ok) {
@@ -152,7 +161,7 @@ export async function request<T = unknown>(
       json?.error ||
       json?.message ||
       json?.data?.message ||
-      `HTTP ${response.status}`;
+      `Server xatosi (HTTP ${response.status})`;
     throw new Error(msg);
   }
 

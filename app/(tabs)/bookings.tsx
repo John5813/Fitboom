@@ -102,8 +102,11 @@ export default function BookingsScreen() {
 
   const handleCancel = async (booking: any) => {
     const bookingId = booking.id || booking._id;
+    console.log("[CANCEL] booking object:", JSON.stringify(booking));
+    console.log("[CANCEL] bookingId:", bookingId);
+
     if (!bookingId) {
-      Alert.alert("Xatolik", "Bron ID topilmadi");
+      Alert.alert("Xatolik", "Bron ID topilmadi. Booking: " + JSON.stringify(booking).slice(0, 200));
       return;
     }
 
@@ -119,17 +122,23 @@ export default function BookingsScreen() {
           text: "Ha, bekor qilish",
           style: "destructive",
           onPress: async () => {
+            console.log("[CANCEL] Starting cancel for:", bookingId);
             setCancellingId(bookingId);
             try {
               const result = await cancelBooking(bookingId);
+              console.log("[CANCEL] Success result:", JSON.stringify(result));
               const msg =
                 (result as any)?.message ||
-                "Bron muvaffaqiyatli bekor qilindi.";
+                (result as any)?.noRefund === false
+                  ? "Bron bekor qilindi. Kreditingiz qaytarildi."
+                  : (result as any)?.noRefund === true
+                    ? "Bron bekor qilindi. Kredit qaytarilmadi (2 soatdan kam qolgan)."
+                    : "Bron muvaffaqiyatli bekor qilindi.";
               queryClient.invalidateQueries({ queryKey: ["bookings"] });
               refetchUser();
               Alert.alert("Bekor qilindi", msg);
             } catch (err: any) {
-              console.error("Cancel error:", err);
+              console.error("[CANCEL] Error:", err?.message, err);
               Alert.alert(
                 "Xatolik",
                 err?.message || "Bronni bekor qilib bo'lmadi"
