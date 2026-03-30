@@ -1028,7 +1028,7 @@ export function registerMobileRoutes(app: Express) {
       const user = await storage.checkAndResetExpiredCredits(mobileUser.id);
       const currentUser = user || mobileUser;
 
-      const [pendingPayment, pendingPayments] = await Promise.all([
+      const [partialPayment, pendingPayments] = await Promise.all([
         storage.getActiveCreditPayment(mobileUser.id),
         storage.getPendingCreditPayments(mobileUser.id),
       ]);
@@ -1038,6 +1038,8 @@ export function registerMobileRoutes(app: Express) {
       const daysUntilExpiry = expiryDate
         ? Math.max(0, Math.ceil((new Date(expiryDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
         : null;
+
+      const firstPending = pendingPayments[0] || null;
 
       mobileSuccess(res, {
         credits: currentUser.credits,
@@ -1049,7 +1051,22 @@ export function registerMobileRoutes(app: Express) {
           price: CREDIT_PRICES[c],
           priceFormatted: `${CREDIT_PRICES[c].toLocaleString()} so'm`,
         })),
-        activePartialPayment: pendingPayment?.status === 'partial' ? pendingPayment : null,
+        activePartialPayment: partialPayment?.status === 'partial' ? {
+          id: partialPayment.id,
+          credits: partialPayment.credits,
+          price: partialPayment.price,
+          remainingAmount: partialPayment.remainingAmount,
+          status: partialPayment.status,
+          createdAt: partialPayment.createdAt,
+        } : null,
+        pendingPayment: firstPending ? {
+          id: firstPending.id,
+          credits: firstPending.credits,
+          price: firstPending.price,
+          remainingAmount: firstPending.remainingAmount,
+          status: firstPending.status,
+          createdAt: firstPending.createdAt,
+        } : null,
         pendingPaymentsCount: pendingPayments.length,
       });
     } catch (err: any) {
