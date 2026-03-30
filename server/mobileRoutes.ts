@@ -796,14 +796,16 @@ export function registerMobileRoutes(app: Express) {
       }
 
       const existingBookings = await storage.getBookings(mobileUser.id);
+      const dateNorm = (d: any) => (typeof d === 'string' ? d.split('T')[0] : new Date(d).toISOString().split('T')[0]);
       const hasConflict = existingBookings.some(b =>
         b.gymId === gymId &&
-        b.date === date &&
-        (b.status === 'pending') &&
+        b.timeSlotId === timeSlotId &&
+        dateNorm(b.date) === dateNorm(date) &&
+        (b.status === 'pending' || b.status === 'confirmed') &&
         !b.isCompleted
       );
       if (hasConflict) {
-        return mobileError(res, "Bu zal uchun shu kunda allaqachon bron qilgansiz");
+        return mobileError(res, "Bu vaqt slotiga allaqachon bron qilgansiz");
       }
 
       const qrData = JSON.stringify({
