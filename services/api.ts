@@ -345,8 +345,14 @@ export const getGymSlots = async (gymId: string, date?: string) =>
     message?: string;
   }>(`/gyms/${gymId}/slots${date ? `?date=${date}` : ""}`);
 
-export const getBookings = async () =>
-  request<{ bookings: any[] }>("/bookings");
+export const getBookings = async (): Promise<{ bookings: any[]; total: number }> => {
+  const result: any = await request("/bookings");
+  const inner = result?.bookings !== undefined ? result : (result?.data ?? result);
+  return {
+    bookings: inner?.bookings ?? [],
+    total: inner?.total ?? 0,
+  };
+};
 
 export const bookGym = async (payload: {
   gymId: string;
