@@ -65,9 +65,10 @@ export default function BookingsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();
+      Alert.alert("✓ Bekor qilindi", "Bron bekor qilindi. Kredit qaytarildi.");
     },
     onError: (err: any) => {
-      Alert.alert(t("common.error"), err.message);
+      Alert.alert(t("common.error"), err.message || "Bron bekor qilinmadi");
     },
   });
 

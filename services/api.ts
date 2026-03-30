@@ -133,15 +133,17 @@ export async function request<T = unknown>(
   const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
 
-  if (!contentType.includes("application/json")) {
+  if (!text || text.trim() === "") {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    throw new Error("API ishlamadi");
+    return null as T;
   }
 
   let json: any;
   try {
     json = JSON.parse(text);
   } catch {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!contentType.includes("application/json")) return null as T;
     throw new Error("API ishlamadi");
   }
 
