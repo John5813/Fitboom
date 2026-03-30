@@ -75,9 +75,10 @@ export default function GymDetailScreen() {
 
   const selectedDate = new Date();
   selectedDate.setDate(selectedDate.getDate() + selectedDayOffset);
-  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const selectedDateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`;
 
-  const { data: slotsData } = useQuery({
+  const { data: slotsData, isLoading: slotsLoading } = useQuery({
     queryKey: [`/api/gyms/${id}/slots`, selectedDateStr],
     queryFn: () => (id ? getGymSlots(id, selectedDateStr) : Promise.resolve({ slots: [], is_day_off: false })),
     enabled: !!id,
@@ -85,6 +86,7 @@ export default function GymDetailScreen() {
 
   const isDayOff = slotsData?.is_day_off === true || slotsData?.isClosed === true;
   const slots = slotsData?.slots || [];
+  const needSlot = slots.length > 0 && !selectedSlot;
 
   const bookMutation = useMutation({
     mutationFn: (data: any) => bookGym(data),
@@ -123,6 +125,10 @@ export default function GymDetailScreen() {
   };
 
   const confirmBooking = () => {
+    if (slots.length > 0 && !selectedSlot) {
+      Alert.alert("Vaqt tanlang", "Iltimos, bron uchun vaqt oralig'ini tanlang");
+      return;
+    }
     bookMutation.mutate({
       gymId: id,
       timeSlotId: selectedSlot?.id || null,
@@ -363,7 +369,12 @@ export default function GymDetailScreen() {
 
             <Text style={styles.sectionLabel}>{t("gym.select_slot")}</Text>
 
-            {isDayOff ? (
+            {slotsLoading ? (
+              <View style={styles.dayOffBox}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.dayOffSub}>Yuklanmoqda...</Text>
+              </View>
+            ) : isDayOff ? (
               <View style={styles.dayOffBox}>
                 <Feather name="moon" size={24} color={Colors.textSecondary} />
                 <Text style={styles.dayOffText}>Dam olish kuni</Text>
@@ -408,11 +419,11 @@ export default function GymDetailScreen() {
               </View>
             )}
 
-            {!isDayOff && (
+            {!isDayOff && !slotsLoading && (
               <TouchableOpacity
                 style={[
                   styles.confirmBtn,
-                  bookMutation.isPending && { opacity: 0.7 },
+                  (bookMutation.isPending || needSlot) && { opacity: 0.5 },
                 ]}
                 onPress={confirmBooking}
                 disabled={bookMutation.isPending}
@@ -421,7 +432,9 @@ export default function GymDetailScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.confirmBtnText}>
-                    {t("gym.confirm_booking")} ({gym.credits} kredit)
+                    {needSlot
+                      ? "Vaqt tanlang"
+                      : `${t("gym.confirm_booking")} (${gym.credits} kredit)`}
                   </Text>
                 )}
               </TouchableOpacity>
