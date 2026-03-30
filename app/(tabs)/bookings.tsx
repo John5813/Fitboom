@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
@@ -39,7 +40,14 @@ export default function BookingsScreen() {
   const { data, refetch } = useQuery({
     queryKey: ["bookings"],
     queryFn: getBookings,
+    staleTime: 0,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const allBookings: any[] = data?.bookings || [];
 
