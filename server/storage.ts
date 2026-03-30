@@ -530,7 +530,8 @@ export class DatabaseStorage implements IStorage {
 
   async getPendingCreditPayments(userId: string): Promise<CreditPayment[]> {
     return await db.select().from(creditPayments)
-      .where(and(eq(creditPayments.userId, userId), eq(creditPayments.status, 'pending')));
+      .where(and(eq(creditPayments.userId, userId), eq(creditPayments.status, 'pending')))
+      .orderBy(creditPayments.createdAt);
   }
 
   async getActiveCreditPayment(userId: string): Promise<CreditPayment | undefined> {
