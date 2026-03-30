@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import type { IStorage } from './storage';
 import { generateFiscalReceiptPDF } from './pdfReceipt';
+import path from 'path';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'uzfitboom_bot';
@@ -109,6 +110,39 @@ async function sendPhoto(chatId: number | string, photoUrl: string, caption: str
   const body: any = { chat_id: chatId, photo: photoUrl, caption, parse_mode: 'HTML' };
   if (replyMarkup) body.reply_markup = replyMarkup;
   return telegramApi('sendPhoto', body);
+}
+
+async function sendPhotoBuffer(chatId: number | string, photoBuffer: Buffer, filename: string, caption: string, replyMarkup?: any) {
+  const boundary = `----FormBoundary${Date.now()}`;
+  const parts: Buffer[] = [];
+
+  const addField = (name: string, value: string) => {
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+  };
+
+  addField('chat_id', String(chatId));
+  addField('caption', caption);
+  addField('parse_mode', 'HTML');
+  if (replyMarkup) addField('reply_markup', JSON.stringify(replyMarkup));
+
+  const ext = path.extname(filename).toLowerCase();
+  const mimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+
+  parts.push(Buffer.from(
+    `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+  ));
+  parts.push(photoBuffer);
+  parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+
+  const body = Buffer.concat(parts);
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+    body,
+  });
+  return res.json();
 }
 
 async function sendDocument(chatId: number | string, fileBuffer: Buffer, filename: string, caption?: string) {
@@ -766,24 +800,45 @@ export function setupCreditExpiryScheduler(storage: IStorage): void {
   }, msUntilFirst);
 }
 
-export async function sendPaymentReceiptToAdmin(storage: IStorage, paymentId: string, receiptUrl: string, user: any, credits: number, price: number, isRemainingPayment: boolean = false) {
+export async function sendPaymentReceiptToAdmin(
+  storage: IStorage,
+  paymentId: string,
+  receiptUrlOrBuffer: string | Buffer,
+  user: any,
+  credits: number,
+  price: number,
+  isRemainingPayment: boolean = false,
+  receiptFilename: string = 'receipt.jpg'
+) {
   const payment = await storage.getCreditPayment(paymentId);
   const remainingAmount = payment?.remainingAmount || 0;
-  
+
   let caption: string;
   if (isRemainingPayment) {
     caption = `<b>Qoldiq to'lov cheki!</b>\n\nMijoz: ${user.name}\nTel: ${user.phone}\nPaket: ${credits} kalit\nQoldiq summa: ${remainingAmount.toLocaleString()} so'm`;
   } else {
     caption = `<b>Yangi to'lov!</b>\n\nMijoz: ${user.name}\nTel: ${user.phone}\nPaket: ${credits} kalit\nSumma: ${price.toLocaleString()} so'm`;
   }
+
   const inlineKeyboard = {
     inline_keyboard: [
       [{ text: 'Tasdiqlash', callback_data: `pay_approve_${paymentId.trim()}` }, { text: 'Rad etish', callback_data: `pay_reject_${paymentId.trim()}` }],
       [{ text: "Summani o'zgartirish", callback_data: `pay_amount_${paymentId.trim()}` }]
     ]
   };
+
   const adminIds = getAdminChatIds();
   for (const adminId of adminIds) {
-    await sendPhoto(adminId, receiptUrl, caption, inlineKeyboard);
+    if (Buffer.isBuffer(receiptUrlOrBuffer)) {
+      const result = await sendPhotoBuffer(adminId, receiptUrlOrBuffer, receiptFilename, caption, inlineKeyboard);
+      if (!result.ok) {
+        console.error(`[Telegram] sendPhotoBuffer xatoligi:`, result.description);
+      }
+    } else {
+      const result: any = await sendPhoto(adminId, receiptUrlOrBuffer, caption, inlineKeyboard);
+      if (!result.ok) {
+        console.error(`[Telegram] sendPhoto URL xatoligi: ${result.description} — URL: ${receiptUrlOrBuffer}`);
+      }
+    }
   }
 }

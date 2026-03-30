@@ -66,13 +66,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function saveReceiptFile(file: Express.Multer.File, uniqueName: string): Promise<string> {
+    let savedToOS = false;
     if (bucketId) {
-      const blob = getOSBucket().file(`receipts/${uniqueName}`);
-      await blob.save(file.buffer, { contentType: file.mimetype });
-    } else {
+      try {
+        const blob = getOSBucket().file(`receipts/${uniqueName}`);
+        await blob.save(file.buffer, { contentType: file.mimetype });
+        const [exists] = await blob.exists();
+        if (exists) {
+          savedToOS = true;
+        } else {
+          console.error(`[Receipt] OS ga saqlandi lekin topilmadi: receipts/${uniqueName}`);
+        }
+      } catch (osErr: any) {
+        console.error(`[Receipt] OS xatoligi, lokal diskka saqlanadi:`, osErr.message);
+      }
+    }
+    if (!savedToOS) {
       const localDir = path.join(uploadsDir, 'receipts');
       await fs.mkdir(localDir, { recursive: true });
       await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
+      console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
     }
     return `/api/receipts/${uniqueName}`;
   }
@@ -929,7 +942,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Chek rasmi yuborilmadi" });
       }
 
-      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const ext = path.extname(req.file.originalname) || '.jpg';
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
       const receiptUrl = await saveReceiptFile(req.file, uniqueName);
 
       const payment = await storage.createCreditPayment({
@@ -942,17 +956,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
-    const user = await storage.getUser(req.user!.id);
-    const fullReceiptUrl = `${getAppUrl()}${receiptUrl}`.trim();
-
-    await sendPaymentReceiptToAdmin(
-      storage,
-      payment.id.trim(),
-      fullReceiptUrl,
-      user,
-      creditsNum,
-      priceNum
-    );
+      const user = await storage.getUser(req.user!.id);
+      await sendPaymentReceiptToAdmin(
+        storage,
+        payment.id.trim(),
+        req.file.buffer,
+        user,
+        creditsNum,
+        priceNum,
+        false,
+        uniqueName
+      );
 
       res.json({ success: true, message: "Chek yuborildi" });
     } catch (error: any) {
@@ -988,21 +1002,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Chek rasmi yuborilmadi" });
       }
 
-      const rUniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(req.file.originalname)}`;
+      const rExt = path.extname(req.file.originalname) || '.jpg';
+      const rUniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${rExt}`;
       const receiptUrl = await saveReceiptFile(req.file, rUniqueName);
       await storage.updateCreditPayment(paymentId, { receiptUrl } as any);
 
       const user = await storage.getUser(req.user!.id);
-      const fullReceiptUrl = `${getAppUrl()}${receiptUrl}`.trim();
-
       await sendPaymentReceiptToAdmin(
         storage,
         paymentId.trim(),
-        fullReceiptUrl,
+        req.file.buffer,
         user,
         payment.credits,
         payment.remainingAmount,
-        true
+        true,
+        rUniqueName
       );
 
       res.json({ success: true, message: "Qoldiq chek yuborildi" });

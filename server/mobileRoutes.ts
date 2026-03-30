@@ -106,15 +106,40 @@ async function uploadToObjectStorage(file: Express.Multer.File, folder = 'images
   return `/api/images/${uniqueName}`;
 }
 
-async function saveReceiptFile(file: Express.Multer.File): Promise<string> {
+async function saveReceiptFile(file: Express.Multer.File): Promise<{ url: string; filename: string }> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
+  const ext = path.extname(file.originalname) ||
+    (file.mimetype === 'image/png' ? '.png' :
+     file.mimetype === 'image/gif' ? '.gif' :
+     file.mimetype === 'image/webp' ? '.webp' : '.jpg');
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
+
+  let savedToOS = false;
   if (bucketId) {
-    const bucket = objectStorageClient.bucket(bucketId);
-    const blob = bucket.file(`receipts/${uniqueName}`);
-    await blob.save(file.buffer, { contentType: file.mimetype });
+    try {
+      const bucket = objectStorageClient.bucket(bucketId);
+      const blob = bucket.file(`receipts/${uniqueName}`);
+      await blob.save(file.buffer, { contentType: file.mimetype });
+      const [exists] = await blob.exists();
+      if (exists) {
+        savedToOS = true;
+      } else {
+        console.error(`[Receipt] OS ga saqlandi lekin topilmadi: receipts/${uniqueName}`);
+      }
+    } catch (osErr: any) {
+      console.error(`[Receipt] OS xatoligi, lokal diskka saqlanadi:`, osErr.message);
+    }
   }
-  return `/api/receipts/${uniqueName}`;
+
+  if (!savedToOS) {
+    const { mkdir, writeFile } = await import('fs/promises');
+    const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts');
+    await mkdir(receiptsDir, { recursive: true });
+    await writeFile(path.join(receiptsDir, uniqueName), file.buffer);
+    console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
+  }
+
+  return { url: `/api/receipts/${uniqueName}`, filename: uniqueName };
 }
 
 function formatUser(user: any) {
@@ -1025,7 +1050,7 @@ export function registerMobileRoutes(app: Express) {
       }
       if (!req.file) return mobileError(res, 'To\'lov cheki rasmi talab qilinadi');
 
-      const receiptUrl = await saveReceiptFile(req.file);
+      const { url: receiptUrl, filename: receiptFilename } = await saveReceiptFile(req.file);
       const payment = await storage.createCreditPayment({
         userId: mobileUser.id,
         credits: creditsNum,
@@ -1037,8 +1062,7 @@ export function registerMobileRoutes(app: Express) {
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
       const user = await storage.getUser(mobileUser.id);
-      const fullReceiptUrl = `${getAppUrl()}${receiptUrl}`;
-      await sendPaymentReceiptToAdmin(storage, payment.id, fullReceiptUrl, user, creditsNum, priceNum || CREDIT_PRICES[creditsNum]);
+      await sendPaymentReceiptToAdmin(storage, payment.id, req.file.buffer, user, creditsNum, priceNum || CREDIT_PRICES[creditsNum], false, receiptFilename);
 
       mobileSuccess(res, {
         message: "Chek yuborildi. Admin tasdiqlashini kuting.",
@@ -1067,12 +1091,11 @@ export function registerMobileRoutes(app: Express) {
       if (payment.status !== 'partial') return mobileError(res, 'Bu to\'lov uchun qoldiq yo\'q');
       if (!req.file) return mobileError(res, 'Chek rasmi talab qilinadi');
 
-      const receiptUrl = await saveReceiptFile(req.file);
+      const { url: receiptUrl, filename: receiptFilename } = await saveReceiptFile(req.file);
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
       const user = await storage.getUser(mobileUser.id);
-      const fullReceiptUrl = `${getAppUrl()}${receiptUrl}`;
-      await sendPaymentReceiptToAdmin(storage, payment.id, fullReceiptUrl, user, payment.credits, payment.remainingAmount, true);
+      await sendPaymentReceiptToAdmin(storage, payment.id, req.file.buffer, user, payment.credits, payment.remainingAmount, true, receiptFilename);
 
       mobileSuccess(res, {
         message: "Qoldiq chek yuborildi. Admin tasdiqlashini kuting.",
