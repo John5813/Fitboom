@@ -66,10 +66,11 @@ export default function BookingsScreen() {
       setCancellingId(null);
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();
-      Alert.alert(
-        "Bekor qilindi",
-        responseData?.message || "Bron muvaffaqiyatli bekor qilindi."
-      );
+      const msg =
+        responseData?.message ||
+        responseData?.data?.message ||
+        "Bron muvaffaqiyatli bekor qilindi.";
+      Alert.alert("Bekor qilindi", msg);
     },
     onError: (err: any) => {
       setCancellingId(null);
