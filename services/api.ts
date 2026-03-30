@@ -367,6 +367,22 @@ export const bookGym = async (payload: {
 export const cancelBooking = async (bookingId: string) =>
   request(`/bookings/${bookingId}/cancel`, { method: "POST" });
 
+export const verifyQr = async (qrData: string) =>
+  request<{
+    message: string;
+    gym: { id: string; name: string; imageUrl: string };
+    booking: {
+      id: string;
+      gymId: string;
+      date: string;
+      scheduledStartTime: string;
+      scheduledEndTime: string;
+      isCompleted: boolean;
+      status: string;
+    };
+    visitRecorded: boolean;
+  }>("/bookings/verify-qr", { method: "POST", body: { qrData } });
+
 export const getCredits = async () =>
   request<{ credits: number; creditExpiryDate?: string; daysUntilExpiry?: number; packages: any[] }>("/credits");
 

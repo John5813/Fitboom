@@ -4,16 +4,17 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BookingCardProps {
   booking: any;
   compact?: boolean;
   onScan?: () => void;
   onCancel?: () => void;
+  isCancelling?: boolean;
 }
 
 function getStatusInfo(status: string) {
@@ -36,9 +37,8 @@ export default function BookingCard({
   compact,
   onScan,
   onCancel,
+  isCancelling,
 }: BookingCardProps) {
-  const { t } = useLanguage();
-
   const gymName = booking.gym?.name || booking.gymName || "Sport zal";
   const gymAddress = booking.gym?.address || booking.address || "";
 
@@ -96,26 +96,25 @@ export default function BookingCard({
           </View>
         </View>
 
-        {booking.creditsUsed !== undefined && (
-          <View style={styles.creditsRow}>
-            <Feather name="key" size={12} color={Colors.primary} />
-            <Text style={styles.creditsText}>
-              {booking.creditsUsed} kredit ishlatildi
-            </Text>
-          </View>
-        )}
-
         {!compact && isActive && (
           <View style={styles.actions}>
             {onScan && (
-              <TouchableOpacity style={styles.qrBtn} onPress={onScan}>
+              <TouchableOpacity style={styles.scanBtn} onPress={onScan}>
                 <Feather name="camera" size={14} color="#fff" />
-                <Text style={styles.qrBtnText}>Skaner</Text>
+                <Text style={styles.scanBtnText}>Skaner</Text>
               </TouchableOpacity>
             )}
             {onCancel && (
-              <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-                <Text style={styles.cancelBtnText}>{t("bookings.cancel")}</Text>
+              <TouchableOpacity
+                style={[styles.cancelBtn, isCancelling && { opacity: 0.6 }]}
+                onPress={onCancel}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <ActivityIndicator size="small" color={Colors.error} />
+                ) : (
+                  <Text style={styles.cancelBtnText}>Bekor qilish</Text>
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -189,22 +188,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  creditsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  creditsText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.primary,
-  },
   actions: {
     flexDirection: "row",
     gap: 10,
     marginTop: 4,
   },
-  qrBtn: {
+  scanBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
@@ -214,7 +203,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.primary,
   },
-  qrBtnText: {
+  scanBtnText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: "#fff",
@@ -226,6 +215,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(239,68,68,0.3)",
     backgroundColor: "rgba(239,68,68,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 100,
   },
   cancelBtnText: {
     fontSize: 13,

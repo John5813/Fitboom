@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
@@ -20,7 +21,7 @@ import { getBookings, cancelBooking } from "@/services/api";
 import Colors from "@/constants/Colors";
 import BookingCard from "@/components/BookingCard";
 
-const today = () => {
+const todayStart = () => {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
@@ -33,8 +34,9 @@ export default function BookingsScreen() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [refreshing, setRefreshing] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const { data, refetch } = useQuery({
+  const { data, refetch, isLoading } = useQuery({
     queryKey: ["bookings"],
     queryFn: getBookings,
     staleTime: 0,
@@ -49,38 +51,45 @@ export default function BookingsScreen() {
   const allBookings: any[] = data?.bookings || [];
 
   const upcoming = allBookings.filter((b) => {
-    const bookingDate = new Date(b.scheduledDate || b.date || 0);
-    return b.status === "pending" && bookingDate >= today();
+    const d = new Date(b.scheduledDate || b.date || 0);
+    return b.status === "pending" && d >= todayStart();
   });
 
   const past = allBookings.filter((b) => {
-    const bookingDate = new Date(b.scheduledDate || b.date || 0);
-    return b.status !== "pending" || bookingDate < today();
+    const d = new Date(b.scheduledDate || b.date || 0);
+    return b.status !== "pending" || d < todayStart();
   });
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => cancelBooking(id),
-    onSuccess: (data: any) => {
+    onSuccess: (responseData: any) => {
+      setCancellingId(null);
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();
-      const msg = data?.message || "Bron bekor qilindi.";
-      Alert.alert("Bekor qilindi", msg);
+      Alert.alert(
+        "Bekor qilindi",
+        responseData?.message || "Bron muvaffaqiyatli bekor qilindi."
+      );
     },
     onError: (err: any) => {
-      Alert.alert(t("common.error"), err.message || "Bron bekor qilinmadi");
+      setCancellingId(null);
+      Alert.alert("Xatolik", err.message || "Bronni bekor qilib bo'lmadi");
     },
   });
 
   const confirmCancel = (booking: any) => {
     Alert.alert(
-      t("bookings.cancel"),
-      "Bronni bekor qilmoqchimisiz? Kredit qaytariladi.",
+      "Bronni bekor qilish",
+      `${booking.gym?.name || "Zal"} — ${booking.scheduledStartTime || booking.time || ""}\n\nBekor qilmoqchimisiz?`,
       [
-        { text: t("common.cancel"), style: "cancel" },
+        { text: "Yo'q", style: "cancel" },
         {
-          text: t("bookings.cancel"),
+          text: "Ha, bekor qilish",
           style: "destructive",
-          onPress: () => cancelMutation.mutate(booking.id),
+          onPress: () => {
+            setCancellingId(booking.id);
+            cancelMutation.mutate(booking.id);
+          },
         },
       ]
     );
@@ -132,7 +141,11 @@ export default function BookingsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {list.length === 0 ? (
+        {isLoading && !refreshing ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : list.length === 0 ? (
           <View style={styles.emptyState}>
             <Feather name="calendar" size={48} color={Colors.textSecondary} />
             <Text style={styles.emptyTitle}>
@@ -161,11 +174,11 @@ export default function BookingsScreen() {
                   ? () => confirmCancel(booking)
                   : undefined
               }
+              isCancelling={cancellingId === booking.id}
             />
           ))
         )}
       </ScrollView>
-
     </View>
   );
 }

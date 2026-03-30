@@ -56,6 +56,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "expo-camera": "^17.0.10",
     "react-native-maps": "1.18.0",
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-webview": "^13.16.1"
