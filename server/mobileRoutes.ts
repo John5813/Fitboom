@@ -744,9 +744,15 @@ export function registerMobileRoutes(app: Express) {
   router.post('/bookings', requireMobileAuth, async (req, res) => {
     try {
       const mobileUser = (req as any).mobileUser;
-      const { gymId, timeSlotId, date } = req.body;
+      const body = req.body;
+      console.log('[Mobile] Booking body:', JSON.stringify(body));
+
+      const gymId = body.gymId || body.gym_id;
+      const timeSlotId = body.timeSlotId || body.slotId || body.slot_id || body.time_slot_id;
+      const date = body.date || body.bookingDate || body.booking_date;
 
       if (!gymId || !timeSlotId || !date) {
+        console.log('[Mobile] Booking missing fields - gymId:', gymId, 'timeSlotId:', timeSlotId, 'date:', date);
         return mobileError(res, 'gymId, timeSlotId va date talab qilinadi');
       }
 
