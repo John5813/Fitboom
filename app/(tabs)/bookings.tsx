@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 
@@ -153,7 +153,7 @@ export default function BookingsScreen() {
               booking={booking}
               onScan={
                 (booking.status === "pending" || booking.status === "confirmed")
-                  ? () => {}
+                  ? () => router.push("/(tabs)/scanner" as any)
                   : undefined
               }
               onCancel={

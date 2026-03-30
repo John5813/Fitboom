@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -107,11 +106,8 @@ export default function BookingCard({
 
         {!compact && isActive && (
           <View style={styles.actions}>
-            {onScan !== undefined && (
-              <TouchableOpacity
-                style={styles.qrBtn}
-                onPress={() => router.push("/(tabs)/scanner" as any)}
-              >
+            {onScan && (
+              <TouchableOpacity style={styles.qrBtn} onPress={onScan}>
                 <Feather name="camera" size={14} color="#fff" />
                 <Text style={styles.qrBtnText}>Skaner</Text>
               </TouchableOpacity>
