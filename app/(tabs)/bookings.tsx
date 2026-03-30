@@ -7,14 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Modal,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import QRCode from "react-native-qrcode-svg";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +33,6 @@ export default function BookingsScreen() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [refreshing, setRefreshing] = useState(false);
-  const [qrBooking, setQrBooking] = useState<any>(null);
 
   const { data, refetch } = useQuery({
     queryKey: ["bookings"],
@@ -98,10 +95,6 @@ export default function BookingsScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const list = tab === "upcoming" ? upcoming : past;
 
-  const gymName = qrBooking?.gym?.name || qrBooking?.gymName || "Zal";
-  const qrDate = qrBooking?.scheduledDate || qrBooking?.date || "";
-  const qrTime = qrBooking?.scheduledStartTime || qrBooking?.time || qrBooking?.startTime || "";
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
@@ -158,7 +151,11 @@ export default function BookingsScreen() {
             <BookingCard
               key={booking.id}
               booking={booking}
-              onShowQR={() => setQrBooking(booking)}
+              onScan={
+                (booking.status === "pending" || booking.status === "confirmed")
+                  ? () => {}
+                  : undefined
+              }
               onCancel={
                 (booking.status === "pending" || booking.status === "confirmed")
                   ? () => confirmCancel(booking)
@@ -169,51 +166,6 @@ export default function BookingsScreen() {
         )}
       </ScrollView>
 
-      <Modal
-        visible={!!qrBooking}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setQrBooking(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.qrModal, { paddingBottom: insets.bottom + 24 }]}>
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={() => setQrBooking(null)}
-            >
-              <Feather name="x" size={20} color={Colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.qrTitle}>Bron QR-kodi</Text>
-            {qrBooking && (
-              <>
-                <Text style={styles.qrGymName}>{gymName}</Text>
-                <Text style={styles.qrDate}>
-                  {qrDate
-                    ? new Date(qrDate).toLocaleDateString("uz-UZ", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                      })
-                    : ""}
-                  {qrTime ? `  •  ${qrTime}` : ""}
-                </Text>
-                <View style={styles.qrContainer}>
-                  <QRCode
-                    value={qrBooking.id}
-                    size={200}
-                    color="#1a1a2e"
-                    backgroundColor="#fff"
-                  />
-                </View>
-                <Text style={styles.qrIdText}>#{qrBooking.id?.slice(0, 8).toUpperCase()}</Text>
-                <Text style={styles.qrHint}>
-                  Bu QR-kodni zalga kirishda ko'rsating
-                </Text>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -278,67 +230,5 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     opacity: 0.7,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  qrModal: {
-    backgroundColor: Colors.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    alignItems: "center",
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.cardBorder,
-  },
-  modalClose: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    padding: 8,
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
-  },
-  qrTitle: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    marginTop: 8,
-  },
-  qrGymName: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-  },
-  qrDate: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-  },
-  qrContainer: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  qrIdText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
-    letterSpacing: 1,
-  },
-  qrHint: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    textAlign: "center",
   },
 });

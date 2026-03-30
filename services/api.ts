@@ -363,7 +363,7 @@ export const bookGym = async (payload: {
 }) => request("/bookings", { method: "POST", body: payload });
 
 export const cancelBooking = async (bookingId: string) =>
-  request(`/bookings/${bookingId}`, { method: "DELETE" });
+  request(`/bookings/${bookingId}/cancel`, { method: "POST" });
 
 export const getCredits = async () =>
   request<{ credits: number; creditExpiryDate?: string; daysUntilExpiry?: number; packages: any[] }>("/credits");

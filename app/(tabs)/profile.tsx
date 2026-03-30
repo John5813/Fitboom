@@ -27,6 +27,7 @@ import {
   uploadAvatar,
 } from "@/services/api";
 import Colors from "@/constants/Colors";
+import PaymentMethodModal from "@/components/PaymentMethodModal";
 
 const LANGUAGES = [
   { code: "uz", label: "O'zbek", flag: "\u{1F1FA}\u{1F1FF}" },
@@ -41,6 +42,7 @@ export default function ProfileScreen() {
   const [editModal, setEditModal] = useState(false);
   const [langModal, setLangModal] = useState(false);
   const [adminModal, setAdminModal] = useState(false);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [editName, setEditName] = useState(user?.name || "");
   const [editAge, setEditAge] = useState(String(user?.age || ""));
@@ -139,7 +141,7 @@ export default function ProfileScreen() {
     {
       icon: "credit-card" as const,
       label: t("home.topup"),
-      onPress: () => router.push("/payment" as any),
+      onPress: () => setPaymentModalVisible(true),
       color: Colors.primary,
     },
     {
@@ -255,7 +257,7 @@ export default function ProfileScreen() {
           )}
           <TouchableOpacity
             style={styles.topupBtn}
-            onPress={() => router.push("/payment" as any)}
+            onPress={() => setPaymentModalVisible(true)}
           >
             <Feather name="plus" size={14} color="#fff" />
             <Text style={styles.topupBtnText}>{t("home.topup")}</Text>
@@ -468,6 +470,11 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <PaymentMethodModal
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+      />
     </ScrollView>
   );
 }

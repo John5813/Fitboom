@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,7 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 interface BookingCardProps {
   booking: any;
   compact?: boolean;
-  onShowQR?: () => void;
+  onScan?: () => void;
   onCancel?: () => void;
 }
 
@@ -34,7 +35,7 @@ function getStatusInfo(status: string) {
 export default function BookingCard({
   booking,
   compact,
-  onShowQR,
+  onScan,
   onCancel,
 }: BookingCardProps) {
   const { t } = useLanguage();
@@ -106,10 +107,13 @@ export default function BookingCard({
 
         {!compact && isActive && (
           <View style={styles.actions}>
-            {onShowQR && (
-              <TouchableOpacity style={styles.qrBtn} onPress={onShowQR}>
-                <Feather name="maximize" size={14} color="#fff" />
-                <Text style={styles.qrBtnText}>{t("bookings.show_qr")}</Text>
+            {onScan !== undefined && (
+              <TouchableOpacity
+                style={styles.qrBtn}
+                onPress={() => router.push("/(tabs)/scanner" as any)}
+              >
+                <Feather name="camera" size={14} color="#fff" />
+                <Text style={styles.qrBtnText}>Skaner</Text>
               </TouchableOpacity>
             )}
             {onCancel && (
