@@ -61,7 +61,36 @@ export default function GymsScreen() {
     refetchInterval: 60000,
   });
 
-  const gyms = data?.gyms || [];
+  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  const gyms = useMemo(() => {
+    return (data?.gyms || [])
+      .map((g: any) => {
+        const lat2 = parseFloat(g.latitude);
+        const lng2 = parseFloat(g.longitude);
+        const distanceKm =
+          userCoords && !isNaN(lat2) && !isNaN(lng2)
+            ? haversineKm(userCoords.lat, userCoords.lng, lat2, lng2)
+            : null;
+        return { ...g, distanceKm };
+      })
+      .sort((a: any, b: any) => {
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+  }, [data, userCoords]);
 
   const filtered = useMemo(() => {
     if (!search) return gyms;
