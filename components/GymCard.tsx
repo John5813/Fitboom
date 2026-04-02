@@ -26,6 +26,7 @@ interface Gym {
   rating?: number;
   avgRating?: number;
   distance?: string | number;
+  distanceKm?: number | null;
   latitude?: string;
   longitude?: string;
 }
@@ -41,18 +42,11 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
   const imageCount = gym.images?.length ?? 1;
   const imageUrl = gym.imageUrl;
 
-  const isUrl = (v: string) => {
-    const s = v.trim().toLowerCase();
-    return s.startsWith("http://") || s.startsWith("https://");
-  };
-
   const distanceText =
-    typeof gym.distance === "number"
-      ? `Sizdan ${gym.distance.toFixed(1)} km uzoqlikda`
-      : gym.distance && typeof gym.distance === "string" && !isUrl(gym.distance)
-      ? `Sizdan ${gym.distance} uzoqlikda`
-      : gym.address && !isUrl(gym.address)
-      ? gym.address
+    gym.distanceKm != null
+      ? gym.distanceKm < 1
+        ? `${Math.round(gym.distanceKm * 1000)} m uzoqlikda`
+        : `${gym.distanceKm.toFixed(1)} km uzoqlikda`
       : null;
 
   const categoriesText = Array.isArray(gym.categories)

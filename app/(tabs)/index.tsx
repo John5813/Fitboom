@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -29,10 +30,23 @@ export default function HomeScreen() {
   const { language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS === "web") return;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    })();
+  }, []);
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
-    queryKey: ["/api/gyms"],
-    queryFn: () => getGyms(),
+    queryKey: ["/api/gyms", userCoords?.lat, userCoords?.lng],
+    queryFn: () => getGyms({ lat: userCoords?.lat, lng: userCoords?.lng }),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,
   });

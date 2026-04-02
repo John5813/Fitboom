@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import * as Location from "expo-location";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getGyms, getCategories } from "@/services/api";
@@ -25,6 +26,19 @@ export default function GymsScreen() {
   const [search, setSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS === "web") return;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    })();
+  }, []);
 
   const { data: catData } = useQuery({
     queryKey: ["/api/categories"],
@@ -36,8 +50,13 @@ export default function GymsScreen() {
     catData?.categories || [];
 
   const { data, refetch } = useQuery({
-    queryKey: ["/api/gyms", selectedCategoryId],
-    queryFn: () => getGyms(selectedCategoryId ?? undefined),
+    queryKey: ["/api/gyms", selectedCategoryId, userCoords?.lat, userCoords?.lng],
+    queryFn: () =>
+      getGyms({
+        category: selectedCategoryId ?? undefined,
+        lat: userCoords?.lat,
+        lng: userCoords?.lng,
+      }),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,
   });

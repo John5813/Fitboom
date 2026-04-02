@@ -339,8 +339,22 @@ export const uploadAvatar = async (imageUri: string): Promise<{ imageUrl: string
 export const getCategories = async (): Promise<{ categories: any[] }> =>
   request<{ categories: any[] }>("/categories");
 
-export const getGyms = async (category?: string) =>
-  request<{ gyms: any[] }>(`/gyms${category ? `?category=${category}` : ""}`);
+export const getGyms = async (options?: {
+  category?: string;
+  lat?: number;
+  lng?: number;
+  search?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (options?.category) params.set("category", options.category);
+  if (options?.lat != null && options?.lng != null) {
+    params.set("lat", String(options.lat));
+    params.set("lng", String(options.lng));
+  }
+  if (options?.search) params.set("search", options.search);
+  const qs = params.toString();
+  return request<{ gyms: any[] }>(`/gyms${qs ? `?${qs}` : ""}`);
+};
 
 export const getGymById = async (gymId: string) =>
   request<{ gym: any }>(`/gyms/${gymId}`);
