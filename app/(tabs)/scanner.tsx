@@ -29,15 +29,31 @@ export default function ScannerScreen() {
     gymName?: string;
   } | null>(null);
 
-  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+  const handleBarCodeScanned = async ({ data: rawQrString }: { data: string }) => {
     if (processing) return;
     setProcessing(true);
+
+    let parsed: any;
     try {
-      const res = await verifyQr(data);
+      parsed = JSON.parse(rawQrString);
+    } catch {
+      setResult({ success: false, message: "Bu FitBoom QR kodi emas" });
+      setProcessing(false);
+      return;
+    }
+
+    if (parsed.type !== "gym" || !parsed.gymId) {
+      setResult({ success: false, message: "Bu FitBoom zal QR kodi emas" });
+      setProcessing(false);
+      return;
+    }
+
+    try {
+      const res = await verifyQr(rawQrString);
       setResult({
         success: true,
-        message: res.message || "Xush kelibsiz!",
-        gymName: res.gym?.name,
+        message: res.message || `${parsed.name || "Zal"}ga xush kelibsiz!`,
+        gymName: res.gym?.name || parsed.name,
       });
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       refetchUser();

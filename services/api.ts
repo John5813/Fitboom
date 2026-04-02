@@ -391,8 +391,26 @@ export async function cancelBooking(bookingId: string, accessToken: string) {
   return json.data;
 }
 
-export const verifyQr = async (qrData: string) =>
-  request<{
+export async function verifyQr(rawQrString: string, accessToken?: string) {
+  const token = accessToken || (await getAccessToken());
+  if (!token) throw new Error("Sessiya tugadi. Qayta tizimga kiring.");
+
+  const response = await fetch(`${BASE_URL}/bookings/verify-qr`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ qrData: rawQrString }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok || !json.success) {
+    throw new Error(json.error || "QR tekshirishda xatolik");
+  }
+
+  return json.data as {
     message: string;
     gym: { id: string; name: string; imageUrl: string };
     booking: {
@@ -405,7 +423,8 @@ export const verifyQr = async (qrData: string) =>
       status: string;
     };
     visitRecorded: boolean;
-  }>("/bookings/verify-qr", { method: "POST", body: { qrData } });
+  };
+}
 
 export const getCredits = async () =>
   request<{ credits: number; creditExpiryDate?: string; daysUntilExpiry?: number; packages: any[] }>("/credits");
