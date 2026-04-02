@@ -101,11 +101,14 @@ export default function BookingsScreen() {
   });
 
   const startCancel = (bookingId: string) => {
+    if (!bookingId) {
+      Alert.alert("Xatolik", "Bron ID topilmadi");
+      return;
+    }
     setConfirmingId(bookingId);
   };
 
   const doCancel = (bookingId: string) => {
-    setConfirmingId(null);
     setCancellingId(bookingId);
     getAccessToken()
       .then((token) => {
@@ -135,6 +138,7 @@ export default function BookingsScreen() {
       })
       .finally(() => {
         setCancellingId(null);
+        setConfirmingId(null);
       });
   };
 
@@ -310,8 +314,9 @@ export default function BookingsScreen() {
                             <Text style={styles.confirmNoText}>Yo'q</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={styles.confirmYes}
+                            style={[styles.confirmYes, isCancelling && { opacity: 0.6 }]}
                             activeOpacity={0.7}
+                            disabled={isCancelling}
                             onPress={() => doCancel(bookingId)}
                           >
                             {isCancelling ? (
