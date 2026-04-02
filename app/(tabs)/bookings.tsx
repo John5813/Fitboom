@@ -9,7 +9,6 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
@@ -311,21 +310,23 @@ export default function BookingsScreen() {
 
                   {isPending && (
                     <View style={styles.actions}>
-                      <Pressable
+                      <TouchableOpacity
                         style={styles.scanBtn}
+                        activeOpacity={0.7}
                         onPress={() =>
                           router.push("/(tabs)/scanner" as any)
                         }
                       >
                         <Feather name="camera" size={14} color="#fff" />
                         <Text style={styles.scanBtnText}>Skaner</Text>
-                      </Pressable>
+                      </TouchableOpacity>
 
-                      <Pressable
+                      <TouchableOpacity
                         style={[
                           styles.cancelBtn,
                           isCancelling && { opacity: 0.5 },
                         ]}
+                        activeOpacity={0.7}
                         disabled={isCancelling}
                         onPress={() => handleCancel(booking)}
                       >
@@ -336,7 +337,7 @@ export default function BookingsScreen() {
                             Bekor qilish
                           </Text>
                         )}
-                      </Pressable>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
@@ -398,7 +399,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderRadius: 16,
     flexDirection: "row",
-    overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
