@@ -631,7 +631,10 @@ async function handleMessage(message: TelegramMessage, storage: IStorage) {
       }
     } else {
       // Hech qanday user topilmadi — yangi user yaratamiz
-      user = await storage.createUser({ telegramId: telegramUserId, phone: phoneNumber, chatId });
+      const firstName = message.from.first_name || '';
+      const lastName = message.from.last_name || '';
+      const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'FitBoom User';
+      user = await storage.createUser({ telegramId: telegramUserId, phone: phoneNumber, chatId, name: fullName });
     }
 
     const lastCodeTime = await storage.getLastLoginCodeTime(telegramUserId);
