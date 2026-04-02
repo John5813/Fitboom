@@ -74,6 +74,7 @@ export default function BookingsScreen() {
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const { data, refetch, isLoading } = useQuery({
     queryKey: ["bookings"],
@@ -99,60 +100,42 @@ export default function BookingsScreen() {
     return b.status !== "pending" || d < todayStart();
   });
 
-  const handleCancel = (booking: any) => {
-    const bookingId = booking.id || booking._id;
+  const startCancel = (bookingId: string) => {
+    setConfirmingId(bookingId);
+  };
 
-    if (!bookingId) {
-      Alert.alert("Xatolik", "Bron ID topilmadi");
-      return;
-    }
-
-    Alert.alert(
-      "Bronni bekor qilish",
-      "Haqiqatan ham bu bronni bekor qilmoqchimisiz?",
-      [
-        { text: "Yo'q", style: "cancel" },
-        {
-          text: "Ha, bekor qilish",
-          style: "destructive",
-          onPress: () => {
-            setCancellingId(bookingId);
-
-            getAccessToken()
-              .then((token) => {
-                if (!token) {
-                  throw new Error("Sessiya tugadi. Qayta tizimga kiring.");
-                }
-                return cancelBooking(bookingId, token);
-              })
-              .then((result) => {
-                if (result.noRefund) {
-                  Alert.alert(
-                    "Bekor qilindi",
-                    "Bron bekor qilindi. Boshlanishiga 2 soatdan kam qolganligi sababli kredit qaytarilmadi."
-                  );
-                } else {
-                  Alert.alert(
-                    "Muvaffaqiyatli!",
-                    `Bron bekor qilindi. ${result.creditsRefunded || ""} kredit hisobingizga qaytarildi.`
-                  );
-                }
-                queryClient.invalidateQueries({ queryKey: ["bookings"] });
-                refetchUser();
-              })
-              .catch((err: any) => {
-                Alert.alert(
-                  "Xatolik",
-                  err?.message || "Bronni bekor qilishda xatolik yuz berdi"
-                );
-              })
-              .finally(() => {
-                setCancellingId(null);
-              });
-          },
-        },
-      ]
-    );
+  const doCancel = (bookingId: string) => {
+    setConfirmingId(null);
+    setCancellingId(bookingId);
+    getAccessToken()
+      .then((token) => {
+        if (!token) throw new Error("Sessiya tugadi. Qayta tizimga kiring.");
+        return cancelBooking(bookingId, token);
+      })
+      .then((result) => {
+        queryClient.invalidateQueries({ queryKey: ["bookings"] });
+        refetchUser();
+        if (result.noRefund) {
+          Alert.alert(
+            "Bekor qilindi",
+            "Bron bekor qilindi. Boshlanishiga 2 soatdan kam qolganligi sababli kredit qaytarilmadi."
+          );
+        } else {
+          Alert.alert(
+            "Muvaffaqiyatli!",
+            `Bron bekor qilindi.${result.creditsRefunded ? " " + result.creditsRefunded + " kredit hisobingizga qaytarildi." : ""}`
+          );
+        }
+      })
+      .catch((err: any) => {
+        Alert.alert(
+          "Xatolik",
+          err?.message || "Bronni bekor qilishda xatolik yuz berdi"
+        );
+      })
+      .finally(() => {
+        setCancellingId(null);
+      });
   };
 
   const onRefresh = async () => {
@@ -247,6 +230,7 @@ export default function BookingsScreen() {
                 : "";
             const bookingId = booking.id || booking._id;
             const isCancelling = cancellingId === bookingId;
+            const isConfirming = confirmingId === bookingId;
 
             return (
               <View key={bookingId || Math.random()} style={styles.card}>
@@ -314,36 +298,52 @@ export default function BookingsScreen() {
                   </View>
 
                   {isPending && (
-                    <View style={styles.actions}>
-                      <TouchableOpacity
-                        style={styles.scanBtn}
-                        activeOpacity={0.7}
-                        onPress={() =>
-                          router.push("/(tabs)/scanner" as any)
-                        }
-                      >
-                        <Feather name="camera" size={14} color="#fff" />
-                        <Text style={styles.scanBtnText}>Skaner</Text>
-                      </TouchableOpacity>
+                    isConfirming ? (
+                      <View style={styles.confirmRow}>
+                        <Text style={styles.confirmText}>Bekor qilasizmi?</Text>
+                        <View style={styles.confirmBtns}>
+                          <TouchableOpacity
+                            style={styles.confirmNo}
+                            activeOpacity={0.7}
+                            onPress={() => setConfirmingId(null)}
+                          >
+                            <Text style={styles.confirmNoText}>Yo'q</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.confirmYes}
+                            activeOpacity={0.7}
+                            onPress={() => doCancel(bookingId)}
+                          >
+                            {isCancelling ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <Text style={styles.confirmYesText}>Ha, bekor qilish</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.actions}>
+                        <TouchableOpacity
+                          style={styles.scanBtn}
+                          activeOpacity={0.7}
+                          onPress={() =>
+                            router.push("/(tabs)/scanner" as any)
+                          }
+                        >
+                          <Feather name="camera" size={14} color="#fff" />
+                          <Text style={styles.scanBtnText}>Skaner</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.cancelBtn,
-                          isCancelling && { opacity: 0.5 },
-                        ]}
-                        activeOpacity={0.7}
-                        disabled={isCancelling}
-                        onPress={() => handleCancel(booking)}
-                      >
-                        {isCancelling ? (
-                          <ActivityIndicator size="small" color="#ef4444" />
-                        ) : (
-                          <Text style={styles.cancelBtnText}>
-                            Bekor qilish
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
+                        <TouchableOpacity
+                          style={styles.cancelBtn}
+                          activeOpacity={0.7}
+                          onPress={() => startCancel(bookingId)}
+                        >
+                          <Text style={styles.cancelBtnText}>Bekor qilish</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
                   )}
                 </View>
               </View>
@@ -475,5 +475,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: "#ef4444",
+  },
+  confirmRow: {
+    gap: 8,
+  },
+  confirmText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
+  confirmBtns: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  confirmNo: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: "center",
+  },
+  confirmNoText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
+  confirmYes: {
+    flex: 2,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: "#ef4444",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmYesText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
 });
