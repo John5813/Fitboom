@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -24,11 +25,24 @@ export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
     gymName?: string;
   } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScanned(false);
+      setResult(null);
+      setLoading(false);
+      setCameraActive(true);
+      return () => {
+        setCameraActive(false);
+      };
+    }, [])
+  );
 
   const handleBarCodeScanned = useCallback(
     async ({ data }: { data: string }) => {
@@ -139,12 +153,12 @@ export default function ScannerScreen() {
 
   return (
     <View style={styles.cameraContainer}>
-      {Platform.OS !== "web" ? (
+      {Platform.OS !== "web" && cameraActive ? (
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          onBarcodeScanned={scanned || loading ? undefined : handleBarCodeScanned}
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "#111" }]} />

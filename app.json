@@ -17,7 +17,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Yaqin atrofdagi zallarni ko'rsatish uchun joylashuvingiz kerak",
-        "NSCameraUsageDescription": "Chek rasmini tushirish uchun kamera kerak",
+        "NSCameraUsageDescription": "QR kodni skanerlash va chek rasmini tushirish uchun kamera kerak",
         "NSPhotoLibraryUsageDescription": "Chek rasmini yuborish uchun rasmlar kerak",
         "NSLocationAlwaysUsageDescription": "Yaqin atrofdagi zallarni ko'rsatish uchun joylashuvingiz kerak"
       }
@@ -45,6 +45,12 @@
       "expo-font",
       "expo-web-browser",
       "expo-location",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "QR kodni skanerlash uchun kameraga ruxsat kerak"
+        }
+      ],
       [
         "expo-image-picker",
         {
