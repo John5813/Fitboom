@@ -48,6 +48,16 @@ async function ensureTablesExist() {
         ALTER COLUMN name DROP NOT NULL
     `).catch(() => {});
 
+    // gyms.category — eski NOT NULL o'chiriladi (categories array'ga o'tilgan)
+    await client.query(`
+      ALTER TABLE gyms ALTER COLUMN category DROP NOT NULL
+    `).catch(() => {});
+
+    // video_collections.is_free — mavjud bo'lmasa qo'shiladi
+    await client.query(`
+      ALTER TABLE video_collections ADD COLUMN IF NOT EXISTS is_free BOOLEAN NOT NULL DEFAULT false
+    `).catch(() => {});
+
     console.log("ensureTablesExist: all checks passed.");
   } finally {
     client.release();
