@@ -30,3 +30,9 @@ id = "DUZKXCMtYbkEhlY5nPdBy"
 uri = "file://MOBILE_GYM_LOCATION.md"
 type = "text"
 title = "Zal Joylashuvi — React Native Yo'riqnomasi"
+
+[[outputs]]
+id = "Ecaf2roo8Dq5mjTStgHYV"
+uri = "file://MOBILE_MAP_ALL_GYMS.md"
+type = "text"
+title = "Xaritada Barcha Zallar — React Native Yo'riqnomasi"
