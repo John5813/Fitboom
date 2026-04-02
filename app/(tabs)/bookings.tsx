@@ -99,13 +99,32 @@ export default function BookingsScreen() {
     return b.status !== "pending" || d < todayStart();
   });
 
-  const handleCancel = async (booking: any) => {
+  const doCancel = (bookingId: string) => {
+    setCancellingId(bookingId);
+    cancelBooking(bookingId)
+      .then((result: any) => {
+        const msg = result?.message
+          ? result.message
+          : result?.noRefund === true
+            ? "Bron bekor qilindi. Kredit qaytarilmadi (2 soatdan kam qolgan)."
+            : "Bron bekor qilindi. Kreditingiz qaytarildi.";
+        queryClient.invalidateQueries({ queryKey: ["bookings"] });
+        refetchUser();
+        Alert.alert("Bekor qilindi", msg);
+      })
+      .catch((err: any) => {
+        Alert.alert("Xatolik", err?.message || "Bronni bekor qilib bo'lmadi");
+      })
+      .finally(() => {
+        setCancellingId(null);
+      });
+  };
+
+  const handleCancel = (booking: any) => {
     const bookingId = booking.id || booking._id;
-    console.log("[CANCEL] booking object:", JSON.stringify(booking));
-    console.log("[CANCEL] bookingId:", bookingId);
 
     if (!bookingId) {
-      Alert.alert("Xatolik", "Bron ID topilmadi. Booking: " + JSON.stringify(booking).slice(0, 200));
+      Alert.alert("Xatolik", "Bron ID topilmadi");
       return;
     }
 
@@ -120,31 +139,7 @@ export default function BookingsScreen() {
         {
           text: "Ha, bekor qilish",
           style: "destructive",
-          onPress: async () => {
-            console.log("[CANCEL] Starting cancel for:", bookingId);
-            setCancellingId(bookingId);
-            try {
-              const result = await cancelBooking(bookingId);
-              console.log("[CANCEL] Success result:", JSON.stringify(result));
-              const msg =
-                (result as any)?.message
-                  ? (result as any).message
-                  : (result as any)?.noRefund === true
-                    ? "Bron bekor qilindi. Kredit qaytarilmadi (2 soatdan kam qolgan)."
-                    : "Bron bekor qilindi. Kreditingiz qaytarildi.";
-              queryClient.invalidateQueries({ queryKey: ["bookings"] });
-              refetchUser();
-              Alert.alert("Bekor qilindi", msg);
-            } catch (err: any) {
-              console.error("[CANCEL] Error:", err?.message, err);
-              Alert.alert(
-                "Xatolik",
-                err?.message || "Bronni bekor qilib bo'lmadi"
-              );
-            } finally {
-              setCancellingId(null);
-            }
-          },
+          onPress: () => doCancel(bookingId),
         },
       ]
     );
