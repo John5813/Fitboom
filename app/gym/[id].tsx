@@ -147,19 +147,26 @@ export default function GymDetailScreen() {
   const addressIsUrl =
     !!gym?.address && (gym.address.trim().toLowerCase().startsWith("http://") || gym.address.trim().toLowerCase().startsWith("https://"));
 
-  const viewOnMap = async () => {
+  const openMapUrl = async (mode: "view" | "directions") => {
     if (!hasCoordinates) {
       if (addressIsUrl) await Linking.openURL(gym!.address);
       return;
     }
     const lat = parseFloat(gym!.latitude!);
     const lng = parseFloat(gym!.longitude!);
-    const label = encodeURIComponent(gym!.name);
-    const yandexUrl = `yandexmaps://maps.yandex.ru/?ll=${lng},${lat}&z=16&text=${label}`;
-    const googleUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+    const yandexView = `yandexmaps://maps.yandex.ru/?ll=${lng},${lat}&z=16`;
+    const yandexDir = `yandexmaps://build_route_on_map?lat_to=${lat}&lon_to=${lng}`;
+    const googleView = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const googleDir = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
+    const yandexUrl = mode === "directions" ? yandexDir : yandexView;
+    const googleUrl = mode === "directions" ? googleDir : googleView;
 
     if (Platform.OS === "ios") {
-      const appleUrl = `maps://?ll=${lat},${lng}&q=${label}`;
+      const appleView = `maps://?ll=${lat},${lng}`;
+      const appleDir = `maps://?daddr=${lat},${lng}`;
+      const appleUrl = mode === "directions" ? appleDir : appleView;
       const canYandex = await Linking.canOpenURL(yandexUrl);
       if (canYandex) {
         await Linking.openURL(yandexUrl);
@@ -172,30 +179,8 @@ export default function GymDetailScreen() {
     }
   };
 
-  const getDirections = async () => {
-    if (!hasCoordinates) {
-      if (addressIsUrl) await Linking.openURL(gym!.address);
-      return;
-    }
-    const lat = parseFloat(gym!.latitude!);
-    const lng = parseFloat(gym!.longitude!);
-    const label = encodeURIComponent(gym!.name);
-    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${label}`;
-    const yandexUrl = `yandexmaps://build_route_on_map?lat_to=${lat}&lon_to=${lng}`;
-
-    if (Platform.OS === "ios") {
-      const appleUrl = `maps://?daddr=${lat},${lng}&q=${label}`;
-      const canYandex = await Linking.canOpenURL(yandexUrl);
-      if (canYandex) {
-        await Linking.openURL(yandexUrl);
-      } else {
-        Linking.openURL(appleUrl).catch(() => Linking.openURL(googleUrl));
-      }
-    } else {
-      const canYandex = await Linking.canOpenURL(yandexUrl);
-      await Linking.openURL(canYandex ? yandexUrl : googleUrl);
-    }
-  };
+  const viewOnMap = () => openMapUrl("view");
+  const getDirections = () => openMapUrl("directions");
 
   const images = gym
     ? [gym.imageUrl, ...(gym.images || [])].filter(Boolean)
