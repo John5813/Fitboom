@@ -18,3 +18,9 @@ id = "mfXOn9-jt5JsMnHMONGyn"
 uri = "file://MOBILE_CANCEL_BOOKING.md"
 type = "text"
 title = "Bekor Qilish — React Native Integratsiya Yo'riqnomasi"
+
+[[outputs]]
+id = "8dGeaVSNUcqmxiNGBkr9M"
+uri = "file://MOBILE_QR_SCANNER.md"
+type = "text"
+title = "QR Skaner — React Native Integratsiya Yo'riqnomasi"
