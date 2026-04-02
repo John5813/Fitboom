@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getGyms } from "@/services/api";
 import GymCard from "@/components/GymCard";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
+import Colors from "@/constants/Colors";
 
 const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
 
@@ -74,7 +75,7 @@ export default function HomeScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#16a34a"
+          tintColor={Colors.primary}
         />
       }
       showsVerticalScrollIndicator={false}
@@ -95,7 +96,7 @@ export default function HomeScreen() {
             onPress={() => setLanguage(nextLang())}
             activeOpacity={0.7}
           >
-            <Feather name="globe" size={14} color="#555" />
+            <Feather name="globe" size={13} color={Colors.textSecondary} />
             <Text style={styles.langLabel}>{LANG_LABELS[language]}</Text>
           </TouchableOpacity>
 
@@ -105,28 +106,33 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.avatarCircle}>
-              <Feather name="user" size={16} color="#555" />
+              <Feather name="user" size={16} color={Colors.textSecondary} />
             </View>
           </TouchableOpacity>
-
         </View>
       </View>
 
       {/* ─── Kredit Kartasi ─── */}
       <LinearGradient
-        colors={isExpired ? ["#ef4444", "#b91c1c"] : ["#22c55e", "#16a34a", "#15803d"]}
+        colors={
+          isExpired
+            ? ["#ef4444", "#b91c1c"]
+            : ["#1D4ED8", "#2563EB", "#3B82F6"]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.creditCard}
       >
         <View style={styles.creditLeft}>
-          <Text style={styles.keyEmoji}>🔑</Text>
+          <View style={styles.creditIconBox}>
+            <Feather name="zap" size={24} color="#fff" />
+          </View>
           <View>
             <Text style={styles.creditLabel}>Kredit balansi</Text>
             <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
             {daysLeft !== null && !isExpired && (
               <View style={styles.daysRow}>
-                <Feather name="clock" size={12} color="rgba(255,255,255,0.85)" />
+                <Feather name="clock" size={11} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.daysText}>{daysLeft} kun qoldi</Text>
               </View>
             )}
@@ -141,6 +147,7 @@ export default function HomeScreen() {
           onPress={() => setPaymentModalVisible(true)}
           activeOpacity={0.85}
         >
+          <Feather name="plus" size={14} color={Colors.primary} />
           <Text style={styles.topupBtnText}>
             {isExpired ? "Yangilash" : "To'ldirish"}
           </Text>
@@ -150,21 +157,21 @@ export default function HomeScreen() {
       {/* ─── Yaqin Zallar ─── */}
       <View style={styles.sectionHeader}>
         <View>
-          <Text style={styles.sectionTitle}>Sizga eng yaqin{"\n"}zallar</Text>
+          <Text style={styles.sectionTitle}>Sizga eng yaqin zallar</Text>
           <Text style={styles.sectionSubtitle}>Masofaga qarab saralangan</Text>
         </View>
         <TouchableOpacity
           style={styles.viewAllBtn}
-          onPress={() => router.push("/(tabs)/gyms" as any)}
+          onPress={() => router.push("/(tabs)/map" as any)}
         >
           <Text style={styles.viewAll}>Barchasini ko'rish</Text>
-          <Feather name="arrow-right" size={14} color="#F97316" />
+          <Feather name="arrow-right" size={14} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
       {gyms.length === 0 ? (
         <View style={styles.emptyState}>
-          <Feather name="activity" size={36} color="#ccc" />
+          <Feather name="activity" size={36} color="#CBD5E1" />
           <Text style={styles.emptyText}>Yuklanmoqda...</Text>
         </View>
       ) : (
@@ -195,38 +202,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 18,
+    marginBottom: 20,
   },
-  logoText: { fontSize: 26, fontFamily: "Inter_700Bold" },
-  logoFit: { color: "#111" },
-  logoBoom: { color: "#F97316" },
+  logoText: { fontSize: 28, fontFamily: "Inter_700Bold" },
+  logoFit: { color: Colors.text },
+  logoBoom: { color: Colors.primary },
   logoSubtitle: {
     fontSize: 13,
-    color: "#888",
+    color: Colors.textSecondary,
     fontFamily: "Inter_400Regular",
-    marginTop: 2,
+    marginTop: 3,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 4,
+    marginTop: 6,
   },
   langBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.surface,
     borderRadius: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: Colors.border,
   },
   langLabel: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    color: "#444",
+    color: Colors.text,
   },
   iconBtn: {
     width: 34,
@@ -238,49 +245,52 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
 
   /* Credit Card */
   creditCard: {
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: 20,
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 24,
-    shadowColor: "#16a34a",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    marginBottom: 28,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 10,
   },
   creditLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 14,
     flex: 1,
   },
-  keyEmoji: { fontSize: 38 },
+  creditIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   creditLabel: {
     fontSize: 12,
     color: "rgba(255,255,255,0.75)",
     fontFamily: "Inter_400Regular",
     marginBottom: 2,
   },
-  creditValue: {
-    fontSize: 14,
-    color: "#fff",
-    fontFamily: "Inter_600SemiBold",
-  },
   creditNumber: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: "Inter_700Bold",
     color: "#fff",
+    lineHeight: 36,
   },
   daysRow: {
     flexDirection: "row",
@@ -294,14 +304,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
   topupBtn: {
-    backgroundColor: "#fbbf24",
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   topupBtnText: {
-    color: "#1a1a1a",
-    fontSize: 14,
+    color: Colors.primary,
+    fontSize: 13,
     fontFamily: "Inter_700Bold",
   },
 
@@ -309,30 +327,33 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 14,
+    alignItems: "center",
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "Inter_700Bold",
-    color: "#111",
-    lineHeight: 26,
+    color: Colors.text,
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: "#888",
+    color: Colors.textSecondary,
     fontFamily: "Inter_400Regular",
-    marginTop: 3,
+    marginTop: 2,
   },
   viewAllBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   viewAll: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: "#F97316",
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
 
   /* Empty */
@@ -340,12 +361,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 40,
     gap: 10,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: Colors.surface,
     borderRadius: 16,
   },
   emptyText: {
     fontSize: 13,
-    color: "#aaa",
+    color: Colors.textSecondary,
     fontFamily: "Inter_400Regular",
   },
 });

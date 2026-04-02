@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const ORANGE = "#F97316";
+const ORANGE = "#2563EB";
 
 type TabDef = {
   name: string;
