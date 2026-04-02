@@ -924,9 +924,9 @@ export function registerMobileRoutes(app: Express) {
 
       mobileSuccess(res, {
         message: refunded
-          ? `Bron bekor qilindi. ${gym.credits} kredit qaytarildi.`
+          ? "Bron muvaffaqiyatli bekor qilindi"
           : "Bron bekor qilindi. Boshlanishiga 2 soatdan kam qolganligi sababli kredit qaytarilmadi.",
-        refunded,
+        noRefund: !refunded,
         creditsRefunded: refunded ? gym.credits : 0,
       });
     } catch (err: any) {
