@@ -117,7 +117,7 @@ export default function HomeScreen() {
         colors={
           isExpired
             ? ["#ef4444", "#b91c1c"]
-            : ["#1D4ED8", "#2563EB", "#3B82F6"]
+            : ["#22c55e", "#16a34a", "#15803d"]
         }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 28,
-    shadowColor: Colors.primary,
+    shadowColor: "#16a34a",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
