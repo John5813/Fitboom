@@ -155,16 +155,16 @@ export default function GymDetailScreen() {
     const lat = parseFloat(gym!.latitude!);
     const lng = parseFloat(gym!.longitude!);
 
-    const yandexView = `yandexmaps://maps.yandex.ru/?ll=${lng},${lat}&z=16`;
+    const yandexView = `yandexmaps://maps.yandex.ru/?pt=${lng},${lat}&z=16`;
     const yandexDir = `yandexmaps://build_route_on_map?lat_to=${lat}&lon_to=${lng}`;
-    const googleView = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const googleView = `https://www.google.com/maps?q=${lat},${lng}`;
     const googleDir = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
     const yandexUrl = mode === "directions" ? yandexDir : yandexView;
     const googleUrl = mode === "directions" ? googleDir : googleView;
 
     if (Platform.OS === "ios") {
-      const appleView = `maps://?ll=${lat},${lng}`;
+      const appleView = `maps://?ll=${lat},${lng}&q=${lat},${lng}`;
       const appleDir = `maps://?daddr=${lat},${lng}`;
       const appleUrl = mode === "directions" ? appleDir : appleView;
       const canYandex = await Linking.canOpenURL(yandexUrl);
