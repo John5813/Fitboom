@@ -65,7 +65,8 @@ export default function HomeScreen() {
 
   const gyms = useMemo(() => {
     const raw = gymsData?.gyms || [];
-    return raw
+    console.log("[HOME] userCoords:", userCoords, "gyms count:", raw.length);
+    const mapped = raw
       .filter((g: any) => g.name !== "Velodrom")
       .map((g: any) => {
         const lat2 = parseFloat(g.latitude);
@@ -74,6 +75,7 @@ export default function HomeScreen() {
           userCoords && !isNaN(lat2) && !isNaN(lng2)
             ? haversineKm(userCoords.lat, userCoords.lng, lat2, lng2)
             : null;
+        console.log("[HOME]", g.name, "lat:", g.latitude, "lng:", g.longitude, "=> distanceKm:", distanceKm);
         return { ...g, distanceKm };
       })
       .sort((a: any, b: any) => {
@@ -81,8 +83,9 @@ export default function HomeScreen() {
         if (a.distanceKm == null) return 1;
         if (b.distanceKm == null) return -1;
         return a.distanceKm - b.distanceKm;
-      })
-      .slice(0, 3);
+      });
+    console.log("[HOME] sorted order:", mapped.map((g: any) => `${g.name}(${g.distanceKm?.toFixed(1)}km)`).join(", "));
+    return mapped.slice(0, 3);
   }, [gymsData, userCoords]);
 
   const onRefresh = async () => {
