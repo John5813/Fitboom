@@ -373,8 +373,23 @@ export const bookGym = async (payload: {
   endTime?: string;
 }) => request("/bookings", { method: "POST", body: payload });
 
-export const cancelBooking = async (bookingId: string) =>
-  request(`/bookings/${bookingId}/cancel`, { method: "POST" });
+export async function cancelBooking(bookingId: string, accessToken: string) {
+  const response = await fetch(`${BASE_URL}/bookings/${bookingId}/cancel`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const json = await response.json();
+
+  if (!response.ok || !json.success) {
+    throw new Error(json.error || "Bronni bekor qilishda xatolik");
+  }
+
+  return json.data;
+}
 
 export const verifyQr = async (qrData: string) =>
   request<{

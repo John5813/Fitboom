@@ -17,7 +17,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBookings, cancelBooking } from "@/services/api";
+import { getBookings, cancelBooking, getAccessToken } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 const todayStart = () => {
@@ -99,27 +99,6 @@ export default function BookingsScreen() {
     return b.status !== "pending" || d < todayStart();
   });
 
-  const doCancel = (bookingId: string) => {
-    setCancellingId(bookingId);
-    cancelBooking(bookingId)
-      .then((result: any) => {
-        const msg = result?.message
-          ? result.message
-          : result?.noRefund === true
-            ? "Bron bekor qilindi. Kredit qaytarilmadi (2 soatdan kam qolgan)."
-            : "Bron bekor qilindi. Kreditingiz qaytarildi.";
-        queryClient.invalidateQueries({ queryKey: ["bookings"] });
-        refetchUser();
-        Alert.alert("Bekor qilindi", msg);
-      })
-      .catch((err: any) => {
-        Alert.alert("Xatolik", err?.message || "Bronni bekor qilib bo'lmadi");
-      })
-      .finally(() => {
-        setCancellingId(null);
-      });
-  };
-
   const handleCancel = (booking: any) => {
     const bookingId = booking.id || booking._id;
 
@@ -128,18 +107,49 @@ export default function BookingsScreen() {
       return;
     }
 
-    const gymName = booking.gym?.name || booking.gymName || "Zal";
-    const timeStr = booking.scheduledStartTime || booking.time || "";
-
     Alert.alert(
       "Bronni bekor qilish",
-      `${gymName}${timeStr ? " — " + timeStr : ""}\n\nBekor qilmoqchimisiz?`,
+      "Haqiqatan ham bu bronni bekor qilmoqchimisiz?",
       [
         { text: "Yo'q", style: "cancel" },
         {
           text: "Ha, bekor qilish",
           style: "destructive",
-          onPress: () => doCancel(bookingId),
+          onPress: () => {
+            setCancellingId(bookingId);
+
+            getAccessToken()
+              .then((token) => {
+                if (!token) {
+                  throw new Error("Sessiya tugadi. Qayta tizimga kiring.");
+                }
+                return cancelBooking(bookingId, token);
+              })
+              .then((result) => {
+                if (result.noRefund) {
+                  Alert.alert(
+                    "Bekor qilindi",
+                    "Bron bekor qilindi. Boshlanishiga 2 soatdan kam qolganligi sababli kredit qaytarilmadi."
+                  );
+                } else {
+                  Alert.alert(
+                    "Muvaffaqiyatli!",
+                    `Bron bekor qilindi. ${result.creditsRefunded || ""} kredit hisobingizga qaytarildi.`
+                  );
+                }
+                queryClient.invalidateQueries({ queryKey: ["bookings"] });
+                refetchUser();
+              })
+              .catch((err: any) => {
+                Alert.alert(
+                  "Xatolik",
+                  err?.message || "Bronni bekor qilishda xatolik yuz berdi"
+                );
+              })
+              .finally(() => {
+                setCancellingId(null);
+              });
+          },
         },
       ]
     );
