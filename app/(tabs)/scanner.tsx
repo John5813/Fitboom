@@ -1,16 +1,15 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -19,34 +18,35 @@ import { useAuth } from "@/contexts/AuthContext";
 import { verifyQr } from "@/services/api";
 
 export default function ScannerScreen() {
+  "use no memo";
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { refetchUser } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
     gymName?: string;
   } | null>(null);
+  const processingRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
       setScanned(false);
       setResult(null);
       setLoading(false);
-      setCameraActive(true);
-      return () => {
-        setCameraActive(false);
-      };
+      setCameraError(null);
+      processingRef.current = false;
     }, [])
   );
 
   const handleBarCodeScanned = useCallback(
     async ({ data }: { data: string }) => {
-      if (scanned || loading) return;
+      if (processingRef.current) return;
+      processingRef.current = true;
       setScanned(true);
       setLoading(true);
 
@@ -64,17 +64,19 @@ export default function ScannerScreen() {
           success: false,
           message: err.message || "Xatolik yuz berdi",
         });
+        processingRef.current = false;
       } finally {
         setLoading(false);
       }
     },
-    [scanned, loading, queryClient, refetchUser]
+    [queryClient, refetchUser]
   );
 
   const resetScanner = () => {
     setScanned(false);
     setResult(null);
     setLoading(false);
+    processingRef.current = false;
   };
 
   if (!permission) {
@@ -86,16 +88,24 @@ export default function ScannerScreen() {
   }
 
   if (!permission.granted) {
+    const canAsk = permission.canAskAgain !== false;
     return (
       <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
         <View style={styles.permissionBox}>
           <Feather name="camera-off" size={48} color={Colors.textSecondary} />
           <Text style={styles.permTitle}>Kameraga ruxsat kerak</Text>
           <Text style={styles.permDesc}>
-            QR kodni skanerlash uchun kameraga ruxsat bering
+            {canAsk
+              ? "QR kodni skanerlash uchun kameraga ruxsat bering"
+              : "Kamera ruxsati rad etilgan. Qurilma sozlamalaridan kameraga ruxsat bering."}
           </Text>
-          <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-            <Text style={styles.permBtnText}>Ruxsat berish</Text>
+          <TouchableOpacity
+            style={styles.permBtn}
+            onPress={canAsk ? requestPermission : () => Linking.openSettings()}
+          >
+            <Text style={styles.permBtnText}>
+              {canAsk ? "Ruxsat berish" : "Sozlamalarga o'tish"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -153,15 +163,30 @@ export default function ScannerScreen() {
 
   return (
     <View style={styles.cameraContainer}>
-      {Platform.OS !== "web" && cameraActive ? (
+      {Platform.OS !== "web" ? (
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          onBarcodeScanned={scanned || loading ? undefined : handleBarCodeScanned}
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          onCameraReady={() => setCameraError(null)}
+          onMountError={(e) => setCameraError(e.message || "Kamera ochilmadi")}
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "#111" }]} />
+      )}
+
+      {cameraError && (
+        <View style={styles.errorOverlay}>
+          <Feather name="alert-circle" size={40} color="#fff" />
+          <Text style={styles.errorText}>{cameraError}</Text>
+          <TouchableOpacity
+            style={styles.permBtn}
+            onPress={() => setCameraError(null)}
+          >
+            <Text style={styles.permBtnText}>Qayta urinish</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={[styles.overlay, { paddingTop: insets.top + 16 }]}>
@@ -354,5 +379,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: Colors.primary,
+  },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+    zIndex: 30,
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    color: "#fff",
+    textAlign: "center",
   },
 });
