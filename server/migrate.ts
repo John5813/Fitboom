@@ -40,6 +40,14 @@ async function ensureTablesExist() {
       )
     `);
 
+    // users jadvalidagi age, gender, name ustunlaridan NOT NULL olib tashlash
+    await client.query(`
+      ALTER TABLE users
+        ALTER COLUMN age DROP NOT NULL,
+        ALTER COLUMN gender DROP NOT NULL,
+        ALTER COLUMN name DROP NOT NULL
+    `).catch(() => {});
+
     console.log("ensureTablesExist: all checks passed.");
   } finally {
     client.release();

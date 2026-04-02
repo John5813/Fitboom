@@ -225,7 +225,7 @@ export function registerMobileRoutes(app: Express) {
       let user = await storage.getUserByPhone(normalized);
 
       if (!user) {
-        user = await storage.createUser({ phone: normalized });
+        user = await storage.createUser({ phone: normalized, name: null });
       }
 
       const updatedUser = await storage.checkAndResetExpiredCredits(user.id);
