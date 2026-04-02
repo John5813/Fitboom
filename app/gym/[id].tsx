@@ -138,16 +138,63 @@ export default function GymDetailScreen() {
     });
   };
 
-  const openMaps = () => {
-    if (!gym?.latitude || !gym?.longitude) return;
-    const url = Platform.OS === "ios"
-      ? `maps:?q=${gym.name}&ll=${gym.latitude},${gym.longitude}`
-      : `geo:${gym.latitude},${gym.longitude}?q=${gym.name}`;
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(
-        `https://www.google.com/maps/search/?api=1&query=${gym.latitude},${gym.longitude}`
-      );
-    });
+  const hasCoordinates =
+    !!gym?.latitude &&
+    !!gym?.longitude &&
+    !isNaN(parseFloat(gym.latitude)) &&
+    !isNaN(parseFloat(gym.longitude));
+
+  const addressIsUrl =
+    !!gym?.address && (gym.address.trim().toLowerCase().startsWith("http://") || gym.address.trim().toLowerCase().startsWith("https://"));
+
+  const viewOnMap = async () => {
+    if (!hasCoordinates) {
+      if (addressIsUrl) await Linking.openURL(gym!.address);
+      return;
+    }
+    const lat = parseFloat(gym!.latitude!);
+    const lng = parseFloat(gym!.longitude!);
+    const label = encodeURIComponent(gym!.name);
+    const yandexUrl = `yandexmaps://maps.yandex.ru/?ll=${lng},${lat}&z=16&text=${label}`;
+    const googleUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+    if (Platform.OS === "ios") {
+      const appleUrl = `maps://?ll=${lat},${lng}&q=${label}`;
+      const canYandex = await Linking.canOpenURL(yandexUrl);
+      if (canYandex) {
+        await Linking.openURL(yandexUrl);
+      } else {
+        Linking.openURL(appleUrl).catch(() => Linking.openURL(googleUrl));
+      }
+    } else {
+      const canYandex = await Linking.canOpenURL(yandexUrl);
+      await Linking.openURL(canYandex ? yandexUrl : googleUrl);
+    }
+  };
+
+  const getDirections = async () => {
+    if (!hasCoordinates) {
+      if (addressIsUrl) await Linking.openURL(gym!.address);
+      return;
+    }
+    const lat = parseFloat(gym!.latitude!);
+    const lng = parseFloat(gym!.longitude!);
+    const label = encodeURIComponent(gym!.name);
+    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${label}`;
+    const yandexUrl = `yandexmaps://build_route_on_map?lat_to=${lat}&lon_to=${lng}`;
+
+    if (Platform.OS === "ios") {
+      const appleUrl = `maps://?daddr=${lat},${lng}&q=${label}`;
+      const canYandex = await Linking.canOpenURL(yandexUrl);
+      if (canYandex) {
+        await Linking.openURL(yandexUrl);
+      } else {
+        Linking.openURL(appleUrl).catch(() => Linking.openURL(googleUrl));
+      }
+    } else {
+      const canYandex = await Linking.canOpenURL(yandexUrl);
+      await Linking.openURL(canYandex ? yandexUrl : googleUrl);
+    }
   };
 
   const images = gym
@@ -252,20 +299,6 @@ export default function GymDetailScreen() {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <View style={styles.infoIconBox}>
-                <Feather name="map-pin" size={16} color={Colors.primary} />
-              </View>
-              <View style={styles.infoText}>
-                <Text style={styles.infoLabel}>{t("gym.address")}</Text>
-                <Text style={styles.infoValue}>{gym.address}</Text>
-              </View>
-              {gym.latitude && gym.longitude && (
-                <TouchableOpacity onPress={openMaps}>
-                  <Feather name="external-link" size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={[styles.infoRow, styles.infoRowBorder]}>
-              <View style={styles.infoIconBox}>
                 <Feather name="clock" size={16} color={Colors.primary} />
               </View>
               <View style={styles.infoText}>
@@ -273,6 +306,18 @@ export default function GymDetailScreen() {
                 <Text style={styles.infoValue}>{gym.hours || "00:00 - 24:00"}</Text>
               </View>
             </View>
+            {(hasCoordinates || addressIsUrl) && (
+              <View style={[styles.mapBtnRow, styles.infoRowBorder]}>
+                <TouchableOpacity style={styles.mapActionBtn} onPress={viewOnMap}>
+                  <Feather name="map" size={16} color="#fff" />
+                  <Text style={styles.mapActionText}>Xaritada ko'rish</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.directionsBtn} onPress={getDirections}>
+                  <Feather name="navigation" size={16} color={Colors.primary} />
+                  <Text style={styles.directionsBtnText}>Yo'l boshlash</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {gym.description && (
@@ -571,6 +616,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   infoText: { flex: 1 },
+  mapBtnRow: {
+    flexDirection: "row",
+    padding: 12,
+    gap: 10,
+  },
+  mapActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingVertical: 11,
+    borderRadius: 10,
+  },
+  mapActionText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  directionsBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.primaryLight,
+    paddingVertical: 11,
+    borderRadius: 10,
+  },
+  directionsBtnText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
   infoLabel: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",

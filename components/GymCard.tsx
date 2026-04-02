@@ -41,12 +41,19 @@ export default function GymCard({ gym, onPress, onBook }: GymCardProps) {
   const imageCount = gym.images?.length ?? 1;
   const imageUrl = gym.imageUrl;
 
+  const isUrl = (v: string) => {
+    const s = v.trim().toLowerCase();
+    return s.startsWith("http://") || s.startsWith("https://");
+  };
+
   const distanceText =
     typeof gym.distance === "number"
       ? `Sizdan ${gym.distance.toFixed(1)} km uzoqlikda`
-      : gym.distance
+      : gym.distance && typeof gym.distance === "string" && !isUrl(gym.distance)
       ? `Sizdan ${gym.distance} uzoqlikda`
-      : gym.address || null;
+      : gym.address && !isUrl(gym.address)
+      ? gym.address
+      : null;
 
   const categoriesText = Array.isArray(gym.categories)
     ? gym.categories

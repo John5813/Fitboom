@@ -215,7 +215,9 @@ export default function BookingsScreen() {
             const statusInfo = getStatusInfo(booking.status || "pending");
             const gymName =
               booking.gym?.name || booking.gymName || "Sport zal";
-            const gymAddress = booking.gym?.address || booking.address || "";
+            const rawAddress = booking.gym?.address || booking.address || "";
+            const addrLower = rawAddress.trim().toLowerCase();
+            const gymAddress = (addrLower.startsWith("http://") || addrLower.startsWith("https://")) ? "" : rawAddress;
             const startTime =
               booking.scheduledStartTime ||
               booking.time ||
