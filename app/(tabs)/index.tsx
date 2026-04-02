@@ -57,8 +57,8 @@ export default function HomeScreen() {
   }, []);
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
-    queryKey: ["/api/gyms", userCoords?.lat, userCoords?.lng],
-    queryFn: () => getGyms({ lat: userCoords?.lat, lng: userCoords?.lng }),
+    queryKey: ["/api/gyms"],
+    queryFn: () => getGyms({}),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,
   });

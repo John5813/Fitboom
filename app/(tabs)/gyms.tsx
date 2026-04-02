@@ -62,12 +62,10 @@ export default function GymsScreen() {
     catData?.categories || [];
 
   const { data, refetch } = useQuery({
-    queryKey: ["/api/gyms", selectedCategoryId, userCoords?.lat, userCoords?.lng],
+    queryKey: ["/api/gyms", selectedCategoryId],
     queryFn: () =>
       getGyms({
         category: selectedCategoryId ?? undefined,
-        lat: userCoords?.lat,
-        lng: userCoords?.lng,
       }),
     refetchOnWindowFocus: true,
     refetchInterval: 60000,
