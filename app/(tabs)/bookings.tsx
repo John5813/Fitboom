@@ -128,12 +128,11 @@ export default function BookingsScreen() {
               const result = await cancelBooking(bookingId);
               console.log("[CANCEL] Success result:", JSON.stringify(result));
               const msg =
-                (result as any)?.message ||
-                (result as any)?.noRefund === false
-                  ? "Bron bekor qilindi. Kreditingiz qaytarildi."
+                (result as any)?.message
+                  ? (result as any).message
                   : (result as any)?.noRefund === true
                     ? "Bron bekor qilindi. Kredit qaytarilmadi (2 soatdan kam qolgan)."
-                    : "Bron muvaffaqiyatli bekor qilindi.";
+                    : "Bron bekor qilindi. Kreditingiz qaytarildi.";
               queryClient.invalidateQueries({ queryKey: ["bookings"] });
               refetchUser();
               Alert.alert("Bekor qilindi", msg);

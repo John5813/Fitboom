@@ -374,7 +374,7 @@ export const bookGym = async (payload: {
 }) => request("/bookings", { method: "POST", body: payload });
 
 export const cancelBooking = async (bookingId: string) =>
-  request(`/bookings/${bookingId}`, { method: "DELETE" });
+  request(`/bookings/${bookingId}/cancel`, { method: "POST" });
 
 export const verifyQr = async (qrData: string) =>
   request<{
