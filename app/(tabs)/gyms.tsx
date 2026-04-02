@@ -168,7 +168,7 @@ export default function GymsScreen() {
             <GymCard
               key={gym.id}
               gym={gym}
-              onPress={() => router.push(`/gym/${gym.id}` as any)}
+              onPress={() => router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any)}
             />
           ))
         )}

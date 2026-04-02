@@ -193,8 +193,8 @@ export default function HomeScreen() {
           <GymCard
             key={gym.id}
             gym={gym}
-            onPress={() => router.push(`/gym/${gym.id}` as any)}
-            onBook={() => router.push(`/gym/${gym.id}` as any)}
+            onPress={() => router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any)}
+            onBook={() => router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any)}
           />
         ))
       )}

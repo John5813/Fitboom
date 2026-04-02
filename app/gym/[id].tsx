@@ -55,7 +55,14 @@ function getCategoryLabel(cat: any): string {
 }
 
 export default function GymDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, distanceKm: distanceKmParam } = useLocalSearchParams<{ id: string; distanceKm?: string }>();
+  const distanceKm = distanceKmParam ? parseFloat(distanceKmParam) : null;
+  const distanceText =
+    distanceKm != null && !isNaN(distanceKm)
+      ? distanceKm < 1
+        ? `${Math.round(distanceKm * 1000)} m uzoqlikda`
+        : `${distanceKm.toFixed(1)} km uzoqlikda`
+      : null;
   const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
   const { t } = useLanguage();
@@ -282,7 +289,18 @@ export default function GymDetailScreen() {
           )}
 
           <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
+            {distanceText && (
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconBox}>
+                  <Feather name="map-pin" size={16} color={Colors.primary} />
+                </View>
+                <View style={styles.infoText}>
+                  <Text style={styles.infoLabel}>Masofa</Text>
+                  <Text style={styles.infoValue}>{distanceText}</Text>
+                </View>
+              </View>
+            )}
+            <View style={[styles.infoRow, distanceText ? styles.infoRowBorder : null]}>
               <View style={styles.infoIconBox}>
                 <Feather name="clock" size={16} color={Colors.primary} />
               </View>

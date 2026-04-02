@@ -279,7 +279,7 @@ export default function MapScreen() {
             <View style={styles.panelActions}>
               <TouchableOpacity
                 style={styles.detailBtn}
-                onPress={() => router.push(`/gym/${selectedGym.id}` as any)}
+                onPress={() => router.push(`/gym/${selectedGym.id}?distanceKm=${selectedGym.distanceKm ?? ""}` as any)}
                 activeOpacity={0.85}
               >
                 <Feather name="info" size={15} color={Colors.primary} />
@@ -287,7 +287,7 @@ export default function MapScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.bookBtn}
-                onPress={() => router.push(`/gym/${selectedGym.id}` as any)}
+                onPress={() => router.push(`/gym/${selectedGym.id}?distanceKm=${selectedGym.distanceKm ?? ""}` as any)}
                 activeOpacity={0.85}
               >
                 <Feather name="calendar" size={15} color="#fff" />
