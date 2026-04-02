@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -18,67 +18,37 @@ import { useAuth } from "@/contexts/AuthContext";
 import { verifyQr } from "@/services/api";
 
 export default function ScannerScreen() {
-  "use no memo";
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { refetchUser } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraKey, setCameraKey] = useState(0);
+  const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
     gymName?: string;
   } | null>(null);
-  const processingRef = useRef(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setScanned(false);
-      setResult(null);
-      setLoading(false);
-      setCameraError(null);
-      processingRef.current = false;
-      setCameraKey((k) => k + 1);
-    }, [])
-  );
-
-  const handleBarCodeScanned = useCallback(
-    async ({ data }: { data: string }) => {
-      if (processingRef.current) return;
-      processingRef.current = true;
-      setScanned(true);
-      setLoading(true);
-
-      try {
-        const res = await verifyQr(data);
-        setResult({
-          success: true,
-          message: res.message || "Xush kelibsiz!",
-          gymName: res.gym?.name,
-        });
-        queryClient.invalidateQueries({ queryKey: ["bookings"] });
-        refetchUser();
-      } catch (err: any) {
-        setResult({
-          success: false,
-          message: err.message || "Xatolik yuz berdi",
-        });
-        processingRef.current = false;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [queryClient, refetchUser]
-  );
-
-  const resetScanner = () => {
-    setScanned(false);
-    setResult(null);
-    setLoading(false);
-    processingRef.current = false;
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (processing) return;
+    setProcessing(true);
+    try {
+      const res = await verifyQr(data);
+      setResult({
+        success: true,
+        message: res.message || "Xush kelibsiz!",
+        gymName: res.gym?.name,
+      });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      refetchUser();
+    } catch (err: any) {
+      setResult({
+        success: false,
+        message: err.message || "Xatolik yuz berdi",
+      });
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (!permission) {
@@ -145,7 +115,10 @@ export default function ScannerScreen() {
           >
             {result.message}
           </Text>
-          <TouchableOpacity style={styles.resetBtn} onPress={resetScanner}>
+          <TouchableOpacity
+            style={styles.resetBtn}
+            onPress={() => setResult(null)}
+          >
             <Feather name="refresh-cw" size={16} color="#fff" />
             <Text style={styles.resetBtnText}>Qayta skanerlash</Text>
           </TouchableOpacity>
@@ -167,38 +140,13 @@ export default function ScannerScreen() {
     <View style={styles.cameraContainer}>
       {Platform.OS !== "web" ? (
         <CameraView
-          key={cameraKey}
           style={StyleSheet.absoluteFill}
           facing="back"
-          barcodeScannerSettings={{
-            barcodeTypes: [
-              "qr",
-              "aztec",
-              "code128",
-              "code39",
-              "pdf417",
-              "datamatrix",
-            ],
-          }}
-          onBarcodeScanned={handleBarCodeScanned}
-          onCameraReady={() => setCameraError(null)}
-          onMountError={(e) => setCameraError(e.message || "Kamera ochilmadi")}
+          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+          onBarcodeScanned={processing ? undefined : handleBarCodeScanned}
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "#111" }]} />
-      )}
-
-      {cameraError && (
-        <View style={styles.errorOverlay}>
-          <Feather name="alert-circle" size={40} color="#fff" />
-          <Text style={styles.errorText}>{cameraError}</Text>
-          <TouchableOpacity
-            style={styles.permBtn}
-            onPress={() => setCameraError(null)}
-          >
-            <Text style={styles.permBtnText}>Qayta urinish</Text>
-          </TouchableOpacity>
-        </View>
       )}
 
       <View style={[styles.overlay, { paddingTop: insets.top + 16 }]}>
@@ -217,7 +165,7 @@ export default function ScannerScreen() {
         </View>
       </View>
 
-      {loading && (
+      {processing && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.loadingText}>Tekshirilmoqda...</Text>
@@ -391,20 +339,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: Colors.primary,
-  },
-  errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 16,
-    zIndex: 30,
-    paddingHorizontal: 32,
-  },
-  errorText: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: "#fff",
-    textAlign: "center",
   },
 });
