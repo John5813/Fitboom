@@ -24,3 +24,9 @@ id = "8dGeaVSNUcqmxiNGBkr9M"
 uri = "file://MOBILE_QR_SCANNER.md"
 type = "text"
 title = "QR Skaner — React Native Integratsiya Yo'riqnomasi"
+
+[[outputs]]
+id = "DUZKXCMtYbkEhlY5nPdBy"
+uri = "file://MOBILE_GYM_LOCATION.md"
+type = "text"
+title = "Zal Joylashuvi — React Native Yo'riqnomasi"
