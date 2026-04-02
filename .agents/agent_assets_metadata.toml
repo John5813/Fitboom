@@ -12,3 +12,9 @@ id = "66_1F57voJsMLhDRs0TTu"
 uri = "file://mobile_spec/FITBOOM_REACT_NATIVE.md"
 type = "text"
 title = "FitBoom React Native — To'liq Loyiha Kodi"
+
+[[outputs]]
+id = "mfXOn9-jt5JsMnHMONGyn"
+uri = "file://MOBILE_CANCEL_BOOKING.md"
+type = "text"
+title = "Bekor Qilish — React Native Integratsiya Yo'riqnomasi"
