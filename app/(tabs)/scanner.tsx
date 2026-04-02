@@ -26,6 +26,7 @@ export default function ScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraKey, setCameraKey] = useState(0);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
@@ -40,6 +41,7 @@ export default function ScannerScreen() {
       setLoading(false);
       setCameraError(null);
       processingRef.current = false;
+      setCameraKey((k) => k + 1);
     }, [])
   );
 
@@ -165,10 +167,20 @@ export default function ScannerScreen() {
     <View style={styles.cameraContainer}>
       {Platform.OS !== "web" ? (
         <CameraView
+          key={cameraKey}
           style={StyleSheet.absoluteFill}
           facing="back"
-          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: [
+              "qr",
+              "aztec",
+              "code128",
+              "code39",
+              "pdf417",
+              "datamatrix",
+            ],
+          }}
+          onBarcodeScanned={handleBarCodeScanned}
           onCameraReady={() => setCameraError(null)}
           onMountError={(e) => setCameraError(e.message || "Kamera ochilmadi")}
         />
