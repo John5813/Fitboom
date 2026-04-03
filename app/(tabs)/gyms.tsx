@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -71,9 +71,12 @@ export default function GymsScreen() {
     refetchInterval: 60000,
   });
 
-  const gyms = useMemo(() => {
-    return (data?.gyms || [])
-      .map((g: any) => {
+  const [gyms, setGyms] = useState<any[]>([]);
+
+  useEffect(() => {
+    const raw: any[] = data?.gyms || [];
+    const result = raw
+      .map((g) => {
         const lat2 = parseFloat(g.latitude);
         const lng2 = parseFloat(g.longitude);
         const distanceKm =
@@ -82,22 +85,23 @@ export default function GymsScreen() {
             : null;
         return { ...g, distanceKm };
       })
-      .sort((a: any, b: any) => {
+      .sort((a, b) => {
         if (a.distanceKm == null && b.distanceKm == null) return 0;
         if (a.distanceKm == null) return 1;
         if (b.distanceKm == null) return -1;
         return a.distanceKm - b.distanceKm;
       });
+    setGyms(result);
   }, [data, userCoords]);
 
-  const filtered = useMemo(() => {
-    if (!search) return gyms;
+  const filtered = gyms.filter((gym: any) => {
+    if (!search) return true;
     const q = search.toLowerCase();
-    return gyms.filter((gym: any) =>
+    return (
       gym.name.toLowerCase().includes(q) ||
       (gym.address || "").toLowerCase().includes(q)
     );
-  }, [gyms, search]);
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);

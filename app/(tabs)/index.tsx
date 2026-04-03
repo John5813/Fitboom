@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gyms, setGyms] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -63,29 +64,27 @@ export default function HomeScreen() {
     refetchInterval: 60000,
   });
 
-  const gyms = useMemo(() => {
-    const raw = gymsData?.gyms || [];
-    console.log("[HOME] userCoords:", userCoords, "gyms count:", raw.length);
-    const mapped = raw
-      .filter((g: any) => g.name !== "Velodrom")
-      .map((g: any) => {
+  useEffect(() => {
+    const raw: any[] = gymsData?.gyms || [];
+    const result = raw
+      .filter((g) => g.name !== "Velodrom")
+      .map((g) => {
         const lat2 = parseFloat(g.latitude);
         const lng2 = parseFloat(g.longitude);
         const distanceKm =
           userCoords && !isNaN(lat2) && !isNaN(lng2)
             ? haversineKm(userCoords.lat, userCoords.lng, lat2, lng2)
             : null;
-        console.log("[HOME]", g.name, "lat:", g.latitude, "lng:", g.longitude, "=> distanceKm:", distanceKm);
         return { ...g, distanceKm };
       })
-      .sort((a: any, b: any) => {
+      .sort((a, b) => {
         if (a.distanceKm == null && b.distanceKm == null) return 0;
         if (a.distanceKm == null) return 1;
         if (b.distanceKm == null) return -1;
         return a.distanceKm - b.distanceKm;
-      });
-    console.log("[HOME] sorted order:", mapped.map((g: any) => `${g.name}(${g.distanceKm?.toFixed(1)}km)`).join(", "));
-    return mapped.slice(0, 3);
+      })
+      .slice(0, 3);
+    setGyms(result);
   }, [gymsData, userCoords]);
 
   const onRefresh = async () => {
