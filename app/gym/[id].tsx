@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -56,8 +55,7 @@ function getCategoryLabel(cat: any): string {
 }
 
 export default function GymDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const { id, distanceKm: distanceKmParam } = useLocalSearchParams<{ id: string; distanceKm?: string }>();
   const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
   const { t } = useLanguage();
@@ -75,36 +73,13 @@ export default function GymDetailScreen() {
 
   const gym = gymData?.gym || gymData;
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") return;
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setUserCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      } catch {}
-    })();
-  }, []);
-
-  const distanceText = (() => {
-    if (!userCoords || !gym) return null;
-    const lat2 = parseFloat(gym.latitude);
-    const lng2 = parseFloat(gym.longitude);
-    if (isNaN(lat2) || isNaN(lng2)) return null;
-    const R = 6371;
-    const dLat = ((lat2 - userCoords.lat) * Math.PI) / 180;
-    const dLng = ((lng2 - userCoords.lng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((userCoords.lat * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
-    const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return km < 1
-      ? `${Math.round(km * 1000)} m uzoqlikda`
-      : `${km.toFixed(1)} km uzoqlikda`;
-  })();
+  const distanceKm = distanceKmParam ? parseFloat(distanceKmParam) : null;
+  const distanceText =
+    distanceKm != null && !isNaN(distanceKm)
+      ? distanceKm < 1
+        ? `${Math.round(distanceKm * 1000)} m uzoqlikda`
+        : `${distanceKm.toFixed(1)} km uzoqlikda`
+      : null;
 
   const selectedDate = new Date();
   selectedDate.setDate(selectedDate.getDate() + selectedDayOffset);
