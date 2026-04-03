@@ -40,10 +40,10 @@ export default function GymsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [sortedGyms, setSortedGyms] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
-      if (Platform.OS === "web") return;
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") return;
       const pos = await Location.getCurrentPositionAsync({
@@ -68,26 +68,28 @@ export default function GymsScreen() {
     queryFn: () => getGyms({ category: selectedCategoryId ?? undefined }),
   });
 
-  const rawGyms: any[] = data?.gyms || [];
-
-  const sortedGyms =
-    userLat !== null && userLng !== null
-      ? [...rawGyms]
-          .map((g: any) => {
-            const lat2 = parseFloat(g.latitude);
-            const lng2 = parseFloat(g.longitude);
-            const d =
-              !isNaN(lat2) && !isNaN(lng2)
-                ? distKm(userLat, userLng, lat2, lng2)
-                : null;
-            return { ...g, distanceKm: d };
-          })
-          .sort((a: any, b: any) => {
-            if (a.distanceKm === null) return 1;
-            if (b.distanceKm === null) return -1;
-            return a.distanceKm - b.distanceKm;
-          })
-      : rawGyms;
+  useEffect(() => {
+    const raw: any[] = data?.gyms || [];
+    const withDist = raw.map((g: any) => {
+      const lat2 = parseFloat(g.latitude);
+      const lng2 = parseFloat(g.longitude);
+      const d =
+        userLat !== null &&
+        userLng !== null &&
+        !isNaN(lat2) &&
+        !isNaN(lng2)
+          ? distKm(userLat, userLng, lat2, lng2)
+          : null;
+      return { ...g, distanceKm: d };
+    });
+    const sorted = [...withDist].sort((a: any, b: any) => {
+      if (a.distanceKm === null && b.distanceKm === null) return 0;
+      if (a.distanceKm === null) return 1;
+      if (b.distanceKm === null) return -1;
+      return a.distanceKm - b.distanceKm;
+    });
+    setSortedGyms(sorted);
+  }, [data, userLat, userLng]);
 
   const filtered = sortedGyms.filter((gym: any) => {
     if (!search) return true;

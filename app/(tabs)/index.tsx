@@ -44,10 +44,10 @@ export default function HomeScreen() {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [gyms, setGyms] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
-      if (Platform.OS === "web") return;
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") return;
       const pos = await Location.getCurrentPositionAsync({
@@ -63,29 +63,30 @@ export default function HomeScreen() {
     queryFn: () => getGyms({}),
   });
 
-  const rawGyms: any[] = (gymsData?.gyms || []).filter(
-    (g: any) => g.name !== "Velodrom"
-  );
-
-  const gyms =
-    userLat !== null && userLng !== null
-      ? [...rawGyms]
-          .map((g: any) => {
-            const lat2 = parseFloat(g.latitude);
-            const lng2 = parseFloat(g.longitude);
-            const d =
-              !isNaN(lat2) && !isNaN(lng2)
-                ? distKm(userLat, userLng, lat2, lng2)
-                : null;
-            return { ...g, distanceKm: d };
-          })
-          .sort((a: any, b: any) => {
-            if (a.distanceKm === null) return 1;
-            if (b.distanceKm === null) return -1;
-            return a.distanceKm - b.distanceKm;
-          })
-          .slice(0, 3)
-      : rawGyms.slice(0, 3);
+  useEffect(() => {
+    const raw: any[] = (gymsData?.gyms || []).filter(
+      (g: any) => g.name !== "Velodrom"
+    );
+    const withDist = raw.map((g: any) => {
+      const lat2 = parseFloat(g.latitude);
+      const lng2 = parseFloat(g.longitude);
+      const d =
+        userLat !== null &&
+        userLng !== null &&
+        !isNaN(lat2) &&
+        !isNaN(lng2)
+          ? distKm(userLat, userLng, lat2, lng2)
+          : null;
+      return { ...g, distanceKm: d };
+    });
+    const sorted = [...withDist].sort((a: any, b: any) => {
+      if (a.distanceKm === null && b.distanceKm === null) return 0;
+      if (a.distanceKm === null) return 1;
+      if (b.distanceKm === null) return -1;
+      return a.distanceKm - b.distanceKm;
+    });
+    setGyms(sorted.slice(0, 3));
+  }, [gymsData, userLat, userLng]);
 
   const onRefresh = async () => {
     setRefreshing(true);
