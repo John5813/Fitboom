@@ -24,13 +24,26 @@ import Colors from "@/constants/Colors";
 
 const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
 
+function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -40,20 +53,39 @@ export default function HomeScreen() {
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      setUserLat(pos.coords.latitude);
+      setUserLng(pos.coords.longitude);
     })();
   }, []);
 
   const { data: gymsData, refetch: refetchGyms } = useQuery({
-    queryKey: ["/api/gyms", userCoords?.lat, userCoords?.lng],
-    queryFn: () =>
-      getGyms({ lat: userCoords?.lat, lng: userCoords?.lng }),
-    enabled: true,
+    queryKey: ["/api/gyms"],
+    queryFn: () => getGyms({}),
   });
 
-  const gyms = (gymsData?.gyms || [])
-    .filter((g: any) => g.name !== "Velodrom")
-    .slice(0, 3);
+  const rawGyms: any[] = (gymsData?.gyms || []).filter(
+    (g: any) => g.name !== "Velodrom"
+  );
+
+  const gyms =
+    userLat !== null && userLng !== null
+      ? [...rawGyms]
+          .map((g: any) => {
+            const lat2 = parseFloat(g.latitude);
+            const lng2 = parseFloat(g.longitude);
+            const d =
+              !isNaN(lat2) && !isNaN(lng2)
+                ? distKm(userLat, userLng, lat2, lng2)
+                : null;
+            return { ...g, distanceKm: d };
+          })
+          .sort((a: any, b: any) => {
+            if (a.distanceKm === null) return 1;
+            if (b.distanceKm === null) return -1;
+            return a.distanceKm - b.distanceKm;
+          })
+          .slice(0, 3)
+      : rawGyms.slice(0, 3);
 
   const onRefresh = async () => {
     setRefreshing(true);

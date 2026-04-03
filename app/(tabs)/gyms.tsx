@@ -20,13 +20,26 @@ import { getGyms, getCategories } from "@/services/api";
 import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
 
+function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function GymsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -36,7 +49,8 @@ export default function GymsScreen() {
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      setUserLat(pos.coords.latitude);
+      setUserLng(pos.coords.longitude);
     })();
   }, []);
 
@@ -50,19 +64,32 @@ export default function GymsScreen() {
     catData?.categories || [];
 
   const { data, refetch } = useQuery({
-    queryKey: ["/api/gyms", selectedCategoryId, userCoords?.lat, userCoords?.lng],
-    queryFn: () =>
-      getGyms({
-        category: selectedCategoryId ?? undefined,
-        lat: userCoords?.lat,
-        lng: userCoords?.lng,
-      }),
-    enabled: true,
+    queryKey: ["/api/gyms", selectedCategoryId],
+    queryFn: () => getGyms({ category: selectedCategoryId ?? undefined }),
   });
 
-  const gyms: any[] = data?.gyms || [];
+  const rawGyms: any[] = data?.gyms || [];
 
-  const filtered = gyms.filter((gym: any) => {
+  const sortedGyms =
+    userLat !== null && userLng !== null
+      ? [...rawGyms]
+          .map((g: any) => {
+            const lat2 = parseFloat(g.latitude);
+            const lng2 = parseFloat(g.longitude);
+            const d =
+              !isNaN(lat2) && !isNaN(lng2)
+                ? distKm(userLat, userLng, lat2, lng2)
+                : null;
+            return { ...g, distanceKm: d };
+          })
+          .sort((a: any, b: any) => {
+            if (a.distanceKm === null) return 1;
+            if (b.distanceKm === null) return -1;
+            return a.distanceKm - b.distanceKm;
+          })
+      : rawGyms;
+
+  const filtered = sortedGyms.filter((gym: any) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
