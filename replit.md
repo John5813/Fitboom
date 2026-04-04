@@ -1,106 +1,84 @@
-# FitBoom Fitness Marketplace
+# FitBoom - Gym Management Platform
 
 ## Overview
-FitBoom is a fitness marketplace that offers a credit-based subscription system for accessing multiple gyms and fitness studios. It allows users to browse gyms, book classes, watch online fitness content, and manage bookings via a mobile-first interface. The platform aims to provide a flexible and convenient way for users to engage with various fitness options, leveraging a React frontend, Express backend, and PostgreSQL database. The project envisions significant market potential by consolidating fitness services and enhancing user accessibility.
+FitBoom is a full-stack gym/fitness management platform built for Uzbekistan (Tashkent). It allows users to discover gyms, book slots, purchase credits, and access online fitness courses. Gym owners can manage their facilities, and admins have full control over users, payments, and content.
 
-## User Preferences
-Preferred communication style: Simple, everyday language.
+## Architecture
 
-## System Architecture
+- **Frontend**: React 18 + TypeScript, Vite, Tailwind CSS, Radix UI, TanStack Query, Wouter routing
+- **Backend**: Node.js + Express, TypeScript, served on port 5000
+- **Database**: PostgreSQL via Neon serverless (`@neondatabase/serverless`)
+- **ORM**: Drizzle ORM (schema in `shared/schema.ts`)
+- **Auth**: Passport.js (local strategy) + Telegram bot authentication
+- **File Storage**: `@replit/object-storage` for persistent file uploads
+- **Integrations**: Telegram Bot, Stripe payments
 
-### Frontend Architecture
-The frontend uses React 18 with TypeScript, Vite for bundling, and Wouter for routing. UI components are built with shadcn/ui (Radix UI + Tailwind CSS) and custom components, adhering to a mobile-first design with a bottom navigation pattern, inspired by ClassPass/Mindbody aesthetics. State management utilizes React Query for server state and React Context for authentication. Styling is handled by Tailwind CSS, incorporating CSS variables for theming and an HSL color system.
+## Project Structure
 
-### Backend Architecture
-The backend is an Express.js application written in TypeScript, implementing a RESTful API design. Authentication is session-based using Passport.js (Local Strategy), with routes for user authentication, gyms, classes, bookings, and categories. All routes are protected by authentication middleware, with additional admin-only routes for specific functionalities. Telegram Bot authentication has been integrated as the primary login method, handling user registration, login, and profile completion flows.
+```
+client/          # React frontend (Vite)
+  src/
+    components/  # Reusable UI components (shadcn/ui + custom)
+    pages/       # App views (Home, Admin, Courses, Gym Owner, etc.)
+    contexts/    # Auth and Language contexts
+    hooks/       # Custom hooks
+    lib/         # Utilities
+server/          # Express backend
+  index.ts       # Entry point
+  routes.ts      # All API routes (~2280 lines)
+  storage.ts     # Database abstraction layer
+  auth.ts        # Authentication (Passport.js)
+  telegram.ts    # Telegram bot integration
+  migrate.ts     # Database migration runner
+  vite.ts        # Vite dev server integration
+shared/
+  schema.ts      # Drizzle ORM schema + Zod validation (single source of truth)
+migrations/      # SQL migration files
+uploads/         # User uploads directory
+```
 
-### Database Architecture
-PostgreSQL, hosted via Neon serverless, serves as the primary database. Drizzle ORM is used for type-safe queries and migrations. The schema includes `users` (with `telegramId`, `creditBalance`, `isAdmin`, `profileImageUrl`), `gyms`, `onlineClasses`, `bookings`, `categories`, `adminSettings` (for secure password storage), `partnershipMessages` (for partner requests), `timeSlots` (for gym scheduling with weekly pattern, capacity management, and rest day support), and `gymRatings` (1-5 star ratings per booking, unique per booking, with user/gym references). A repository pattern (`IStorage` interface) abstracts database operations for better maintainability and testability.
+## Key Scripts
 
-### Gym Rating System
-- `gymRatings` table: id, userId, gymId, bookingId (UNIQUE), rating (1-5), createdAt
-- Only allowed on completed bookings (isCompleted=true or status='completed')
-- One rating per booking enforced at DB level (UNIQUE constraint on bookingId)
-- `GET /api/gyms` includes `avgRating` (null if none) and `ratingCount` for each gym
-- `POST /api/gyms/:id/rate` — authenticated, validates booking ownership + completion
-- `GET /api/my-ratings` — returns user's ratings keyed by bookingId
-- GymCard shows star + average rating in photo overlay and detail dialog
-- BookingCard shows "Baho bering" button for completed unrated bookings; star display for already-rated
+- `npm run dev` — Start development server (via `npx tsx server/index.ts`)
+- `npm run build` — Build frontend + backend for production
+- `npm start` — Run production build (runs migrations then starts server)
+- `NODE_ENV=production npx tsx server/migrate.ts` — Run database migrations
 
-### Admin Analytics Dashboard
-- Route: `/admin/analytics` — comprehensive business metrics page
-- **Key Metrics**: DAU (Daily Active Users), MAU (Monthly Active Users), MRR (Monthly Recurring Revenue), ARPU (Average Revenue Per User)
-- **Expense Management**: Manual input form for monthly marketing spend and operational costs (admin_expenses table: month, year, marketing_spend, operational_costs, notes)
-- **CAC Calculation**: Automatic Customer Acquisition Cost = Total Marketing Spend / New Users for selected month/year
-- **User Segmentation**:
-  - Top Active Users — ranked by booking count (activity score)
-  - At-Risk Users — users with completed profiles who haven't booked in 7+ days
-- API endpoints: `/api/admin/analytics`, `/api/admin/analytics/cac`, `/api/admin/analytics/top-users`, `/api/admin/analytics/at-risk-users`, `/api/admin/expenses` (GET/POST/DELETE)
-- Navigation card added to AdminDashboard
+## Environment Variables Required
 
-### Gym Owner Panel
-- Professional dashboard with analytics: today's visitors, daily revenue, monthly stats, slot occupancy rate
-- Hero banner with gym image, gradient overlay, clean address (URL stripped), hours, closed days
-- QR scanner as primary action with gradient button
-- Balance card showing total earnings, paid amount, and current balance
-- Quick action buttons for time slot management and all visitors
-- Recent visitors inline list (last 5) with avatars and revenue
-- Payments history with modern card layout
-- Settings dialog for switching to user mode (requires re-entering owner access code) and logout
-- Browser back button intercepted to prevent accidental navigation away
-- Auto-redirect: if gymOwnerId exists in localStorage, user always lands on gym owner panel
-- Slot management with auto-generate + manual entry, both available during gym creation
+- `DATABASE_URL` — PostgreSQL connection string (Neon serverless)
+- `SESSION_SECRET` — Express session secret
+- `TELEGRAM_BOT_TOKEN` — Telegram bot token (optional, disables bot if missing)
+- `STRIPE_SECRET_KEY` — Stripe secret key (optional)
+- `VITE_STRIPE_PUBLIC_KEY` — Stripe publishable key (optional)
+- `OBJECT_STORAGE_BUCKET_ID` — Replit object storage bucket (for file uploads)
 
-### Time Slot System
-- Weekly schedule pattern: Mon-Sat with hourly slots (09:00-21:00) by default
-- Each slot tracks capacity and availableSpots (default 15 per hour)
-- Auto-generate endpoint creates 72 slots (12 hours × 6 days) with one click
-- Booking decrements availableSpots; cancellation restores them
-- Admin and gym owner can manage slots via their respective panels
-- Each gym has `closedDays` (array of day-of-week numbers as strings: "0"=Sunday, "6"=Saturday)
-- Booking dialog dynamically filters available dates based on gym's closedDays (no more hardcoded Sunday block)
+## Database Schema Tables
 
-### Booking Cancellation Policy
-- If cancelled ≥2 hours before scheduled start: credits are fully refunded
-- If cancelled <2 hours before start: booking is cancelled but no credit refund
-- Frontend pre-check warns user before they confirm late cancellation (window.confirm)
-- Server enforces the policy regardless of frontend; `noRefund: true` in response when no refund given
+- `users` — Platform users (telegram auth + phone)
+- `gyms` — Gym listings with location, hours, categories
+- `bookings` — Gym slot bookings
+- `time_slots` — Available time slots per gym
+- `gym_visits` — Visit history
+- `gym_payments` — Gym payment records
+- `gym_ratings` — User ratings for gyms
+- `video_collections` — Online course collections
+- `online_classes` — Individual videos in collections
+- `user_purchases` — Course purchase records
+- `credit_payments` — Credit top-up payment records
+- `login_codes` — Phone OTP login codes
+- `admin_settings` — Key-value admin configuration
+- `partnership_messages` — Gym partner inquiries
+- `admin_expenses` — Monthly expense tracking
+- `stored_files` — Files stored in database (fallback)
+- `categories` — Gym/activity categories
 
-### Project Structure
-The project is organized as a monorepo:
-- `/client`: React frontend.
-- `/server`: Express backend.
-- `/shared`: Code shared between frontend and backend (e.g., database schema, Zod validation schemas).
-- `/migrations`: Database migration files.
-Development uses Vite, and production builds static assets served by Express.
+## Workflow
 
-### Key Design Patterns
-- **Component Patterns**: Presentational/Container, Compound Components, Controlled Components with React Hook Form, Custom Hooks.
-- **Data Fetching**: React Query for caching, refetching, and optimistic updates.
-- **Error Handling**: Global error boundaries, React Query error states, toast notifications, HTTP status codes.
-- **Security**: Bcrypt password hashing, secure session management, Zod for input validation, role-based authorization, Telegram authentication security features (rate limiting, code expiry, attempt throttling).
-- **Telegram Bot**: Completely rewritten (Feb 2026). Bot token stored in secrets (not hardcoded). Login codes stored in PostgreSQL `login_codes` table (persistent across restarts). Webhook URL auto-detected from REPLIT_DOMAINS/REPLIT_DEV_DOMAIN environment variables. Exported functions: `setupTelegramBot`, `setupTelegramWebhook`, `notifyProfileCompleted`, `sendPaymentReceiptToAdmin`.
+- **Start application** — `NODE_ENV=development npx tsx server/index.ts` (port 5000, webview)
 
-## External Dependencies
+## Migration Notes
 
-### Third-Party Services
-- **Database**: Neon PostgreSQL (serverless database).
-- **Payment Processing**: Stripe for credit purchases, including Checkout Sessions and webhook handling.
-- **Telegram Bot API**: For user authentication and registration.
-
-### UI Component Libraries
-- **Radix UI Primitives**: Accessible, unstyled UI primitives.
-- **shadcn/ui**: Component library built on Radix UI and Tailwind CSS.
-- **Additional UI Libraries**: `cmdk` (command palette), `react-day-picker` (date selection), `lucide-react` (icons), `vaul` (drawer), `embla-carousel-react` (carousel).
-
-### Development Tools
-- **Build Tools**: Vite, esbuild, PostCSS.
-- **Type Safety**: TypeScript, Zod (runtime validation), Drizzle-Zod.
-- **Development Utilities**: `tsx`, Replit-specific plugins.
-
-### Image & File Storage
-- **Replit Object Storage** (Google Cloud Storage) is used for persistent file storage. All uploaded images (gym photos, receipts) are stored in the cloud bucket and survive deployments/restarts.
-- Upload endpoints (`/api/upload-images`, `/api/upload-image`) use multer memory storage and save to Object Storage under `images/` prefix.
-- Receipt uploads save to Object Storage under `receipts/` prefix.
-- Serving endpoints (`/api/images/:filename`, `/api/receipts/:filename`) read from Object Storage with fallback to local `uploads/` directory for backwards compatibility.
-- Static assets (hero images, thumbnails) are in `/attached_assets/generated_images/`.
+- Migrations were initially created with drizzle-kit v0.18.1 (outdated)
+- The live database schema was synced manually via SQL during the Replit migration
+- Future schema changes: modify `shared/schema.ts` then write SQL migrations manually or upgrade drizzle-kit
