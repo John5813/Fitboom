@@ -12,7 +12,7 @@ import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
 
-const MAP_URL = "https://fitboom.replit.app/map";
+const MAP_BASE = "https://fitboom.replit.app/map";
 
 interface Props {
   visible: boolean;
@@ -33,7 +33,22 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const uri = token ? `${MAP_BASE}?token=${encodeURIComponent(token)}` : MAP_BASE;
+
+  const injectedJavaScript = token
+    ? `
+        (function() {
+          try {
+            localStorage.setItem('mobile_token', '${token}');
+            localStorage.setItem('fitboom_token', '${token}');
+            localStorage.setItem('access_token', '${token}');
+            sessionStorage.setItem('mobile_token', '${token}');
+            window.__mobileToken = '${token}';
+          } catch(e) {}
+        })();
+        true;
+      `
+    : undefined;
 
   return (
     <Modal
@@ -56,7 +71,10 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
           </View>
         ) : (
           <WebView
-            source={{ uri: MAP_URL, headers }}
+            source={{
+              uri,
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            }}
             style={styles.webview}
             startInLoadingState
             renderLoading={() => (
@@ -67,6 +85,7 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
             javaScriptEnabled
             domStorageEnabled
             geolocationEnabled
+            injectedJavaScript={injectedJavaScript}
           />
         )}
       </SafeAreaView>

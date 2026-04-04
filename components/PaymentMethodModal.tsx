@@ -33,7 +33,22 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const uri = token ? `${PAY_BASE}?token=${encodeURIComponent(token)}` : PAY_BASE;
+
+  const injectedJavaScript = token
+    ? `
+        (function() {
+          try {
+            localStorage.setItem('mobile_token', '${token}');
+            localStorage.setItem('fitboom_token', '${token}');
+            localStorage.setItem('access_token', '${token}');
+            sessionStorage.setItem('mobile_token', '${token}');
+            window.__mobileToken = '${token}';
+          } catch(e) {}
+        })();
+        true;
+      `
+    : undefined;
 
   return (
     <Modal
@@ -56,7 +71,10 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
           </View>
         ) : (
           <WebView
-            source={{ uri: PAY_BASE, headers }}
+            source={{
+              uri,
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            }}
             style={styles.webview}
             startInLoadingState
             renderLoading={() => (
@@ -66,6 +84,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
             )}
             javaScriptEnabled
             domStorageEnabled
+            injectedJavaScript={injectedJavaScript}
           />
         )}
       </SafeAreaView>
