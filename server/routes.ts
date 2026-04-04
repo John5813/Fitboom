@@ -303,6 +303,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Mobil ilova JWT tokeni bilan web session ochish
+  app.post("/api/auth/token-login", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) return res.status(400).json({ message: "Token talab qilinadi" });
+
+      const { verifyToken } = await import("./mobileAuth");
+      const payload = verifyToken(token);
+      if (!payload || payload.type !== "access") {
+        return res.status(401).json({ message: "Token yaroqsiz yoki muddati o'tgan" });
+      }
+
+      const user = await storage.getUser(payload.userId);
+      if (!user) return res.status(401).json({ message: "Foydalanuvchi topilmadi" });
+
+      req.logIn(user, (err) => {
+        if (err) return res.status(500).json({ message: "Session yaratishda xatolik" });
+        return res.json({ user });
+      });
+    } catch (err) {
+      return res.status(500).json({ message: "Xatolik yuz berdi" });
+    }
+  });
+
   app.get("/api/user", async (req, res) => {
     if (req.isAuthenticated()) {
       // Kredit muddatini tekshirish va agar muddati o'tgan bo'lsa nolga tushirish

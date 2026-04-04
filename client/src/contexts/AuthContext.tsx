@@ -32,11 +32,37 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
+  const [tokenLoginDone, setTokenLoginDone] = useState(false);
+
+  // Mobil ilova WebView dan ?token= bilan kelganda avtomatik login
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (!token) { setTokenLoginDone(true); return; }
+
+    fetch("/api/auth/token-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ token }),
+    })
+      .then((res) => res.ok ? res.json() : null)
+      .then(() => {
+        // URL dan token parametrini olib tashlash (xavfsizlik uchun)
+        params.delete("token");
+        const newUrl = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+        window.history.replaceState({}, "", newUrl);
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      })
+      .catch(() => {})
+      .finally(() => setTokenLoginDone(true));
+  }, []);
 
   const { data, isLoading } = useQuery<{ user: User } | null>({
     queryKey: ['/api/user'],
     queryFn: getQueryFn<{ user: User } | null>({ on401: "returnNull" }),
     retry: false,
+    enabled: tokenLoginDone,
   });
 
   const user = data?.user || null;
