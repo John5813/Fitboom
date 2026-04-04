@@ -42,3 +42,9 @@ id = "yN9LFBv4-4SAQbJpL7xec"
 uri = "file://MOBILE_DISTANCE_SORTING.md"
 type = "text"
 title = "Masofaga Ko'ra Saralash — Yo'riqnoma"
+
+[[outputs]]
+id = "SYhE1ztZphj4csukDLN05"
+uri = "file://INTEGRATION_GUIDE.md"
+type = "text"
+title = "FitBoom — Mobile App Integration Guide"
