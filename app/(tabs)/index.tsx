@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getGyms } from "@/services/api";
 import GymCard from "@/components/GymCard";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
+import MapWebViewModal from "@/components/MapWebViewModal";
 import Colors from "@/constants/Colors";
 
 const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
@@ -40,6 +41,7 @@ export default function HomeScreen() {
   const { language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [mapModalVisible, setMapModalVisible] = useState(false);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [gyms, setGyms] = useState<any[]>([]);
@@ -206,7 +208,7 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity
           style={styles.viewAllBtn}
-          onPress={() => router.push("/(tabs)/map" as any)}
+          onPress={() => setMapModalVisible(true)}
         >
           <Text style={styles.viewAll}>Barchasini ko'rish</Text>
           <Feather name="arrow-right" size={14} color={Colors.primary} />
@@ -232,6 +234,10 @@ export default function HomeScreen() {
       <PaymentMethodModal
         visible={paymentModalVisible}
         onClose={() => setPaymentModalVisible(false)}
+      />
+      <MapWebViewModal
+        visible={mapModalVisible}
+        onClose={() => setMapModalVisible(false)}
       />
     </ScrollView>
     </SafeAreaView>
