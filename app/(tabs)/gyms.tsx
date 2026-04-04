@@ -7,10 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   RefreshControl,
-  Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -33,7 +32,6 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number 
 }
 
 export default function GymsScreen() {
-  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -106,11 +104,9 @@ export default function GymsScreen() {
     setRefreshing(false);
   };
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <Text style={styles.title}>{t("gyms.title")}</Text>
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
@@ -201,7 +197,7 @@ export default function GymsScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

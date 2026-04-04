@@ -6,10 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -20,11 +19,9 @@ import { request } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CoursesTab() {
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data } = useQuery({
     queryKey: ["/collections"],
@@ -72,8 +69,8 @@ export default function CoursesTab() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <Text style={styles.title}>{t("courses.title")}</Text>
       </View>
 
@@ -138,7 +135,7 @@ export default function CoursesTab() {
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -6,10 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -37,7 +36,6 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number 
 }
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
@@ -94,8 +92,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const topPadding = Platform.OS === "web" ? 16 : insets.top + 8;
-
   const daysLeft = user?.creditExpiryDate
     ? Math.ceil(
         (new Date(user.creditExpiryDate).getTime() - Date.now()) /
@@ -112,11 +108,12 @@ export default function HomeScreen() {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPadding, paddingBottom: 110 },
+        { paddingBottom: 110 },
       ]}
       refreshControl={
         <RefreshControl
@@ -237,10 +234,12 @@ export default function HomeScreen() {
         onClose={() => setPaymentModalVisible(false)}
       />
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, backgroundColor: "#fff" },
   content: { paddingHorizontal: 16 },
 

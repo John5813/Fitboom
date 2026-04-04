@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,6 @@ type Step = "welcome" | "phone" | "code" | "telegram";
 type AuthMethod = "sms" | "telegram";
 
 export default function AuthScreen() {
-  const insets = useSafeAreaInsets();
   const { user, isLoading, verifyOtp, verifyTelegram } = useAuth();
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>("welcome");
@@ -109,7 +108,7 @@ export default function AuthScreen() {
 
   if (step === "welcome") {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.glowTop} />
         <View style={styles.glowBottom} />
 
@@ -188,13 +187,13 @@ export default function AuthScreen() {
             Ro'yxatdan o'tish bepul · 30 soniyada tayyor
           </Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (step === "telegram") {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.authInner}
@@ -248,12 +247,12 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.authInner}
@@ -349,7 +348,7 @@ export default function AuthScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 

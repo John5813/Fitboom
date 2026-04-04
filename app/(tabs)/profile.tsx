@@ -8,11 +8,10 @@ import {
   Alert,
   TextInput,
   Modal,
-  Platform,
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
@@ -36,7 +35,6 @@ const LANGUAGES = [
 ] as const;
 
 export default function ProfileScreen() {
-  const insets = useSafeAreaInsets();
   const { user, logout, refetchUser } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const [editModal, setEditModal] = useState(false);
@@ -51,8 +49,6 @@ export default function ProfileScreen() {
   );
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const daysLeft = user?.creditExpiryDate
     ? Math.ceil(
@@ -175,11 +171,12 @@ export default function ProfileScreen() {
   ];
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPadding + 16, paddingBottom: 100 },
+        { paddingTop: 16, paddingBottom: 100 },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -476,10 +473,12 @@ export default function ProfileScreen() {
         onClose={() => setPaymentModalVisible(false)}
       />
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: 16, gap: 16 },
   profileCard: {

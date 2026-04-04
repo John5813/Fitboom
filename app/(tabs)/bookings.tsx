@@ -7,10 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Platform,
   ActivityIndicator,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -67,7 +66,6 @@ function getStatusInfo(status: string) {
 }
 
 export default function BookingsScreen() {
-  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { refetchUser } = useAuth();
   const queryClient = useQueryClient();
@@ -148,12 +146,11 @@ export default function BookingsScreen() {
     setRefreshing(false);
   };
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const list = tab === "upcoming" ? upcoming : past;
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <Text style={styles.title}>{t("bookings.title")}</Text>
         <View style={styles.tabs}>
           <TouchableOpacity
@@ -358,7 +355,7 @@ export default function BookingsScreen() {
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

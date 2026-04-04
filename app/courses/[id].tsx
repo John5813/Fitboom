@@ -5,11 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   Linking,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -20,9 +19,7 @@ import Colors from "@/constants/Colors";
 
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data, isLoading } = useQuery({
     queryKey: [`/collections/${id}`],
@@ -49,8 +46,8 @@ export default function CourseDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
@@ -133,7 +130,7 @@ export default function CourseDetailScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

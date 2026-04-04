@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +19,6 @@ import { completeProfile } from "@/services/api";
 import Colors from "@/constants/Colors";
 
 export default function CompleteProfileScreen() {
-  const insets = useSafeAreaInsets();
   const { refetchUser } = useAuth();
   const { t } = useLanguage();
   const [name, setName] = useState("");
@@ -58,7 +57,7 @@ export default function CompleteProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.inner}
         keyboardShouldPersistTaps="handled"
@@ -138,7 +137,7 @@ export default function CompleteProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

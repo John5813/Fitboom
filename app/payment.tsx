@@ -6,12 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Platform,
   ActivityIndicator,
   Image,
 } from "react-native";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -37,10 +36,8 @@ const FALLBACK_CARD = "8600 0000 0000 0000";
 type Step = "select" | "receipt" | "pending" | "done" | "rejected";
 
 export default function PaymentScreen() {
-  const insets = useSafeAreaInsets();
   const { user, refetchUser } = useAuth();
   const { t } = useLanguage();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const [selectedPkg, setSelectedPkg] = useState<any>(null);
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
@@ -196,8 +193,8 @@ export default function PaymentScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
@@ -337,7 +334,7 @@ export default function PaymentScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
