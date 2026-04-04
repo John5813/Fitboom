@@ -17,7 +17,7 @@ import { Image } from "expo-image";
 
 import Colors from "@/constants/Colors";
 
-const BASE_URL = "https://fitboom--moydinovjavlon4.replit.app/api/mobile/v1";
+const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
 
 const TASHKENT = { latitude: 41.2995, longitude: 69.2401 };
 const PANEL_HEIGHT = 200;

@@ -1,10 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BASE_URL = "https://fitboom--moydinovjavlon4.replit.app/api/mobile/v1";
+const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
 
 export function fixImageUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
-  return url.replace("https://fitboom--moydinovjavlon4.replit.app/api/images/", "https://fitboom--moydinovjavlon4.replit.app/images/");
+  return url
+    .replace("https://fitboom--moydinovjavlon4.replit.app/api/images/", "https://fitboom.replit.app/images/")
+    .replace("https://fitboom--moydinovjavlon4.replit.app/images/", "https://fitboom.replit.app/images/");
 }
 
 const ACCESS_TOKEN_KEY = "fitboom_access_token";

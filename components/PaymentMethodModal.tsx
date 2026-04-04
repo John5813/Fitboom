@@ -12,7 +12,7 @@ import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
 
-const PAY_BASE = "https://fitboom--moydinovjavlon4.replit.app/mobile-pay";
+const PAY_BASE = "https://fitboom.replit.app/mobile-pay";
 
 interface Props {
   visible: boolean;
