@@ -31,7 +31,8 @@ const FALLBACK_PACKAGES = [
   { credits: 240, price: 240000, priceFormatted: "240 000 so'm" },
 ];
 
-const FALLBACK_CARD = "8600 0000 0000 0000";
+const FALLBACK_CARD = "9860 1601 0456 2378";
+const FALLBACK_CARD_HOLDER = "Javlonbek Mo'ydinov";
 
 type Step = "select" | "receipt" | "pending" | "done" | "rejected";
 
@@ -55,6 +56,7 @@ export default function PaymentScreen() {
   const PACKAGES = configData?.packages?.length ? configData.packages : FALLBACK_PACKAGES;
   const currentPkg = selectedPkg || PACKAGES[1] || PACKAGES[0];
   const cardNumber: string = configData?.cardNumber || FALLBACK_CARD;
+  const cardHolder: string = (configData as any)?.cardHolder || FALLBACK_CARD_HOLDER;
 
   useEffect(() => {
     return () => {
@@ -275,7 +277,10 @@ export default function PaymentScreen() {
               <Text style={styles.instructionTitle}>To'lov ko'rsatmalari</Text>
               <View style={styles.cardNumberBox}>
                 <Feather name="credit-card" size={18} color={Colors.primary} />
-                <Text style={styles.cardNumberText}>{cardNumber}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardNumberText}>{cardNumber}</Text>
+                  <Text style={styles.cardHolderText}>{cardHolder}</Text>
+                </View>
               </View>
               <Text style={styles.instructionText}>
                 1. Yuqoridagi karta raqamiga{" "}
@@ -433,7 +438,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: Colors.primary,
     letterSpacing: 1,
-    flex: 1,
+  },
+  cardHolderText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   instructionText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textSecondary, lineHeight: 22 },
   instructionHighlight: { color: Colors.primary, fontFamily: "Inter_700Bold" },

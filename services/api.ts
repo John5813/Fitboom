@@ -2,13 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
 
-export function fixImageUrl(url: string | null | undefined): string | undefined {
-  if (!url) return undefined;
-  return url
-    .replace("https://fitboom--moydinovjavlon4.replit.app/api/images/", "https://fitboom.replit.app/images/")
-    .replace("https://fitboom--moydinovjavlon4.replit.app/images/", "https://fitboom.replit.app/images/");
-}
-
 const ACCESS_TOKEN_KEY = "fitboom_access_token";
 const REFRESH_TOKEN_KEY = "fitboom_refresh_token";
 
@@ -488,12 +481,3 @@ export interface PaymentStatusResponse {
 export const getPaymentStatus = async (paymentId: string): Promise<PaymentStatusResponse> =>
   request<PaymentStatusResponse>(`/credits/payment/${paymentId}/status`);
 
-export const uploadReceipt = async (payload: {
-  amountCredits: number;
-  amountUzs: number;
-  receiptUrl?: string;
-}) =>
-  request("/payments/upload-receipt", {
-    method: "POST",
-    body: payload,
-  });
