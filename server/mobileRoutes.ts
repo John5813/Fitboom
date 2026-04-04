@@ -1046,6 +1046,9 @@ export function registerMobileRoutes(app: Express) {
 
       const firstPending = pendingPayments[0] || null;
 
+      const mobileToken = (req as any).mobileToken || '';
+      const appUrl = getAppUrl();
+
       mobileSuccess(res, {
         credits: currentUser.credits,
         creditExpiryDate: expiryDate,
@@ -1056,6 +1059,8 @@ export function registerMobileRoutes(app: Express) {
           price: CREDIT_PRICES[c],
           priceFormatted: `${CREDIT_PRICES[c].toLocaleString()} so'm`,
         })),
+        paymentUrl: `${appUrl}/mobile-pay?token=${mobileToken}`,
+        mapUrl: `${appUrl}/map`,
         activePartialPayment: partialPayment?.status === 'partial' ? {
           id: partialPayment.id,
           credits: partialPayment.credits,

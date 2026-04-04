@@ -55,6 +55,7 @@ export async function requireMobileAuth(req: Request, res: Response, next: NextF
   }
 
   (req as any).mobileUser = user;
+  (req as any).mobileToken = token;
   next();
 }
 

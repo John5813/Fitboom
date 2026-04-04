@@ -83,11 +83,7 @@ function Router() {
           <CoursesPage />
         </ProtectedRoute>
       </Route>
-      <Route path="/map">
-        <ProtectedRoute>
-          <MapPage />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/map" component={MapPage} />
       <Route path="/my-courses/:id">
         <ProtectedRoute>
           <MyCourseDetailPage />

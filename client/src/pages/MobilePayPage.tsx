@@ -4,7 +4,7 @@ import { KeyRound, CreditCard, Upload, Copy, CheckCircle, ArrowLeft, Loader2 } f
 
 const CARD_NUMBER = "9860160104562378";
 const CARD_HOLDER = "Javlonbek Mo'ydinov";
-const PRODUCTION_URL = "https://fitboom--gangster5813.replit.app";
+const PRODUCTION_URL = "https://fitboom.replit.app";
 
 const packages = [
   { credits: 60, price: 60000 },
