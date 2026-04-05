@@ -12,6 +12,7 @@ import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
 
+const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
 const PAY_BASE = "https://fitboom.replit.app/mobile-pay";
 
 interface Props {
@@ -20,35 +21,44 @@ interface Props {
 }
 
 export default function PaymentMethodModal({ visible, onClose }: Props) {
-  const [token, setToken] = useState<string | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
       setLoading(true);
-      getAccessToken().then((t) => {
-        setToken(t);
-        setLoading(false);
-      });
+      setError(null);
+      setPaymentUrl(null);
+      loadPaymentUrl();
     }
   }, [visible]);
 
-  const uri = token ? `${PAY_BASE}?token=${encodeURIComponent(token)}` : PAY_BASE;
-
-  const injectedJavaScript = token
-    ? `
-        (function() {
-          try {
-            localStorage.setItem('mobile_token', '${token}');
-            localStorage.setItem('fitboom_token', '${token}');
-            localStorage.setItem('access_token', '${token}');
-            sessionStorage.setItem('mobile_token', '${token}');
-            window.__mobileToken = '${token}';
-          } catch(e) {}
-        })();
-        true;
-      `
-    : undefined;
+  async function loadPaymentUrl() {
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setError("Tizimga kiring");
+        setLoading(false);
+        return;
+      }
+      const res = await fetch(`${BASE_URL}/credits`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      const data = json?.data ?? json;
+      const url = data?.paymentUrl;
+      if (url) {
+        setPaymentUrl(url);
+      } else {
+        setPaymentUrl(`${PAY_BASE}?token=${encodeURIComponent(token)}`);
+      }
+    } catch {
+      setError("Ulanishda xatolik. Qayta urinib ko'ring.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <Modal
@@ -69,12 +79,16 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#F97316" />
           </View>
+        ) : error ? (
+          <View style={styles.loadingBox}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadPaymentUrl}>
+              <Text style={styles.retryText}>Qayta urinish</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <WebView
-            source={{
-              uri,
-              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-            }}
+            source={{ uri: paymentUrl! }}
             style={styles.webview}
             startInLoadingState
             renderLoading={() => (
@@ -84,7 +98,6 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
             )}
             javaScriptEnabled
             domStorageEnabled
-            injectedJavaScriptBeforeContentLoaded={injectedJavaScript}
           />
         )}
       </SafeAreaView>
@@ -107,5 +120,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#111" },
   closeBtn: { position: "absolute", right: 16, padding: 4 },
   webview: { flex: 1 },
-  loadingBox: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loadingBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
+  errorText: { fontSize: 15, color: "#e53935", fontFamily: "Inter_500Medium", textAlign: "center", paddingHorizontal: 24 },
+  retryBtn: { backgroundColor: "#F97316", paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
+  retryText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
 });
