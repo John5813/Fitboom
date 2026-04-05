@@ -436,7 +436,18 @@ export async function verifyQr(rawQrString: string, accessToken?: string) {
 }
 
 export const getCredits = async () =>
-  request<{ credits: number; creditExpiryDate?: string; daysUntilExpiry?: number; packages: any[] }>("/credits");
+  request<{
+    credits: number;
+    creditExpiryDate?: string;
+    daysUntilExpiry?: number;
+    packages: any[];
+    paymentUrl?: string;
+    activePartialPayment?: {
+      id: string;
+      remainingAmount: number;
+      credits: number;
+    } | null;
+  }>("/credits");
 
 export const getCreditHistory = async () => getCredits();
 export const getTopupHistory = async () => getCredits();

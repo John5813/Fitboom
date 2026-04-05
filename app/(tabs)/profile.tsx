@@ -60,10 +60,11 @@ export default function ProfileScreen() {
   const { data: creditsConfig } = useQuery({
     queryKey: ["/credits"],
     queryFn: () => getPaymentConfig(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 
   const packages: any[] = creditsConfig?.packages || [];
+  const activePartialPayment = (creditsConfig as any)?.activePartialPayment;
 
   const handleSaveProfile = async () => {
     const ageNum = parseInt(editAge, 10);
@@ -261,6 +262,25 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {activePartialPayment && activePartialPayment.remainingAmount > 0 && (
+        <TouchableOpacity
+          style={styles.partialBanner}
+          onPress={() => setPaymentModalVisible(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.partialBannerLeft}>
+            <Feather name="alert-circle" size={20} color="#fff" />
+            <View>
+              <Text style={styles.partialBannerTitle}>Qoldiq to'lov mavjud</Text>
+              <Text style={styles.partialBannerSub}>
+                {Number(activePartialPayment.remainingAmount).toLocaleString()} so'm — yangi chek yuboring
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color="#fff" />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.historyCard}>
         <Text style={styles.sectionTitle}>Kredit tarixi</Text>
@@ -606,6 +626,34 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontFamily: "Inter_600SemiBold",
     fontSize: 13,
+  },
+  partialBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f97316",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 10,
+    gap: 10,
+  },
+  partialBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  partialBannerTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  partialBannerSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 2,
   },
   historyCard: {
     backgroundColor: Colors.card,

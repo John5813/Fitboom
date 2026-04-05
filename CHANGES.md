@@ -2,6 +2,20 @@
 
 ---
 
+## 7. Qoldiq To'lov Banneri (activePartialPayment)
+
+Server `/api/mobile/v1/credits` dan `activePartialPayment.remainingAmount` qaytarsa, foydalanuvchiga to'q sariq banner ko'rsatiladi. Banner bosish bilan PaymentMethodModal ochiladi.
+
+**O'zgartirilgan fayllar:**
+
+| Fayl | Nima qilindi |
+|------|-------------|
+| `services/api.ts` | `getCredits()` return typega `activePartialPayment` qo'shildi |
+| `app/(tabs)/index.tsx` | `getCredits` query qo'shildi; kredit kartasi tagida to'q sariq banner (partialBanner) |
+| `app/(tabs)/profile.tsx` | `activePartialPayment` olinadi; kredit karta tagida xuddi shunday banner |
+
+---
+
 ## 1. Safe Area (Notch/Status bar muammosi tuzatildi)
 
 Kontent telefon notch va status bar bilan ustma-ust chiqib ketayotgan edi. Barcha ekranlarda `useSafeAreaInsets()` o'rniga `SafeAreaView edges={["top"]}` qo'llandi.

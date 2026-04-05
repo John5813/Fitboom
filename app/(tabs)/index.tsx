@@ -16,7 +16,7 @@ import * as Location from "expo-location";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getGyms } from "@/services/api";
+import { getGyms, getCredits } from "@/services/api";
 import GymCard from "@/components/GymCard";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
 import MapWebViewModal from "@/components/MapWebViewModal";
@@ -63,6 +63,14 @@ export default function HomeScreen() {
     queryFn: () => getGyms({}),
   });
 
+  const { data: creditsData, refetch: refetchCredits } = useQuery({
+    queryKey: ["/credits"],
+    queryFn: getCredits,
+    staleTime: 30 * 1000,
+  });
+
+  const activePartialPayment = creditsData?.activePartialPayment;
+
   useEffect(() => {
     const raw: any[] = (gymsData?.gyms || []).filter(
       (g: any) => g.name !== "Velodrom"
@@ -90,7 +98,7 @@ export default function HomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchUser(), refetchGyms()]);
+    await Promise.all([refetchUser(), refetchGyms(), refetchCredits()]);
     setRefreshing(false);
   };
 
@@ -199,6 +207,26 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
       </LinearGradient>
+
+      {/* ─── Qoldiq To'lov Banner ─── */}
+      {activePartialPayment && activePartialPayment.remainingAmount > 0 && (
+        <TouchableOpacity
+          style={styles.partialBanner}
+          onPress={() => setPaymentModalVisible(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.partialBannerLeft}>
+            <Feather name="alert-circle" size={20} color="#fff" />
+            <View>
+              <Text style={styles.partialBannerTitle}>Qoldiq to'lov mavjud</Text>
+              <Text style={styles.partialBannerSub}>
+                {Number(activePartialPayment.remainingAmount).toLocaleString()} so'm — yangi chek yuboring
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color="#fff" />
+        </TouchableOpacity>
+      )}
 
       {/* ─── Yaqin Zallar ─── */}
       <View style={styles.sectionHeader}>
@@ -373,6 +401,35 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 13,
     fontFamily: "Inter_700Bold",
+  },
+
+  partialBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f97316",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  partialBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  partialBannerTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  partialBannerSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 2,
   },
 
   /* Section */
