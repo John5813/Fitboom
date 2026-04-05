@@ -16,8 +16,9 @@ type Step = "packages" | "payment" | "success";
 
 export default function MobilePayPage() {
   const search = useSearch();
-  const params = new URLSearchParams(search);
-  const token = params.get("token") || "";
+  // Token birinchi renderda bir marta olinadi va saqlanadi.
+  // AuthContext URL dan ?token= ni o'chirganda qayta render bo'lsa ham token yo'qolmaydi.
+  const [token] = useState(() => new URLSearchParams(search).get("token") || "");
 
   const [step, setStep] = useState<Step>("packages");
   const [selected, setSelected] = useState<{ credits: number; price: number } | null>(null);
