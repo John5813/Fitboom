@@ -47,6 +47,7 @@ export default function HomeScreen() {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [partialModalVisible, setPartialModalVisible] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
+  const [dismissedPartialId, setDismissedPartialId] = useState<string | null>(null);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [gyms, setGyms] = useState<any[]>([]);
@@ -214,7 +215,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
       {/* ─── Qoldiq To'lov Banner ─── */}
-      {activePartialPayment && activePartialPayment.remainingAmount > 0 && (
+      {activePartialPayment && activePartialPayment.remainingAmount > 0 && activePartialPayment.id !== dismissedPartialId && (
         <View style={styles.partialBanner}>
           <View style={styles.partialBannerLeft}>
             <Feather name="alert-circle" size={20} color="#fff" />
@@ -288,7 +289,11 @@ export default function HomeScreen() {
           paymentId={activePartialPayment.id}
           remainingAmount={activePartialPayment.remainingAmount}
           credits={activePartialPayment.credits}
-          onSuccess={() => { refetchCredits(); refetchUser(); }}
+          onSuccess={() => {
+            setDismissedPartialId(activePartialPayment!.id);
+            refetchCredits();
+            refetchUser();
+          }}
         />
       )}
       <MapWebViewModal

@@ -46,6 +46,7 @@ export default function ProfileScreen() {
   const [selectorMode, setSelectorMode] = useState<"topup" | "partial">("topup");
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [partialModalVisible, setPartialModalVisible] = useState(false);
+  const [dismissedPartialId, setDismissedPartialId] = useState<string | null>(null);
   const [adminPassword, setAdminPassword] = useState("");
   const [editName, setEditName] = useState(user?.name || "");
   const [editAge, setEditAge] = useState(String(user?.age || ""));
@@ -268,7 +269,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {activePartialPayment && activePartialPayment.remainingAmount > 0 && (
+      {activePartialPayment && activePartialPayment.remainingAmount > 0 && activePartialPayment.id !== dismissedPartialId && (
         <View style={styles.partialBanner}>
           <View style={styles.partialBannerLeft}>
             <Feather name="alert-circle" size={20} color="#fff" />
@@ -517,7 +518,11 @@ export default function ProfileScreen() {
           paymentId={activePartialPayment.id}
           remainingAmount={activePartialPayment.remainingAmount}
           credits={activePartialPayment.credits}
-          onSuccess={() => { refetchCredits(); refetchUser(); }}
+          onSuccess={() => {
+            setDismissedPartialId(activePartialPayment!.id);
+            refetchCredits();
+            refetchUser();
+          }}
         />
       )}
     </ScrollView>
