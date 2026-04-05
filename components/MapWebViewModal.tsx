@@ -85,7 +85,7 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
             javaScriptEnabled
             domStorageEnabled
             geolocationEnabled
-            injectedJavaScript={injectedJavaScript}
+            injectedJavaScriptBeforeContentLoaded={injectedJavaScript}
           />
         )}
       </SafeAreaView>

@@ -84,7 +84,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
             )}
             javaScriptEnabled
             domStorageEnabled
-            injectedJavaScript={injectedJavaScript}
+            injectedJavaScriptBeforeContentLoaded={injectedJavaScript}
           />
         )}
       </SafeAreaView>
