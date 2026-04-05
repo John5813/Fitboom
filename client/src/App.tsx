@@ -25,7 +25,6 @@ import MapPage from "@/pages/MapPage";
 import GymOwnerPage from "@/pages/GymOwnerPage";
 import MobilePayPage from "@/pages/MobilePayPage";
 import NotFound from "@/pages/not-found";
-import InstallPrompt from "@/components/InstallPrompt";
 
 function Router() {
   return (
@@ -123,7 +122,6 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
-            <InstallPrompt />
           </TooltipProvider>
         </AuthProvider>
       </LanguageProvider>
