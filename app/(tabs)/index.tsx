@@ -38,7 +38,7 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number 
 
 export default function HomeScreen() {
   const { user, refetchUser } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
@@ -141,7 +141,7 @@ export default function HomeScreen() {
             <Text style={styles.logoFit}>Fit</Text>
             <Text style={styles.logoBoom}>Boom</Text>
           </Text>
-          <Text style={styles.logoSubtitle}>Sport hayotingizni boshqaring</Text>
+          <Text style={styles.logoSubtitle}>{t("home.subtitle")}</Text>
         </View>
 
         <View style={styles.headerRight}>
@@ -182,16 +182,16 @@ export default function HomeScreen() {
             <Feather name="zap" size={24} color="#fff" />
           </View>
           <View>
-            <Text style={styles.creditLabel}>Kredit balansi</Text>
+            <Text style={styles.creditLabel}>{t("home.balance")}</Text>
             <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
             {daysLeft !== null && !isExpired && (
               <View style={styles.daysRow}>
                 <Feather name="clock" size={11} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.daysText}>{daysLeft} kun qoldi</Text>
+                <Text style={styles.daysText}>{daysLeft} {t("home.days_left")}</Text>
               </View>
             )}
             {isExpired && (
-              <Text style={styles.daysText}>Muddati o'tgan</Text>
+              <Text style={styles.daysText}>{t("home.expired")}</Text>
             )}
           </View>
         </View>
@@ -203,42 +203,44 @@ export default function HomeScreen() {
         >
           <Feather name="plus" size={14} color={Colors.primary} />
           <Text style={styles.topupBtnText}>
-            {isExpired ? "Yangilash" : "To'ldirish"}
+            {isExpired ? t("home.renew") : t("home.topup")}
           </Text>
         </TouchableOpacity>
       </LinearGradient>
 
       {/* ─── Qoldiq To'lov Banner ─── */}
       {activePartialPayment && activePartialPayment.remainingAmount > 0 && (
-        <TouchableOpacity
-          style={styles.partialBanner}
-          onPress={() => setPaymentModalVisible(true)}
-          activeOpacity={0.85}
-        >
+        <View style={styles.partialBanner}>
           <View style={styles.partialBannerLeft}>
             <Feather name="alert-circle" size={20} color="#fff" />
-            <View>
-              <Text style={styles.partialBannerTitle}>Qoldiq to'lov mavjud</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.partialBannerTitle}>{t("partial.title")}</Text>
               <Text style={styles.partialBannerSub}>
-                {Number(activePartialPayment.remainingAmount).toLocaleString()} so'm — yangi chek yuboring
+                {Number(activePartialPayment.remainingAmount).toLocaleString()} {t("partial.sub")}
               </Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={18} color="#fff" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.partialPayBtn}
+            onPress={() => setPaymentModalVisible(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* ─── Yaqin Zallar ─── */}
       <View style={styles.sectionHeader}>
         <View>
-          <Text style={styles.sectionTitle}>Sizga eng yaqin zallar</Text>
-          <Text style={styles.sectionSubtitle}>Masofaga qarab saralangan</Text>
+          <Text style={styles.sectionTitle}>{t("home.near_gyms")}</Text>
+          <Text style={styles.sectionSubtitle}>{t("home.sorted_by_distance")}</Text>
         </View>
         <TouchableOpacity
           style={styles.viewAllBtn}
           onPress={() => setMapModalVisible(true)}
         >
-          <Text style={styles.viewAll}>Barchasini ko'rish</Text>
+          <Text style={styles.viewAll}>{t("home.view_all")}</Text>
           <Feather name="arrow-right" size={14} color={Colors.primary} />
         </TouchableOpacity>
       </View>
@@ -246,7 +248,7 @@ export default function HomeScreen() {
       {gyms.length === 0 ? (
         <View style={styles.emptyState}>
           <Feather name="activity" size={36} color="#CBD5E1" />
-          <Text style={styles.emptyText}>Yuklanmoqda...</Text>
+          <Text style={styles.emptyText}>{t("home.loading")}</Text>
         </View>
       ) : (
         gyms.map((gym: any) => (
@@ -407,7 +409,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f97316",
+    backgroundColor: "#b91c1c",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -430,6 +432,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.85)",
     marginTop: 2,
+  },
+  partialPayBtn: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  partialPayBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: "#b91c1c",
   },
 
   /* Section */

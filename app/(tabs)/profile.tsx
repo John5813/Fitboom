@@ -69,7 +69,7 @@ export default function ProfileScreen() {
   const handleSaveProfile = async () => {
     const ageNum = parseInt(editAge, 10);
     if (!editName.trim() || !editAge || isNaN(ageNum) || !editGender) {
-      Alert.alert(t("common.error"), "Barcha maydonlarni to'ldiring");
+      Alert.alert(t("common.error"), t("profile.fill_all_fields"));
       return;
     }
     setSaving(true);
@@ -87,7 +87,7 @@ export default function ProfileScreen() {
   const handleAvatarUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Ruxsat kerak", "Rasmlar kutubxonasiga ruxsat bering");
+      Alert.alert(t("profile.photo_permission_title"), t("profile.photo_permission_desc"));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -102,7 +102,7 @@ export default function ProfileScreen() {
       await uploadAvatar(result.assets[0].uri);
       await refetchUser();
     } catch (err: any) {
-      Alert.alert(t("common.error"), err?.message || "Rasm yuklanmadi");
+      Alert.alert(t("common.error"), err?.message || t("profile.photo_upload_error"));
     } finally {
       setAvatarUploading(false);
     }
@@ -113,15 +113,15 @@ export default function ProfileScreen() {
       const data = await adminLogin({ password: adminPassword });
       if ((data as any).success) {
         setAdminModal(false);
-        Alert.alert(t("common.success"), "Admin sifatida kirdingiz");
+        Alert.alert(t("common.success"), t("profile.admin_login_success"));
       }
     } catch (err: any) {
-      Alert.alert(t("common.error"), err.message || "Parol noto'g'ri");
+      Alert.alert(t("common.error"), err.message || t("profile.admin_wrong_password"));
     }
   };
 
   const handleLogout = () => {
-    Alert.alert("Chiqish", "Tizimdan chiqmoqchimisiz?", [
+    Alert.alert(t("profile.logout"), t("profile.logout_confirm"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("profile.logout"),
@@ -204,7 +204,7 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || "Foydalanuvchi"}</Text>
+            <Text style={styles.userName}>{user?.name || t("profile.default_user")}</Text>
             <Text style={styles.userPhone}>{user?.phone || ""}</Text>
             <View style={styles.genderAgeBadge}>
               <Text style={styles.genderAgeText}>
@@ -248,7 +248,7 @@ export default function ProfileScreen() {
             >
               <Text style={styles.expiryText}>
                 {daysLeft <= 0
-                  ? "Muddat tugadi!"
+                  ? t("profile.expired_badge")
                   : `${daysLeft} ${t("profile.days_left")}`}
               </Text>
             </View>
@@ -264,26 +264,28 @@ export default function ProfileScreen() {
       </View>
 
       {activePartialPayment && activePartialPayment.remainingAmount > 0 && (
-        <TouchableOpacity
-          style={styles.partialBanner}
-          onPress={() => setPaymentModalVisible(true)}
-          activeOpacity={0.85}
-        >
+        <View style={styles.partialBanner}>
           <View style={styles.partialBannerLeft}>
             <Feather name="alert-circle" size={20} color="#fff" />
-            <View>
-              <Text style={styles.partialBannerTitle}>Qoldiq to'lov mavjud</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.partialBannerTitle}>{t("partial.title")}</Text>
               <Text style={styles.partialBannerSub}>
-                {Number(activePartialPayment.remainingAmount).toLocaleString()} so'm — yangi chek yuboring
+                {Number(activePartialPayment.remainingAmount).toLocaleString()} {t("partial.sub")}
               </Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={18} color="#fff" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.partialPayBtn}
+            onPress={() => setPaymentModalVisible(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.historyCard}>
-        <Text style={styles.sectionTitle}>Kredit tarixi</Text>
+        <Text style={styles.sectionTitle}>{t("profile.credit_history")}</Text>
         {creditsConfig === undefined ? (
           <ActivityIndicator color={Colors.primary} />
         ) : (creditsConfig?.creditHistory || []).length > 0 ? (
@@ -291,16 +293,16 @@ export default function ProfileScreen() {
             <View key={item.id || i} style={styles.historyItem}>
               <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
               <Text style={styles.historySubText}>{item.date || "-"}</Text>
-              <Text style={styles.historyAmount}>{item.amount} kredit</Text>
+              <Text style={styles.historyAmount}>{item.amount} {t("profile.credits")}</Text>
             </View>
           ))
         ) : (
-          <Text style={styles.emptyHistoryText}>Kredit tarixi mavjud emas</Text>
+          <Text style={styles.emptyHistoryText}>{t("profile.no_credit_history")}</Text>
         )}
       </View>
 
       <View style={styles.historyCard}>
-        <Text style={styles.sectionTitle}>To'ldirish tarixi</Text>
+        <Text style={styles.sectionTitle}>{t("profile.topup_history")}</Text>
         {creditsConfig === undefined ? (
           <ActivityIndicator color={Colors.primary} />
         ) : (creditsConfig?.topupHistory || []).length > 0 ? (
@@ -308,11 +310,11 @@ export default function ProfileScreen() {
             <View key={item.id || i} style={styles.historyItem}>
               <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
               <Text style={styles.historySubText}>{item.date || "-"}</Text>
-              <Text style={styles.historyAmount}>+{item.amount} kredit</Text>
+              <Text style={styles.historyAmount}>+{item.amount} {t("profile.credits")}</Text>
             </View>
           ))
         ) : (
-          <Text style={styles.emptyHistoryText}>To'ldirish tarixi mavjud emas</Text>
+          <Text style={styles.emptyHistoryText}>{t("profile.no_topup_history")}</Text>
         )}
       </View>
 
@@ -474,7 +476,7 @@ export default function ProfileScreen() {
               style={styles.modalInput}
               value={adminPassword}
               onChangeText={setAdminPassword}
-              placeholder="Admin paroli"
+              placeholder={t("profile.admin_password_placeholder")}
               placeholderTextColor={Colors.textSecondary}
               secureTextEntry
             />
@@ -482,7 +484,7 @@ export default function ProfileScreen() {
               style={styles.saveBtn}
               onPress={handleAdminLogin}
             >
-              <Text style={styles.saveBtnText}>Kirish</Text>
+              <Text style={styles.saveBtnText}>{t("profile.admin_enter")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -631,7 +633,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f97316",
+    backgroundColor: "#b91c1c",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -654,6 +656,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.85)",
     marginTop: 2,
+  },
+  partialPayBtn: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  partialPayBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: "#b91c1c",
   },
   historyCard: {
     backgroundColor: Colors.card,

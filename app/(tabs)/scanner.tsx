@@ -15,12 +15,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { verifyQr } from "@/services/api";
 
 export default function ScannerScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { refetchUser } = useAuth();
+  const { t } = useLanguage();
   const [permission, requestPermission] = useCameraPermissions();
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{
@@ -37,13 +39,13 @@ export default function ScannerScreen() {
     try {
       parsed = JSON.parse(rawQrString);
     } catch {
-      setResult({ success: false, message: "Bu FitBoom QR kodi emas" });
+      setResult({ success: false, message: t("scanner.not_fitboom_qr") });
       setProcessing(false);
       return;
     }
 
     if (parsed.type !== "gym" || !parsed.gymId) {
-      setResult({ success: false, message: "Bu FitBoom zal QR kodi emas" });
+      setResult({ success: false, message: t("scanner.not_gym_qr") });
       setProcessing(false);
       return;
     }
@@ -52,7 +54,7 @@ export default function ScannerScreen() {
       const res = await verifyQr(rawQrString);
       setResult({
         success: true,
-        message: res.message || `${parsed.name || "Zal"}ga xush kelibsiz!`,
+        message: res.message || `${parsed.name || t("bookings.gym_default")}${t("scanner.welcome_default")}`,
         gymName: res.gym?.name || parsed.name,
       });
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
@@ -60,7 +62,7 @@ export default function ScannerScreen() {
     } catch (err: any) {
       setResult({
         success: false,
-        message: err.message || "Xatolik yuz berdi",
+        message: err.message || t("scanner.error_generic"),
       });
     } finally {
       setProcessing(false);
@@ -81,18 +83,18 @@ export default function ScannerScreen() {
       <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
         <View style={styles.permissionBox}>
           <Feather name="camera-off" size={48} color={Colors.textSecondary} />
-          <Text style={styles.permTitle}>Kameraga ruxsat kerak</Text>
+          <Text style={styles.permTitle}>{t("scanner.permission_title")}</Text>
           <Text style={styles.permDesc}>
             {canAsk
-              ? "QR kodni skanerlash uchun kameraga ruxsat bering"
-              : "Kamera ruxsati rad etilgan. Qurilma sozlamalaridan kameraga ruxsat bering."}
+              ? t("scanner.permission_desc")
+              : t("scanner.permission_denied")}
           </Text>
           <TouchableOpacity
             style={styles.permBtn}
             onPress={canAsk ? requestPermission : () => Linking.openSettings()}
           >
             <Text style={styles.permBtnText}>
-              {canAsk ? "Ruxsat berish" : "Sozlamalarga o'tish"}
+              {canAsk ? t("scanner.grant") : t("scanner.open_settings")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -110,39 +112,44 @@ export default function ScannerScreen() {
           <View style={styles.ticketCard}>
             <View style={styles.ticketHeader}>
               <Feather name="check-circle" size={56} color="#fff" />
-              <Text style={styles.ticketHeaderText}>KIRISH TASDIQLANDI</Text>
+              <Text style={styles.ticketHeaderText}>{t("scanner.ticket_title")}</Text>
             </View>
             <View style={styles.ticketBody}>
-              <Text style={styles.ticketGymName}>{result.gymName || "Sport zal"}</Text>
+              <Text style={styles.ticketGymName}>
+                {result.gymName || t("bookings.gym_default")}
+              </Text>
               <Text style={styles.ticketWelcome}>{result.message}</Text>
               <View style={styles.ticketDivider} />
               <View style={styles.ticketTimeRow}>
                 <View style={styles.ticketTimeBlock}>
                   <Feather name="clock" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.ticketTimeLabel}>Vaqt</Text>
+                  <Text style={styles.ticketTimeLabel}>{t("scanner.time_label")}</Text>
                   <Text style={styles.ticketTimeValue}>{timeStr}</Text>
                 </View>
                 <View style={styles.ticketTimeSep} />
                 <View style={styles.ticketTimeBlock}>
                   <Feather name="calendar" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.ticketTimeLabel}>Sana</Text>
+                  <Text style={styles.ticketTimeLabel}>{t("scanner.date_label")}</Text>
                   <Text style={styles.ticketTimeValue}>{dateStr}</Text>
                 </View>
               </View>
               <View style={styles.ticketDivider} />
               <View style={styles.ticketStaffHint}>
                 <Feather name="user" size={15} color={Colors.primary} />
-                <Text style={styles.ticketStaffText}>Shu ekranni administratorga ko'rsating</Text>
+                <Text style={styles.ticketStaffText}>{t("scanner.show_admin")}</Text>
               </View>
             </View>
           </View>
           <TouchableOpacity style={styles.resetBtn} onPress={() => setResult(null)}>
             <Feather name="refresh-cw" size={16} color="#fff" />
-            <Text style={styles.resetBtnText}>Qayta skanerlash</Text>
+            <Text style={styles.resetBtnText}>{t("scanner.rescan")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => router.push("/(tabs)/bookings" as any)}>
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={() => router.push("/(tabs)/bookings" as any)}
+          >
             <Feather name="arrow-left" size={16} color={Colors.primary} />
-            <Text style={styles.navBtnText}>Bronlarga qaytish</Text>
+            <Text style={styles.navBtnText}>{t("scanner.back_bookings")}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -153,10 +160,12 @@ export default function ScannerScreen() {
           <View style={[styles.resultIcon, { backgroundColor: "rgba(239,68,68,0.1)" }]}>
             <Feather name="x-circle" size={48} color={Colors.error} />
           </View>
-          <Text style={[styles.resultMessage, { color: Colors.error }]}>{result.message}</Text>
+          <Text style={[styles.resultMessage, { color: Colors.error }]}>
+            {result.message}
+          </Text>
           <TouchableOpacity style={styles.resetBtn} onPress={() => setResult(null)}>
             <Feather name="refresh-cw" size={16} color="#fff" />
-            <Text style={styles.resetBtnText}>Qayta skanerlash</Text>
+            <Text style={styles.resetBtnText}>{t("scanner.rescan")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -177,10 +186,8 @@ export default function ScannerScreen() {
       )}
 
       <View style={[styles.overlay, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.overlayTitle}>QR Skaner</Text>
-        <Text style={styles.overlaySubtitle}>
-          Zal eshigidagi QR kodni ramka ichiga joylashtiring
-        </Text>
+        <Text style={styles.overlayTitle}>{t("scanner.title")}</Text>
+        <Text style={styles.overlaySubtitle}>{t("scanner.frame_hint")}</Text>
       </View>
 
       <View style={styles.frameContainer}>
@@ -195,14 +202,12 @@ export default function ScannerScreen() {
       {processing && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loadingText}>Tekshirilmoqda...</Text>
+          <Text style={styles.loadingText}>{t("scanner.checking")}</Text>
         </View>
       )}
 
       <View style={[styles.bottomHint, { paddingBottom: insets.bottom + 80 }]}>
-        <Text style={styles.hintText}>
-          Har bir zal eshigida QR kod bor. Shu QR ni skanerlang.
-        </Text>
+        <Text style={styles.hintText}>{t("scanner.hint")}</Text>
       </View>
     </View>
   );

@@ -40,46 +40,6 @@ function isWithin2Hours(booking: any): boolean {
   }
 }
 
-function getStatusInfo(status: string) {
-  switch (status) {
-    case "pending":
-      return {
-        label: "Kutilmoqda",
-        bg: "rgba(245,158,11,0.12)",
-        color: "#f59e0b",
-        stripe: "#f59e0b",
-      };
-    case "completed":
-      return {
-        label: "Tashrif buyurildi",
-        bg: "rgba(16,185,129,0.12)",
-        color: "#10b981",
-        stripe: "#10b981",
-      };
-    case "missed":
-      return {
-        label: "Kelmadi",
-        bg: "rgba(249,115,22,0.1)",
-        color: "#f97316",
-        stripe: "#f97316",
-      };
-    case "cancelled":
-      return {
-        label: "Bekor qilindi",
-        bg: "rgba(239,68,68,0.1)",
-        color: "#ef4444",
-        stripe: "#ef4444",
-      };
-    default:
-      return {
-        label: status || "Noma'lum",
-        bg: Colors.surface,
-        color: Colors.textSecondary,
-        stripe: Colors.textSecondary,
-      };
-  }
-}
-
 export default function BookingsScreen() {
   const { t } = useLanguage();
   const { refetchUser } = useAuth();
@@ -113,18 +73,58 @@ export default function BookingsScreen() {
     return b.status !== "pending" || d < todayStart();
   });
 
+  function getStatusInfo(status: string) {
+    switch (status) {
+      case "pending":
+        return {
+          label: t("bookings.status_pending"),
+          bg: "rgba(245,158,11,0.12)",
+          color: "#f59e0b",
+          stripe: "#f59e0b",
+        };
+      case "completed":
+        return {
+          label: t("bookings.status_completed"),
+          bg: "rgba(16,185,129,0.12)",
+          color: "#10b981",
+          stripe: "#10b981",
+        };
+      case "missed":
+        return {
+          label: t("bookings.status_missed"),
+          bg: "rgba(249,115,22,0.1)",
+          color: "#f97316",
+          stripe: "#f97316",
+        };
+      case "cancelled":
+        return {
+          label: t("bookings.status_cancelled"),
+          bg: "rgba(239,68,68,0.1)",
+          color: "#ef4444",
+          stripe: "#ef4444",
+        };
+      default:
+        return {
+          label: status || t("bookings.status_unknown"),
+          bg: Colors.surface,
+          color: Colors.textSecondary,
+          stripe: Colors.textSecondary,
+        };
+    }
+  }
+
   const startCancel = (bookingId: string, booking: any) => {
     if (!bookingId) {
-      Alert.alert("Xatolik", "Bron ID topilmadi");
+      Alert.alert(t("common.error"), t("bookings.error_no_id"));
       return;
     }
     if (isWithin2Hours(booking)) {
       Alert.alert(
-        "⚠️ Diqqat!",
-        "Boshlanishiga 2 soatdan kam qoldi. Bekor qilsangiz kredit qaytarilmaydi. Baribir bekor qilasizmi?",
+        t("bookings.cancel_2h_title"),
+        t("bookings.cancel_2h_msg"),
         [
-          { text: "Yo'q, qoldiraman", style: "cancel" },
-          { text: "Ha, bekor qilish", style: "destructive", onPress: () => doCancel(bookingId) },
+          { text: t("bookings.cancel_stay"), style: "cancel" },
+          { text: t("bookings.cancel_do"), style: "destructive", onPress: () => doCancel(bookingId) },
         ]
       );
       return;
@@ -136,28 +136,28 @@ export default function BookingsScreen() {
     setCancellingId(bookingId);
     getAccessToken()
       .then((token) => {
-        if (!token) throw new Error("Sessiya tugadi. Qayta tizimga kiring.");
+        if (!token) throw new Error(t("bookings.session_expired"));
         return cancelBooking(bookingId, token);
       })
       .then((result) => {
         queryClient.invalidateQueries({ queryKey: ["bookings"] });
         refetchUser();
         if (result.noRefund) {
-          Alert.alert(
-            "Bekor qilindi",
-            "Bron bekor qilindi. Boshlanishiga 2 soatdan kam qolganligi sababli kredit qaytarilmadi."
-          );
+          Alert.alert(t("bookings.cancelled"), t("bookings.cancel_no_refund"));
         } else {
           Alert.alert(
-            "Muvaffaqiyatli!",
-            `Bron bekor qilindi.${result.creditsRefunded ? " " + result.creditsRefunded + " kredit hisobingizga qaytarildi." : ""}`
+            t("bookings.cancel_success"),
+            t("bookings.cancel_base_msg") +
+              (result.creditsRefunded
+                ? " " + result.creditsRefunded + t("bookings.cancel_refund_suffix")
+                : "")
           );
         }
       })
       .catch((err: any) => {
         Alert.alert(
-          "Xatolik",
-          err?.message || "Bronni bekor qilishda xatolik yuz berdi"
+          t("common.error"),
+          err?.message || t("bookings.cancel_error")
         );
       })
       .finally(() => {
@@ -189,7 +189,7 @@ export default function BookingsScreen() {
                 tab === "upcoming" && styles.tabBtnTextActive,
               ]}
             >
-              {`Kelayotgan (${upcoming.length})`}
+              {`${t("bookings.tab_upcoming")} (${upcoming.length})`}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -202,7 +202,7 @@ export default function BookingsScreen() {
                 tab === "past" && styles.tabBtnTextActive,
               ]}
             >
-              {`O'tgan (${past.length})`}
+              {`${t("bookings.tab_past")} (${past.length})`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -228,8 +228,8 @@ export default function BookingsScreen() {
             <Feather name="calendar" size={48} color={Colors.textSecondary} />
             <Text style={styles.emptyTitle}>
               {tab === "upcoming"
-                ? "Hozircha faol bronlar yo'q"
-                : "O'tgan bronlar yo'q"}
+                ? t("bookings.empty_upcoming")
+                : t("bookings.empty_past")}
             </Text>
           </View>
         ) : (
@@ -237,10 +237,13 @@ export default function BookingsScreen() {
             const isPending = booking.status === "pending";
             const statusInfo = getStatusInfo(booking.status || "pending");
             const gymName =
-              booking.gym?.name || booking.gymName || "Sport zal";
+              booking.gym?.name || booking.gymName || t("bookings.gym_default");
             const rawAddress = booking.gym?.address || booking.address || "";
             const addrLower = rawAddress.trim().toLowerCase();
-            const gymAddress = (addrLower.startsWith("http://") || addrLower.startsWith("https://")) ? "" : rawAddress;
+            const gymAddress =
+              addrLower.startsWith("http://") || addrLower.startsWith("https://")
+                ? ""
+                : rawAddress;
             const startTime =
               booking.scheduledStartTime ||
               booking.time ||
@@ -330,24 +333,33 @@ export default function BookingsScreen() {
                   {within2h && (
                     <View style={styles.warningBanner}>
                       <Feather name="alert-triangle" size={13} color="#f59e0b" />
-                      <Text style={styles.warningText}>2 soatdan kam qoldi — bekor qilsangiz kredit qaytarilmaydi</Text>
+                      <Text style={styles.warningText}>
+                        {t("bookings.within_2h_warning")}
+                      </Text>
                     </View>
                   )}
 
                   {isPending && (
                     isConfirming ? (
                       <View style={styles.confirmRow}>
-                        <Text style={styles.confirmText}>Bekor qilasizmi?</Text>
+                        <Text style={styles.confirmText}>
+                          {t("bookings.cancel_confirm")}
+                        </Text>
                         <View style={styles.confirmBtns}>
                           <TouchableOpacity
                             style={styles.confirmNo}
                             activeOpacity={0.7}
                             onPress={() => setConfirmingId(null)}
                           >
-                            <Text style={styles.confirmNoText}>Yo'q</Text>
+                            <Text style={styles.confirmNoText}>
+                              {t("bookings.cancel_no")}
+                            </Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={[styles.confirmYes, isCancelling && { opacity: 0.6 }]}
+                            style={[
+                              styles.confirmYes,
+                              isCancelling && { opacity: 0.6 },
+                            ]}
                             activeOpacity={0.7}
                             disabled={isCancelling}
                             onPress={() => doCancel(bookingId)}
@@ -355,7 +367,9 @@ export default function BookingsScreen() {
                             {isCancelling ? (
                               <ActivityIndicator size="small" color="#fff" />
                             ) : (
-                              <Text style={styles.confirmYesText}>Ha, bekor qilish</Text>
+                              <Text style={styles.confirmYesText}>
+                                {t("bookings.cancel_yes")}
+                              </Text>
                             )}
                           </TouchableOpacity>
                         </View>
@@ -370,7 +384,9 @@ export default function BookingsScreen() {
                           }
                         >
                           <Feather name="camera" size={14} color="#fff" />
-                          <Text style={styles.scanBtnText}>Skaner</Text>
+                          <Text style={styles.scanBtnText}>
+                            {t("bookings.scanner_btn")}
+                          </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -378,7 +394,9 @@ export default function BookingsScreen() {
                           activeOpacity={0.7}
                           onPress={() => startCancel(bookingId, booking)}
                         >
-                          <Text style={styles.cancelBtnText}>Bekor qilish</Text>
+                          <Text style={styles.cancelBtnText}>
+                            {t("bookings.cancel")}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     )
@@ -514,18 +532,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: "#ef4444",
   },
-  confirmRow: {
-    gap: 8,
-  },
+  confirmRow: { gap: 8 },
   confirmText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
   },
-  confirmBtns: {
-    flexDirection: "row",
-    gap: 8,
-  },
+  confirmBtns: { flexDirection: "row", gap: 8 },
   confirmNo: {
     flex: 1,
     paddingVertical: 9,

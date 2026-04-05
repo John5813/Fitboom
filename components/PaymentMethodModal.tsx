@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
 const PAY_BASE = "https://fitboom.replit.app/mobile-pay";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function PaymentMethodModal({ visible, onClose }: Props) {
+  const { t } = useLanguage();
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
     try {
       const token = await getAccessToken();
       if (!token) {
-        setError("Tizimga kiring");
+        setError(t("payment.login_required"));
         setLoading(false);
         return;
       }
@@ -54,7 +56,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
         setPaymentUrl(`${PAY_BASE}?token=${encodeURIComponent(token)}`);
       }
     } catch {
-      setError("Ulanishda xatolik. Qayta urinib ko'ring.");
+      setError(t("payment.connection_error"));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
     >
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>To'lov</Text>
+          <Text style={styles.title}>{t("payment.modal_title")}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Feather name="x" size={22} color="#333" />
           </TouchableOpacity>
@@ -77,13 +79,13 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
 
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#F97316" />
+            <ActivityIndicator size="large" color="#dc2626" />
           </View>
         ) : error ? (
           <View style={styles.loadingBox}>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={loadPaymentUrl}>
-              <Text style={styles.retryText}>Qayta urinish</Text>
+              <Text style={styles.retryText}>{t("payment.retry")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -93,7 +95,7 @@ export default function PaymentMethodModal({ visible, onClose }: Props) {
             startInLoadingState
             renderLoading={() => (
               <View style={styles.loadingBox}>
-                <ActivityIndicator size="large" color="#F97316" />
+                <ActivityIndicator size="large" color="#dc2626" />
               </View>
             )}
             javaScriptEnabled
@@ -121,7 +123,18 @@ const styles = StyleSheet.create({
   closeBtn: { position: "absolute", right: 16, padding: 4 },
   webview: { flex: 1 },
   loadingBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
-  errorText: { fontSize: 15, color: "#e53935", fontFamily: "Inter_500Medium", textAlign: "center", paddingHorizontal: 24 },
-  retryBtn: { backgroundColor: "#F97316", paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
+  errorText: {
+    fontSize: 15,
+    color: "#e53935",
+    fontFamily: "Inter_500Medium",
+    textAlign: "center",
+    paddingHorizontal: 24,
+  },
+  retryBtn: {
+    backgroundColor: "#dc2626",
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
   retryText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
 });
