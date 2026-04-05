@@ -101,52 +101,63 @@ export default function ScannerScreen() {
   }
 
   if (result) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
-        <View style={styles.resultBox}>
-          <View
-            style={[
-              styles.resultIcon,
-              {
-                backgroundColor: result.success
-                  ? "rgba(16,185,129,0.12)"
-                  : "rgba(239,68,68,0.1)",
-              },
-            ]}
-          >
-            <Feather
-              name={result.success ? "check-circle" : "x-circle"}
-              size={48}
-              color={result.success ? "#10b981" : Colors.error}
-            />
+    if (result.success) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+      const dateStr = now.toLocaleDateString("uz-UZ", { day: "numeric", month: "long", year: "numeric" });
+      return (
+        <View style={[styles.ticketContainer, { paddingTop: insets.top }]}>
+          <View style={styles.ticketCard}>
+            <View style={styles.ticketHeader}>
+              <Feather name="check-circle" size={56} color="#fff" />
+              <Text style={styles.ticketHeaderText}>KIRISH TASDIQLANDI</Text>
+            </View>
+            <View style={styles.ticketBody}>
+              <Text style={styles.ticketGymName}>{result.gymName || "Sport zal"}</Text>
+              <Text style={styles.ticketWelcome}>{result.message}</Text>
+              <View style={styles.ticketDivider} />
+              <View style={styles.ticketTimeRow}>
+                <View style={styles.ticketTimeBlock}>
+                  <Feather name="clock" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.ticketTimeLabel}>Vaqt</Text>
+                  <Text style={styles.ticketTimeValue}>{timeStr}</Text>
+                </View>
+                <View style={styles.ticketTimeSep} />
+                <View style={styles.ticketTimeBlock}>
+                  <Feather name="calendar" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.ticketTimeLabel}>Sana</Text>
+                  <Text style={styles.ticketTimeValue}>{dateStr}</Text>
+                </View>
+              </View>
+              <View style={styles.ticketDivider} />
+              <View style={styles.ticketStaffHint}>
+                <Feather name="user" size={15} color={Colors.primary} />
+                <Text style={styles.ticketStaffText}>Shu ekranni administratorga ko'rsating</Text>
+              </View>
+            </View>
           </View>
-          {result.gymName && result.success && (
-            <Text style={styles.resultGymName}>{result.gymName}</Text>
-          )}
-          <Text
-            style={[
-              styles.resultMessage,
-              { color: result.success ? "#10b981" : Colors.error },
-            ]}
-          >
-            {result.message}
-          </Text>
-          <TouchableOpacity
-            style={styles.resetBtn}
-            onPress={() => setResult(null)}
-          >
+          <TouchableOpacity style={styles.resetBtn} onPress={() => setResult(null)}>
             <Feather name="refresh-cw" size={16} color="#fff" />
             <Text style={styles.resetBtnText}>Qayta skanerlash</Text>
           </TouchableOpacity>
-          {result.success && (
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => router.push("/(tabs)/bookings" as any)}
-            >
-              <Feather name="arrow-left" size={16} color={Colors.primary} />
-              <Text style={styles.navBtnText}>Bronlarga qaytish</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.navBtn} onPress={() => router.push("/(tabs)/bookings" as any)}>
+            <Feather name="arrow-left" size={16} color={Colors.primary} />
+            <Text style={styles.navBtnText}>Bronlarga qaytish</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
+        <View style={styles.resultBox}>
+          <View style={[styles.resultIcon, { backgroundColor: "rgba(239,68,68,0.1)" }]}>
+            <Feather name="x-circle" size={48} color={Colors.error} />
+          </View>
+          <Text style={[styles.resultMessage, { color: Colors.error }]}>{result.message}</Text>
+          <TouchableOpacity style={styles.resetBtn} onPress={() => setResult(null)}>
+            <Feather name="refresh-cw" size={16} color="#fff" />
+            <Text style={styles.resetBtnText}>Qayta skanerlash</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -319,11 +330,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  resultGymName: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-  },
   resultMessage: {
     fontSize: 16,
     fontFamily: "Inter_500Medium",
@@ -354,6 +360,100 @@ const styles = StyleSheet.create({
   navBtnText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+    color: Colors.primary,
+  },
+  ticketContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  ticketCard: {
+    width: "100%",
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  ticketHeader: {
+    backgroundColor: "#10b981",
+    alignItems: "center",
+    paddingVertical: 28,
+    gap: 10,
+  },
+  ticketHeaderText: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: 1,
+  },
+  ticketBody: {
+    backgroundColor: Colors.card,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 14,
+  },
+  ticketGymName: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    textAlign: "center",
+  },
+  ticketWelcome: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  ticketDivider: {
+    height: 1,
+    backgroundColor: Colors.cardBorder,
+  },
+  ticketTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  ticketTimeBlock: {
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  ticketTimeSep: {
+    width: 1,
+    height: 40,
+    backgroundColor: Colors.cardBorder,
+  },
+  ticketTimeLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  ticketTimeValue: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  ticketStaffHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  ticketStaffText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
     color: Colors.primary,
   },
 });

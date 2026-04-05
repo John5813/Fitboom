@@ -25,6 +25,21 @@ const todayStart = () => {
   return d;
 };
 
+function isWithin2Hours(booking: any): boolean {
+  try {
+    const dateStr = booking.scheduledDate || booking.date;
+    const timeStr = booking.scheduledStartTime || booking.startTime || booking.time;
+    if (!dateStr || !timeStr) return false;
+    const dateOnly = dateStr.split("T")[0];
+    const dt = new Date(`${dateOnly}T${timeStr}`);
+    if (isNaN(dt.getTime())) return false;
+    const diffMs = dt.getTime() - Date.now();
+    return diffMs >= 0 && diffMs <= 2 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 function getStatusInfo(status: string) {
   switch (status) {
     case "pending":
@@ -98,9 +113,20 @@ export default function BookingsScreen() {
     return b.status !== "pending" || d < todayStart();
   });
 
-  const startCancel = (bookingId: string) => {
+  const startCancel = (bookingId: string, booking: any) => {
     if (!bookingId) {
       Alert.alert("Xatolik", "Bron ID topilmadi");
+      return;
+    }
+    if (isWithin2Hours(booking)) {
+      Alert.alert(
+        "⚠️ Diqqat!",
+        "Boshlanishiga 2 soatdan kam qoldi. Bekor qilsangiz kredit qaytarilmaydi. Baribir bekor qilasizmi?",
+        [
+          { text: "Yo'q, qoldiraman", style: "cancel" },
+          { text: "Ha, bekor qilish", style: "destructive", onPress: () => doCancel(bookingId) },
+        ]
+      );
       return;
     }
     setConfirmingId(bookingId);
@@ -234,6 +260,7 @@ export default function BookingsScreen() {
             const bookingId = booking.id || booking._id;
             const isCancelling = cancellingId === bookingId;
             const isConfirming = confirmingId === bookingId;
+            const within2h = isPending && isWithin2Hours(booking);
 
             return (
               <View key={bookingId || Math.random()} style={styles.card}>
@@ -300,6 +327,13 @@ export default function BookingsScreen() {
                     </View>
                   </View>
 
+                  {within2h && (
+                    <View style={styles.warningBanner}>
+                      <Feather name="alert-triangle" size={13} color="#f59e0b" />
+                      <Text style={styles.warningText}>2 soatdan kam qoldi — bekor qilsangiz kredit qaytarilmaydi</Text>
+                    </View>
+                  )}
+
                   {isPending && (
                     isConfirming ? (
                       <View style={styles.confirmRow}>
@@ -342,7 +376,7 @@ export default function BookingsScreen() {
                         <TouchableOpacity
                           style={styles.cancelBtn}
                           activeOpacity={0.7}
-                          onPress={() => startCancel(bookingId)}
+                          onPress={() => startCancel(bookingId, booking)}
                         >
                           <Text style={styles.cancelBtnText}>Bekor qilish</Text>
                         </TouchableOpacity>
@@ -517,5 +551,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: "#fff",
+  },
+  warningBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(245,158,11,0.12)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.25)",
+  },
+  warningText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: "#f59e0b",
+    flex: 1,
+    lineHeight: 15,
   },
 });
