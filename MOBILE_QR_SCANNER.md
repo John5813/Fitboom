@@ -1,26 +1,29 @@
-# QR Skaner — React Native Integratsiya Yo'riqnomasi
+# QR Skaner Tizimi — To'liq Tahlil
 
-## Umumiy Tushuncha: Kim Nimani Skanerlaydi?
+## Umumiy Tushuncha
 
 ```
-FOYDALANUVCHI   →   Telefon kamerasi bilan   →   ZAL DEVORIGDAGI QR kodini skanerlaydi
-                                                         ↓
-                                              /api/mobile/v1/bookings/verify-qr
-                                                         ↓
-                                              Server: "Sening bugungi bronin bor, kiraver!"
+FOYDALANUVCHI         →    Zalning DEVORIDA osig'liq QR kodini skanerlaydi
+(Mobil ilova)                          ↓
+                       POST /api/mobile/v1/bookings/verify-qr
+                                       ↓
+                       Server: "Bugungi bronin bor, kiraver!" → Bron yopiladi
 ```
 
-**Muhim:** Foydalanuvchi **o'z bronining QR kodini** emas, **zalning devorida osig'liq QR kodini** skanerlaydi.
+**Muhim farq:**
+| | Kim uchun | Kim skanerlaydi |
+|--|-----------|-----------------|
+| **Zal QR** (devorda osig'liq) | Foydalanuvchi skanerlaydi | Mobil ilova |
+| **Bron QR** (foydalanuvchi bronida) | Zal egasi skanerlaydi | Web admin panel |
+
+**Mobil ilova uchun faqat Zal QR muhim.**
 
 ---
 
-## Skanerdan Serverga: To'g'ri Tartib
+## QR Kod Ichidagi Ma'lumot
 
-### Qadam 1 — QR Kodni O'qish
+Zal devorigdagi QR kod — bu JSON string:
 
-Kamera kutubxonasi (`expo-camera`, `react-native-vision-camera`, `react-native-qrcode-scanner` va boshqalar) skanerlangan matnni qaytaradi. Bu matn **JSON string** ko'rinishida bo'ladi.
-
-Zal devorigdagi QR kod ichidagi ma'lumot:
 ```json
 {
   "gymId": "ef3ca4e9-c3c5-4f01-9159-9e3f48811b23",
@@ -30,11 +33,15 @@ Zal devorigdagi QR kod ichidagi ma'lumot:
 }
 ```
 
-### Qadam 2 — Serverga Yuborish
+Kamera kutubxonasi bu string ni qaytaradi. **Ilova bu stringni o'zgartirmay, to'g'ridan-to'g'ri serverga yuboradi.**
+
+---
+
+## Skanerdan Serverga: So'rov
 
 ```http
-POST /api/mobile/v1/bookings/verify-qr
-Authorization: Bearer {ACCESS_TOKEN}
+POST https://fitboom.replit.app/api/mobile/v1/bookings/verify-qr
+Authorization: Bearer {accessToken}
 Content-Type: application/json
 
 {
@@ -42,25 +49,50 @@ Content-Type: application/json
 }
 ```
 
-> `qrData` — kamera kutubxonasi qaytargan **xom string** (JSON.parse qilmasdan, to'g'ridan-to'g'ri yuborish). Server o'zi parse qiladi.
+> `qrData` — kamera qaytargan **xom string** (JSON.parse qilmasdan yuborish). Server o'zi parse qiladi.
 
-### Qadam 3 — Serverdan Javob
+---
 
-**Muvaffaqiyatli kirish (200):**
+## Server Nima Qiladi (ichki mantiq)
+
+```
+1. Token tekshiradi (Bearer)           → foydalanuvchini aniqlaydi
+2. qrData ni JSON.parse qiladi        → gymId oladi
+3. gymId bo'yicha zalning mavjudligini tekshiradi
+4. Foydalanuvchining BUGUNGI bronlarini tekshiradi:
+   - gymId mos kelishi kerak
+   - sana = bugun (Toshkent vaqti)
+   - status = "pending"
+   - isCompleted = false
+5. Vaqt qoidasini tekshiradi:
+   - Bron vaqti 10:00 bo'lsa → 09:00 dan oldin kelsa ❌
+   - 09:00 dan keyin kelsa ✅
+6. Bronni "completed" ga o'tkazadi
+7. Tashrif tarixini yozadi (gym_visits jadvaliga)
+8. Zal daromadini yangilaydi
+9. Muvaffaqiyat javobi qaytaradi
+```
+
+---
+
+## Serverdan Javob
+
+### Muvaffaqiyatli kirish (200)
+
 ```json
 {
   "success": true,
-  "message": "Fitzone ga xush kelibsiz!",
   "data": {
+    "message": "Fitzone ga xush kelibsiz!",
     "gym": {
       "id": "ef3ca4e9-...",
       "name": "Fitzone",
-      "imageUrl": "/api/images/..."
+      "imageUrl": "https://fitboom.replit.app/api/images/..."
     },
     "booking": {
-      "id": "bron-id",
-      "date": "2026-04-02",
-      "time": "09:00",
+      "id": "bron-uuid",
+      "date": "2026-04-05",
+      "time": "10:00",
       "isCompleted": true,
       "status": "completed"
     },
@@ -69,28 +101,52 @@ Content-Type: application/json
 }
 ```
 
----
+### Xato holatlari
 
-## Xato Holatlari va Ularga Munosabat
-
-| HTTP | `error` matni | Sabab | Foydalanuvchiga ko'rsating |
-|------|--------------|-------|---------------------------|
-| `400` | `QR kod ma'lumoti talab qilinadi` | `qrData` body'da yo'q | Qayta skaner qiling |
-| `400` | `QR kod formati noto'g'ri` | JSON parse xatosi | Bu QR FitBoom QR emas |
-| `400` | `QR kod zal identifikatorini o'z ichiga olmagan` | `gymId` yo'q | Bu QR FitBoom QR emas |
-| `404` | `Sport zal topilmadi` | Zal o'chirib yuborilgan | Zalga murojaat qiling |
-| `400` | `Bugun bu zalda faol broningiz yo'q` | Bron yo'q yoki allaqachon yakunlangan | Avval bron qiling |
-| `400` | `Siz juda erta keldingiz. Kirish HH:MM dan boshlanadi` | Boshlanishidan 1 soat oldin | Vaqtni kuting |
-| `401` | Token xatosi | Token muddati o'tgan | Tokenni yangilang |
+| HTTP | `error` matni | Sabab | Ilovada ko'rsatish |
+|------|--------------|-------|--------------------|
+| `400` | `QR kod ma'lumoti talab qilinadi` | `qrData` body'da yo'q | "Qayta skaner qiling" |
+| `400` | `QR kod formati noto'g'ri` | JSON parse xatosi | "Bu FitBoom QR emas" |
+| `400` | `QR kod zal identifikatorini o'z ichiga olmagan` | `gymId` yo'q | "Bu FitBoom QR emas" |
+| `404` | `Sport zal topilmadi` | Zal o'chirib yuborilgan | "Zalga murojaat qiling" |
+| `400` | `Bugun bu zalda faol broningiz yo'q` | Bron yo'q yoki yakunlangan | "Avval bron qiling" |
+| `400` | `Siz juda erta keldingiz. Kirish HH:MM dan boshlanadi` | Boshlanishidan 1 soat oldin | Vaqtni ko'rsating |
+| `401` | Token xatosi | Token muddati o'tgan | Tokenni yangilab qaytaring |
 
 ---
 
-## React Native Kodi
+## Server Tekshiruvlari (qoidalar)
+
+### 1. Vaqt oynasi — 1 soat oldin kirish mumkin
+```
+Bron vaqti:   10:00
+Eng erta:     09:00  ✅ kirish mumkin
+08:59 da:              ❌ "Juda erta keldingiz. Kirish 09:00 dan boshlanadi"
+```
+
+### 2. Faqat bugungi bron
+```
+Bugun: 5-aprel  →  5-aprelga bron bor  ✅
+Bugun: 5-aprel  →  6-aprelga bron bor  ❌ "Bugun bu zalda faol broningiz yo'q"
+```
+
+### 3. Bron holati
+```
+status: 'pending'  + isCompleted: false  →  ✅ Kirish mumkin
+status: 'completed' yoki isCompleted: true  →  ❌ "Allaqachon kirgan"
+status: 'cancelled'                          →  ❌ "Bekor qilingan"
+```
+
+---
+
+## Mobil Ilovada Kod
+
+### API funksiyasi
 
 ```typescript
 // api/qr.ts
 
-const BASE_URL = 'https://fitboom--moydinovjavlon4.replit.app/api/mobile/v1';
+const BASE_URL = 'https://fitboom.replit.app/api/mobile/v1';
 
 export async function verifyGymQR(rawQrString: string, accessToken: string) {
   const response = await fetch(`${BASE_URL}/bookings/verify-qr`, {
@@ -118,7 +174,7 @@ export async function verifyGymQR(rawQrString: string, accessToken: string) {
 
 ```tsx
 // screens/QRScannerScreen.tsx
-import { CameraView, useCameraPermissions } from 'expo-camera'; // yoki boshqa kutubxona
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { verifyGymQR } from '../api/qr';
 import { useAuthStore } from '../store/auth';
 
@@ -129,13 +185,12 @@ export function QRScannerScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleBarCodeScanned = async ({ data: rawQrString }: { data: string }) => {
-    // 1. Bir marta skanerlash uchun bloklash
     if (!scanning || loading) return;
     setScanning(false);
     setLoading(true);
 
     try {
-      // 2. QR validatsiya — FitBoom QR ekanligini tekshirish
+      // 1. FitBoom QR ekanligini tekshirish (ixtiyoriy oldindan tekshiruv)
       let parsed: any;
       try {
         parsed = JSON.parse(rawQrString);
@@ -151,14 +206,15 @@ export function QRScannerScreen({ navigation }) {
         return;
       }
 
-      // 3. Serverga yuborish
+      // 2. Serverga yuborish
       const result = await verifyGymQR(rawQrString, accessToken);
 
-      // 4. Muvaffaqiyat ekrani
+      // 3. Muvaffaqiyat — ilovaga ma'lumot qaytadi
       navigation.replace('QRSuccess', {
         gymName: result.gym.name,
         gymImage: result.gym.imageUrl,
         bookingTime: result.booking.time,
+        bookingId: result.booking.id,
       });
 
     } catch (error: any) {
@@ -172,7 +228,7 @@ export function QRScannerScreen({ navigation }) {
 
   if (!permission?.granted) {
     return (
-      <View style={styles.center}>
+      <View>
         <Text>Kamera ruxsati kerak</Text>
         <Button title="Ruxsat berish" onPress={requestPermission} />
       </View>
@@ -180,28 +236,17 @@ export function QRScannerScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
       <CameraView
-        style={StyleSheet.absoluteFillObject}
+        style={{ flex: 1 }}
         onBarcodeScanned={scanning ? handleBarCodeScanned : undefined}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       />
-
-      {/* Ramka */}
-      <View style={styles.overlay}>
-        <View style={styles.scanFrame} />
-        <Text style={styles.hint}>
+      <View style={{ position: 'absolute', bottom: 40, alignSelf: 'center' }}>
+        <Text style={{ color: 'white' }}>
           {loading ? 'Tekshirilmoqda...' : 'Zal QR kodini skanerlang'}
         </Text>
       </View>
-
-      {loading && (
-        <ActivityIndicator
-          size="large"
-          color="#FF6B35"
-          style={styles.loader}
-        />
-      )}
     </View>
   );
 }
@@ -209,60 +254,53 @@ export function QRScannerScreen({ navigation }) {
 
 ---
 
-## Muhim Qoidalar (Server Tekshiradi)
-
-### 1. Vaqt oynasi — Boshlanishidan 1 soat oldin kirish mumkin
-```
-Bron vaqti: 10:00
-Eng erta kirish: 09:00  ✅
-08:59 da kirish:  ❌ "Juda erta keldingiz. Kirish 09:00 dan boshlanadi"
-```
-
-### 2. Faqat bugungi bron
-```
-Bugun: 2-aprel     →  2-aprelga bron bor  ✅
-Bugun: 2-aprel     →  3-aprelga bron bor  ❌ "Bugun bu zalda faol broningiz yo'q"
-```
-
-### 3. Status tekshiruvi
-```
-status: 'pending'   + isCompleted: false  →  ✅ Kirish mumkin
-status: 'completed' yoki isCompleted: true →  ❌ Allaqachon kirgan
-status: 'cancelled'                        →  ❌ Bekor qilingan
-```
-
-### 4. Zal QR vs Bron QR — Farqi
-| | Zal QR (devorga osig'liq) | Bron QR (foydalanuvchi bronida) |
-|--|--------------------------|-------------------------------|
-| **Maqsad** | Foydalanuvchi skanerlaydi → zal kirish | Zal egasi skanerlaydi → tasdiqlash (web app) |
-| **Kim skanerlaydi** | Mobil ilova foydalanuvchisi | Zal egasi (web paneldan) |
-| **Endpoint** | `POST /bookings/verify-qr` | `POST /api/verify-qr` (web) |
-| **Ichida nima bor** | `gymId`, `type: "gym"` | `gymId`, `userId`, `bookingId` |
-
-**Mobil ilova uchun faqat Zal QR (birinchi ustun) muhim.**
-
----
-
-## Server Endpoint Ma'lumoti
+## To'liq Oqim (Boshidan Oxirigacha)
 
 ```
-URL:    POST https://fitboom--moydinovjavlon4.replit.app/api/mobile/v1/bookings/verify-qr
-Auth:   Bearer {accessToken}
-Body:   { "qrData": "<kamera qaytargan xom JSON string>" }
+1. BRON QILISH
+   Foydalanuvchi → zal tanlaydi → vaqt slotini tanlaydi
+   POST /api/mobile/v1/bookings
+   → Server: 1 kredit hisobdan chiqariladi, bron yaratiladi
+   → Bron ma'lumotlari: { id, gymId, date, time, qrCode, status: "pending" }
 
-Muvaffaqiyat: { success: true, data: { gym, booking, visitRecorded: true } }
-Xato:         { success: false, error: "<sabab>" }
+2. ZALGA BORISH
+   Foydalanuvchi → zalning devorida osig'liq QR kodni kameraga tutadi
+
+3. SKANERLASH
+   Ilova → kamera QR matnni o'qiydi → verifyGymQR() chaqiriladi
+   POST /api/mobile/v1/bookings/verify-qr
+   Body: { qrData: "<zal QR matni>" }
+   Authorization: Bearer <accessToken>
+
+4. SERVER JAVOB BERADI
+   ✅ Muvaffaqiyat:
+      {
+        success: true,
+        data: {
+          message: "Fitzone ga xush kelibsiz!",
+          gym: { id, name, imageUrl },
+          booking: { id, date, time, isCompleted: true, status: "completed" },
+          visitRecorded: true
+        }
+      }
+
+5. ILOVA MUVAFFAQIYAT EKRANINI KO'RSATADI
+   → "Xush kelibsiz!" + zal nomi
+   → Bookings ro'yxatini yangilash (bron "completed" bo'ldi)
+
+6. ❌ Agar xato:
+   → Alert.alert("Kirish rad etildi", error.message)
+   → Skaner qayta yoqiladi
 ```
 
 ---
 
-## Server Tomonida O'zgartirish Kerak Emas
+## Backend Tayyor — O'zgartirish Shart Emas
 
-Backend to'liq tayyor:
-- ✅ Foydalanuvchi tokenini tekshiradi  
-- ✅ QR ni parse qilib `gymId` ni oladi  
-- ✅ Bugungi faol bronni topadi  
-- ✅ 1 soat oldingi kirish qoidasini tekshiradi  
-- ✅ Bronni `completed` ga o'tkazadi  
-- ✅ Zal daromadini hisoblaydi  
-- ✅ Tashrif tarixini yozadi  
+- ✅ Bearer token tekshiruvi
+- ✅ QR parse va gymId aniqlash
+- ✅ Bugungi faol bronni topish
+- ✅ 1 soat oldin kirish qoidasi
+- ✅ Bronni `completed` ga o'tkazish
+- ✅ Tashrif tarixini yozish (`gym_visits`)
+- ✅ Zal daromadini hisoblash va yangilash
