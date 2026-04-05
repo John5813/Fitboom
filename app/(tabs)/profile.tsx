@@ -27,6 +27,7 @@ import {
 } from "@/services/api";
 import Colors from "@/constants/Colors";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
+import PartialPaymentModal from "@/components/PartialPaymentModal";
 
 const LANGUAGES = [
   { code: "uz", label: "O'zbek", flag: "\u{1F1FA}\u{1F1FF}" },
@@ -41,6 +42,7 @@ export default function ProfileScreen() {
   const [langModal, setLangModal] = useState(false);
   const [adminModal, setAdminModal] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [partialModalVisible, setPartialModalVisible] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [editName, setEditName] = useState(user?.name || "");
   const [editAge, setEditAge] = useState(String(user?.age || ""));
@@ -57,7 +59,7 @@ export default function ProfileScreen() {
       )
     : null;
 
-  const { data: creditsConfig } = useQuery({
+  const { data: creditsConfig, refetch: refetchCredits } = useQuery({
     queryKey: ["/credits"],
     queryFn: () => getPaymentConfig(),
     staleTime: 30 * 1000,
@@ -276,7 +278,7 @@ export default function ProfileScreen() {
           </View>
           <TouchableOpacity
             style={styles.partialPayBtn}
-            onPress={() => setPaymentModalVisible(true)}
+            onPress={() => setPartialModalVisible(true)}
             activeOpacity={0.85}
           >
             <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
@@ -494,6 +496,16 @@ export default function ProfileScreen() {
         visible={paymentModalVisible}
         onClose={() => setPaymentModalVisible(false)}
       />
+      {activePartialPayment && (
+        <PartialPaymentModal
+          visible={partialModalVisible}
+          onClose={() => setPartialModalVisible(false)}
+          paymentId={activePartialPayment.id}
+          remainingAmount={activePartialPayment.remainingAmount}
+          credits={activePartialPayment.credits}
+          onSuccess={() => { refetchCredits(); refetchUser(); }}
+        />
+      )}
     </ScrollView>
     </SafeAreaView>
   );

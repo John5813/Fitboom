@@ -19,6 +19,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getGyms, getCredits } from "@/services/api";
 import GymCard from "@/components/GymCard";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
+import PartialPaymentModal from "@/components/PartialPaymentModal";
 import MapWebViewModal from "@/components/MapWebViewModal";
 import Colors from "@/constants/Colors";
 
@@ -41,6 +42,7 @@ export default function HomeScreen() {
   const { language, setLanguage, t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [partialModalVisible, setPartialModalVisible] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
@@ -222,7 +224,7 @@ export default function HomeScreen() {
           </View>
           <TouchableOpacity
             style={styles.partialPayBtn}
-            onPress={() => setPaymentModalVisible(true)}
+            onPress={() => setPartialModalVisible(true)}
             activeOpacity={0.85}
           >
             <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
@@ -265,6 +267,16 @@ export default function HomeScreen() {
         visible={paymentModalVisible}
         onClose={() => setPaymentModalVisible(false)}
       />
+      {activePartialPayment && (
+        <PartialPaymentModal
+          visible={partialModalVisible}
+          onClose={() => setPartialModalVisible(false)}
+          paymentId={activePartialPayment.id}
+          remainingAmount={activePartialPayment.remainingAmount}
+          credits={activePartialPayment.credits}
+          onSuccess={() => { refetchCredits(); refetchUser(); }}
+        />
+      )}
       <MapWebViewModal
         visible={mapModalVisible}
         onClose={() => setMapModalVisible(false)}
