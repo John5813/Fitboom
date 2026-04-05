@@ -28,6 +28,7 @@ import {
 import Colors from "@/constants/Colors";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
 import PartialPaymentModal from "@/components/PartialPaymentModal";
+import PaymentSelectorModal from "@/components/PaymentSelectorModal";
 
 const LANGUAGES = [
   { code: "uz", label: "O'zbek", flag: "\u{1F1FA}\u{1F1FF}" },
@@ -41,6 +42,8 @@ export default function ProfileScreen() {
   const [editModal, setEditModal] = useState(false);
   const [langModal, setLangModal] = useState(false);
   const [adminModal, setAdminModal] = useState(false);
+  const [selectorVisible, setSelectorVisible] = useState(false);
+  const [selectorMode, setSelectorMode] = useState<"topup" | "partial">("topup");
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [partialModalVisible, setPartialModalVisible] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -257,7 +260,7 @@ export default function ProfileScreen() {
           )}
           <TouchableOpacity
             style={styles.topupBtn}
-            onPress={() => setPaymentModalVisible(true)}
+            onPress={() => { setSelectorMode("topup"); setSelectorVisible(true); }}
           >
             <Feather name="plus" size={14} color="#fff" />
             <Text style={styles.topupBtnText}>{t("home.topup")}</Text>
@@ -278,7 +281,7 @@ export default function ProfileScreen() {
           </View>
           <TouchableOpacity
             style={styles.partialPayBtn}
-            onPress={() => setPartialModalVisible(true)}
+            onPress={() => { setSelectorMode("partial"); setSelectorVisible(true); }}
             activeOpacity={0.85}
           >
             <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
@@ -492,6 +495,17 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
+      <PaymentSelectorModal
+        visible={selectorVisible}
+        onClose={() => setSelectorVisible(false)}
+        onSelectCard={() => {
+          if (selectorMode === "partial") {
+            setPartialModalVisible(true);
+          } else {
+            setPaymentModalVisible(true);
+          }
+        }}
+      />
       <PaymentMethodModal
         visible={paymentModalVisible}
         onClose={() => setPaymentModalVisible(false)}
