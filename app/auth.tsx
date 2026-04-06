@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -254,8 +255,19 @@ export default function AuthScreen() {
                 <Text style={styles.cardTitle}>Telegram orqali kirish</Text>
               </View>
               <Text style={styles.telegramDesc}>
-                @uzfitboom_bot ga <Text style={styles.telegramBold}>/start</Text> yozing va bot bergan kodni kiriting.
+                Quyidagi tugmani bosib botga o'ting, <Text style={styles.telegramBold}>/start</Text> yozing va bot bergan kodni kiriting.
               </Text>
+
+              <TouchableOpacity
+                style={styles.openBotBtn}
+                onPress={() => Linking.openURL("https://t.me/uzfitboom_bot")}
+                activeOpacity={0.85}
+              >
+                <Feather name="send" size={18} color="#fff" />
+                <Text style={styles.openBotBtnText}>@uzfitboom_bot ga o'tish</Text>
+                <Feather name="external-link" size={15} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+
               <TextInput
                 style={[styles.input, styles.codeInput]}
                 value={telegramCode}
@@ -264,7 +276,6 @@ export default function AuthScreen() {
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 autoCapitalize="characters"
                 maxLength={8}
-                autoFocus
               />
               <TouchableOpacity
                 style={[styles.button, (loading || telegramCode.length < 6) && styles.buttonDisabled]}
@@ -647,6 +658,28 @@ const styles = StyleSheet.create({
   telegramBold: {
     fontFamily: "Inter_700Bold",
     color: "#38bdf8",
+  },
+  openBotBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#0088cc",
+    borderRadius: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    shadowColor: "#0088cc",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  openBotBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    flex: 1,
+    textAlign: "center",
   },
   cardTitle: {
     fontSize: 18,
