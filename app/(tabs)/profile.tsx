@@ -23,6 +23,7 @@ import {
   updateUserProfile,
   adminLogin,
   getPaymentConfig,
+  getPaymentStatus,
   uploadAvatar,
 } from "@/services/api";
 import Colors from "@/constants/Colors";
@@ -71,6 +72,18 @@ export default function ProfileScreen() {
 
   const packages: any[] = creditsConfig?.packages || [];
   const activePartialPayment = (creditsConfig as any)?.activePartialPayment;
+
+  useEffect(() => {
+    if (!activePartialPayment?.id) return;
+    if (dismissedPartialId === activePartialPayment.id) return;
+    getPaymentStatus(activePartialPayment.id)
+      .then((status) => {
+        if (status.status !== "partial") {
+          setDismissedPartialId(activePartialPayment.id);
+        }
+      })
+      .catch(() => {});
+  }, [activePartialPayment?.id]);
 
   const handleSaveProfile = async () => {
     const ageNum = parseInt(editAge, 10);

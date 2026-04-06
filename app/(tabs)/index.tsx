@@ -16,7 +16,7 @@ import * as Location from "expo-location";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getGyms, getCredits } from "@/services/api";
+import { getGyms, getCredits, getPaymentStatus } from "@/services/api";
 import GymCard from "@/components/GymCard";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
 import PartialPaymentModal from "@/components/PartialPaymentModal";
@@ -76,6 +76,18 @@ export default function HomeScreen() {
   });
 
   const activePartialPayment = creditsData?.activePartialPayment;
+
+  useEffect(() => {
+    if (!activePartialPayment?.id) return;
+    if (dismissedPartialId === activePartialPayment.id) return;
+    getPaymentStatus(activePartialPayment.id)
+      .then((status) => {
+        if (status.status !== "partial") {
+          setDismissedPartialId(activePartialPayment.id);
+        }
+      })
+      .catch(() => {});
+  }, [activePartialPayment?.id]);
 
   useEffect(() => {
     const raw: any[] = (gymsData?.gyms || []).filter(
