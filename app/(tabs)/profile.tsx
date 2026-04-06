@@ -23,9 +23,9 @@ import {
   updateUserProfile,
   adminLogin,
   getPaymentConfig,
-  getPaymentStatus,
   uploadAvatar,
 } from "@/services/api";
+import { usePartialPaymentDismiss } from "@/hooks/usePartialPaymentDismiss";
 import Colors from "@/constants/Colors";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
 import PartialPaymentModal from "@/components/PartialPaymentModal";
@@ -47,7 +47,6 @@ export default function ProfileScreen() {
   const [selectorMode, setSelectorMode] = useState<"topup" | "partial">("topup");
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [partialModalVisible, setPartialModalVisible] = useState(false);
-  const [dismissedPartialId, setDismissedPartialId] = useState<string | null>(null);
   const [adminPassword, setAdminPassword] = useState("");
   const [editName, setEditName] = useState(user?.name || "");
   const [editAge, setEditAge] = useState(String(user?.age || ""));
@@ -72,18 +71,8 @@ export default function ProfileScreen() {
 
   const packages: any[] = creditsConfig?.packages || [];
   const activePartialPayment = (creditsConfig as any)?.activePartialPayment;
-
-  useEffect(() => {
-    if (!activePartialPayment?.id) return;
-    if (dismissedPartialId === activePartialPayment.id) return;
-    getPaymentStatus(activePartialPayment.id)
-      .then((status) => {
-        if (status.status !== "partial") {
-          setDismissedPartialId(activePartialPayment.id);
-        }
-      })
-      .catch(() => {});
-  }, [activePartialPayment?.id]);
+  const { isVisible: partialBannerVisible, dismissPayment } =
+    usePartialPaymentDismiss(activePartialPayment);
 
   const handleSaveProfile = async () => {
     const ageNum = parseInt(editAge, 10);
@@ -282,7 +271,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {activePartialPayment && activePartialPayment.remainingAmount > 0 && activePartialPayment.id !== dismissedPartialId && (
+      {partialBannerVisible && activePartialPayment && (
         <View style={styles.partialBanner}>
           <View style={styles.partialBannerLeft}>
             <Feather name="alert-circle" size={20} color="#fff" />
@@ -532,7 +521,7 @@ export default function ProfileScreen() {
           remainingAmount={activePartialPayment.remainingAmount}
           credits={activePartialPayment.credits}
           onSuccess={() => {
-            setDismissedPartialId(activePartialPayment!.id);
+            dismissPayment(activePartialPayment!.id);
             refetchCredits();
             refetchUser();
           }}

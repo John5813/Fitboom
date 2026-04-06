@@ -16,7 +16,8 @@ import * as Location from "expo-location";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getGyms, getCredits, getPaymentStatus } from "@/services/api";
+import { getGyms, getCredits } from "@/services/api";
+import { usePartialPaymentDismiss } from "@/hooks/usePartialPaymentDismiss";
 import GymCard from "@/components/GymCard";
 import PaymentMethodModal from "@/components/PaymentMethodModal";
 import PartialPaymentModal from "@/components/PartialPaymentModal";
@@ -47,7 +48,6 @@ export default function HomeScreen() {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [partialModalVisible, setPartialModalVisible] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
-  const [dismissedPartialId, setDismissedPartialId] = useState<string | null>(null);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [gyms, setGyms] = useState<any[]>([]);
@@ -76,18 +76,8 @@ export default function HomeScreen() {
   });
 
   const activePartialPayment = creditsData?.activePartialPayment;
-
-  useEffect(() => {
-    if (!activePartialPayment?.id) return;
-    if (dismissedPartialId === activePartialPayment.id) return;
-    getPaymentStatus(activePartialPayment.id)
-      .then((status) => {
-        if (status.status !== "partial") {
-          setDismissedPartialId(activePartialPayment.id);
-        }
-      })
-      .catch(() => {});
-  }, [activePartialPayment?.id]);
+  const { isVisible: partialBannerVisible, dismissPayment } =
+    usePartialPaymentDismiss(activePartialPayment);
 
   useEffect(() => {
     const raw: any[] = (gymsData?.gyms || []).filter(
@@ -227,7 +217,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
       {/* ─── Qoldiq To'lov Banner ─── */}
-      {activePartialPayment && activePartialPayment.remainingAmount > 0 && activePartialPayment.id !== dismissedPartialId && (
+      {partialBannerVisible && activePartialPayment && (
         <View style={styles.partialBanner}>
           <View style={styles.partialBannerLeft}>
             <Feather name="alert-circle" size={20} color="#fff" />
@@ -302,7 +292,7 @@ export default function HomeScreen() {
           remainingAmount={activePartialPayment.remainingAmount}
           credits={activePartialPayment.credits}
           onSuccess={() => {
-            setDismissedPartialId(activePartialPayment!.id);
+            dismissPayment(activePartialPayment!.id);
             refetchCredits();
             refetchUser();
           }}
