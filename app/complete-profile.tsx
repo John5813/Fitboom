@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { completeProfile } from "@/services/api";
@@ -63,12 +64,11 @@ export default function CompleteProfileScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <LinearGradient
-            colors={["#fb923c", "#f97316"]}
+          <Image
+            source={require("@/assets/images/logo.png")}
             style={styles.logoCircle}
-          >
-            <Feather name="zap" size={32} color="#fff" />
-          </LinearGradient>
+            contentFit="contain"
+          />
           <Text style={styles.title}>{t("profile.complete_title")}</Text>
           <Text style={styles.subtitle}>{t("profile.complete_subtitle")}</Text>
         </View>

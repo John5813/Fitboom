@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B7A8C"
+      "backgroundColor": "#0B1229"
     },
     "ios": {
       "supportsTablet": false,
@@ -24,6 +24,10 @@
     },
     "android": {
       "package": "com.javlon5813.fitboom",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0B1229"
+      },
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",

@@ -16,6 +16,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { sendSmsCode } from "@/services/api";
@@ -123,18 +124,11 @@ export default function AuthScreen() {
           <View style={styles.decorCircle2} />
 
           <View style={styles.welcomeContent}>
-            <View style={styles.logoRow}>
-              <LinearGradient
-                colors={["#22c55e", "#16a34a"]}
-                style={styles.logoIcon}
-              >
-                <Feather name="zap" size={28} color="#fff" />
-              </LinearGradient>
-              <Text style={styles.logoText}>
-                <Text style={styles.logoFit}>Fit</Text>
-                <Text style={styles.logoBoom}>Boom</Text>
-              </Text>
-            </View>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={styles.brandLogo}
+              contentFit="contain"
+            />
 
             <View style={styles.headlineBox}>
               <Text style={styles.headline}>
@@ -444,6 +438,11 @@ const styles = StyleSheet.create({
   },
 
   logoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  brandLogo: {
+    width: 200,
+    height: 200,
+    marginBottom: 4,
+  },
   logoIcon: {
     width: 54,
     height: 54,
