@@ -1,5 +1,28 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "Ok0kdsjYMSpIqGls7s_-K"
+uri = "file://attached_assets/generated_images/fitboom_logo_1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "BT6UjLTqmLi_hl4S1E9wc"
+uri = "file://attached_assets/generated_images/fitboom_logo_2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "WRuf8i4c6orueJNq2dyfN"
+uri = "file://attached_assets/generated_images/fitboom_logo_3.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "bwC8qVzR9Xu5YP08Hs7nq"
+uri = "file://attached_assets/generated_images/fitboom_logo_4.png"
+type = "image"
+title = "generated_image"
 
 [[outputs]]
 id = "iloBCXekLbrVgyKDLwJRa"
@@ -48,3 +71,27 @@ id = "SYhE1ztZphj4csukDLN05"
 uri = "file://INTEGRATION_GUIDE.md"
 type = "text"
 title = "FitBoom — Mobile App Integration Guide"
+
+[[outputs]]
+id = "T_2zfSPRYb8pf_nEjuBGO"
+uri = "file://attached_assets/generated_images/fitboom_logo_1.png"
+type = "image"
+title = "Logo 1 — Minimalist F + Dumbbell"
+
+[[outputs]]
+id = "xIv3wMyHtOBY_mEAS-l4w"
+uri = "file://attached_assets/generated_images/fitboom_logo_2.png"
+type = "image"
+title = "Logo 2 — Dynamic Flame Burst"
+
+[[outputs]]
+id = "4a_xT0mT-4xvxpae0Dp-z"
+uri = "file://attached_assets/generated_images/fitboom_logo_3.png"
+type = "image"
+title = "Logo 3 — Hexagon Badge"
+
+[[outputs]]
+id = "c1ZNxnyh4IwvfM4s5todM"
+uri = "file://attached_assets/generated_images/fitboom_logo_4.png"
+type = "image"
+title = "Logo 4 — Typographic B + Kettlebell"
