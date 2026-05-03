@@ -72,7 +72,7 @@ export default function CoursesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="h-16 bg-gradient-to-r from-violet-600 to-purple-600" />
+        <div className="h-16 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500" />
         <div className="max-w-2xl mx-auto px-4 py-5 space-y-3">
           {[1, 2, 3].map(i => <div key={i} className="h-28 rounded-2xl bg-muted/50 animate-pulse" />)}
         </div>
@@ -83,23 +83,30 @@ export default function CoursesPage() {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-5">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
+      <div className="relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white px-4 py-5 overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(249,115,22,0.4) 0%, transparent 65%)",
+          }}
+        />
+        <div className="relative max-w-2xl mx-auto flex items-center gap-3">
           <button
             onClick={() => navigate('/home')}
-            className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+            className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold">{t('courses.title')}</h1>
-            <p className="text-purple-200 text-sm">{collections.length} ta kurs mavjud</p>
+            <h1 className="text-xl font-display font-bold">{t('courses.title')}</h1>
+            <p className="text-orange-200/70 text-sm">{collections.length} ta kurs mavjud</p>
           </div>
           {user && (
-            <div className="flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1.5">
-              <CreditCard className="h-4 w-4" />
+            <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <CreditCard className="h-4 w-4 text-orange-300" />
               <span className="text-sm font-bold">{user.credits ?? 0}</span>
-              <span className="text-xs text-purple-200">kr</span>
+              <span className="text-xs text-orange-200/80">kr</span>
             </div>
           )}
         </div>

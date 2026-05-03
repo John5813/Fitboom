@@ -114,7 +114,14 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
 
       {/* Hero gradient header */}
-      <div className="relative bg-gradient-to-br from-orange-500 via-orange-400 to-yellow-400 pb-20 pt-safe">
+      <div className="relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-20 pt-safe overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.45) 0%, transparent 65%)",
+          }}
+        />
         <div className="absolute inset-0 bg-black/10" />
 
         {/* Back button */}

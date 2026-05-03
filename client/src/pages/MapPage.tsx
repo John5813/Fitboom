@@ -109,6 +109,7 @@ export default function MapPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
       <Card className="p-2 sm:p-4">
         {isLoading ? (
           <div className="h-[400px] sm:h-[600px] flex items-center justify-center">
@@ -216,11 +217,52 @@ export default function MapPage() {
         )}
       </Card>
 
-      {!isLoading && gymsWithLocation.length === 0 && (
-        <div className="text-center mt-4 text-muted-foreground">
-          <p>{t('home.no_gyms_on_map')}</p>
+      {/* Gym list sidebar */}
+      <div className="space-y-3 lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur pb-2">
+          <h3 className="text-sm font-display font-bold text-foreground">
+            {gymsWithLocation.length} ta zal xaritada
+          </h3>
         </div>
-      )}
+        {!isLoading && gymsWithLocation.length === 0 && (
+          <Card className="p-6 text-center border-dashed">
+            <MapPin className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">{t('home.no_gyms_on_map')}</p>
+          </Card>
+        )}
+        {gymsWithLocation.map((gym) => (
+          <Card
+            key={gym.id}
+            className="p-3 cursor-pointer hover-elevate active-elevate transition-shadow flex gap-3"
+            onClick={() => navigate(`/gym/${gym.id}`)}
+            data-testid={`card-map-gym-${gym.id}`}
+          >
+            {gym.imageUrl && (
+              <img
+                src={gym.imageUrl}
+                alt={gym.name}
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-sm leading-tight truncate">{gym.name}</h4>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                {gym.categories?.join(', ') || ''}
+              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-xs font-bold text-primary">
+                  {gym.credits} kr
+                </span>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {gym.hours}
+                </span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      </div>
     </div>
   );
 }

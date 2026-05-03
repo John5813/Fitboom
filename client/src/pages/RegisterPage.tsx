@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Send, Phone, ChevronLeft, Dumbbell } from "lucide-react";
-import fitboomLogo from "@/assets/fitboom-logo.png";
+import fitboomLogo from "@/assets/fitboom-logo-transparent.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -198,17 +198,34 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-y-auto bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Background glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(249,115,22,0.35) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(251,191,36,0.18) 0%, transparent 60%)",
+        }}
+      />
+      <div
+        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      <div className="relative w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <img
             src={fitboomLogo}
             alt="FitBoom"
-            className="h-28 w-auto mx-auto mb-2 rounded-2xl"
+            className="h-28 w-auto mx-auto drop-shadow-[0_0_30px_rgba(249,115,22,0.5)]"
             data-testid="img-logo"
           />
-          <p className="text-gray-500 text-sm mt-1">Sport platformasi</p>
+          <p className="text-orange-200/70 text-sm mt-2 font-medium">Sport platformasi</p>
         </div>
 
         <Card className="border-0 shadow-xl rounded-3xl overflow-hidden" data-testid="card-register">

@@ -141,14 +141,21 @@ export default function AdminDashboard() {
 
   if (!isVerified) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
+      <div className="min-h-screen relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4 overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.35) 0%, transparent 65%)",
+          }}
+        />
+        <div className="relative w-full max-w-sm">
           <div className="text-center mb-8">
-            <div className="inline-flex p-4 rounded-2xl bg-white/10 backdrop-blur-sm mb-4">
-              <ShieldCheck className="h-10 w-10 text-blue-400" />
+            <div className="inline-flex p-4 rounded-2xl bg-orange-500/15 ring-1 ring-orange-400/30 backdrop-blur-sm mb-4">
+              <ShieldCheck className="h-10 w-10 text-orange-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">Admin Panel</h1>
-            <p className="text-blue-200/70 text-sm">Kirish uchun parolni kiriting</p>
+            <h1 className="text-2xl font-display font-bold text-white mb-1">Admin Panel</h1>
+            <p className="text-orange-200/70 text-sm">Kirish uchun parolni kiriting</p>
           </div>
           <Card className="border-0 shadow-2xl shadow-black/20">
             <CardContent className="pt-6 space-y-4">
@@ -182,7 +189,7 @@ export default function AdminDashboard() {
           </Card>
           <div className="text-center mt-4">
             <Link href="/home">
-              <Button variant="ghost" size="sm" className="text-blue-200/70 hover:text-white hover:bg-white/10" data-testid="button-back-from-gate">
+              <Button variant="ghost" size="sm" className="text-orange-200/80 hover:text-white hover:bg-white/10" data-testid="button-back-from-gate">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Orqaga
               </Button>
@@ -243,26 +250,33 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6">
+      <div className="relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.35) 0%, transparent 65%)",
+          }}
+        />
+        <div className="relative max-w-5xl mx-auto px-4 py-6 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img
                 src="/icon-192.png"
                 alt="FitBoom"
-                className="h-12 w-12 rounded-xl shadow-lg"
+                className="h-12 w-12 rounded-xl shadow-lg ring-1 ring-orange-400/30"
                 data-testid="img-logo"
               />
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">Admin Panel</h1>
-                <p className="text-blue-200/60 text-sm">FitBoom boshqaruv tizimi</p>
+                <h1 className="text-xl sm:text-2xl font-display font-bold">Admin Panel</h1>
+                <p className="text-orange-200/70 text-sm">FitBoom boshqaruv tizimi</p>
               </div>
             </div>
             <Link href="/home">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-blue-200/70 hover:text-white hover:bg-white/10"
+                className="text-orange-200/80 hover:text-white hover:bg-white/10"
                 data-testid="button-back"
                 onClick={() => localStorage.setItem("lastUserRole", "user")}
               >

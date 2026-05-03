@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dumbbell, KeyRound, QrCode, Video, MapPin, ArrowRight, Zap, Users, Trophy } from "lucide-react";
-import fitboomLogo from "@/assets/fitboom-logo.png";
+import fitboomLogo from "@/assets/fitboom-logo-transparent.png";
 
 interface WelcomeScreenProps {
   onStart: () => void;
@@ -19,7 +19,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           className="absolute inset-0"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 80% 60% at 50% -10%, #f97316 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 100%, #0ea5e9 0%, transparent 60%)",
+              "radial-gradient(ellipse 80% 60% at 50% -10%, #f97316 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 100%, #fbbf24 0%, transparent 60%)",
             animation: "hero-glow 6s ease-in-out infinite",
           }}
         />
@@ -111,14 +111,14 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
                 desc: "60, 130 yoki 240 ta kredit sotib oling — har kredit bitta zalga kirish. Turli zallarni sinab ko'ring, bitta obunaga bog'lanmang.",
               },
               {
-                icon: <Dumbbell className="w-6 h-6 text-blue-500" />,
-                bg: "bg-blue-50 dark:bg-blue-950/40",
+                icon: <Dumbbell className="w-6 h-6 text-amber-500" />,
+                bg: "bg-amber-50 dark:bg-amber-950/40",
                 title: "Ko'plab sport zallari",
                 desc: "Gym, yoga, boks, pilates, suzish havzalari va boshqa zallar. Haritadan eng yaqinini toping va bron qiling.",
               },
               {
-                icon: <Video className="w-6 h-6 text-violet-500" />,
-                bg: "bg-violet-50 dark:bg-violet-950/40",
+                icon: <Video className="w-6 h-6 text-rose-500" />,
+                bg: "bg-rose-50 dark:bg-rose-950/40",
                 title: "Online darslar",
                 desc: "Kredit bilan professional ustozlarning video kurslarini ham oling. Uyda ham, zalda ham mashq qiling.",
               },
@@ -162,15 +162,15 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
                 num: "02",
                 title: "Kredit sotib oling",
                 desc: "O'zingizga mos paketni tanlang va to'liq raqamga o'tkazing.",
-                color: "text-blue-500",
-                border: "border-blue-500/30 bg-blue-500/5",
+                color: "text-amber-500",
+                border: "border-amber-500/30 bg-amber-500/5",
               },
               {
                 num: "03",
                 title: "Zalni bron qiling",
                 desc: "Haritadan yaqin zalni toping, qulay vaqtni tanlang va bir bosim bilan band qiling.",
-                color: "text-violet-500",
-                border: "border-violet-500/30 bg-violet-500/5",
+                color: "text-rose-500",
+                border: "border-rose-500/30 bg-rose-500/5",
               },
               {
                 num: "04",
@@ -203,8 +203,8 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           <div className="grid grid-cols-3 gap-4">
             {[
               { icon: <MapPin className="w-5 h-5 text-orange-500" />, value: "20+", label: "Sport zallari" },
-              { icon: <Users className="w-5 h-5 text-blue-500" />, value: "1000+", label: "Faol a'zolar" },
-              { icon: <Trophy className="w-5 h-5 text-violet-500" />, value: "5★", label: "Reyting" },
+              { icon: <Users className="w-5 h-5 text-amber-500" />, value: "1000+", label: "Faol a'zolar" },
+              { icon: <Trophy className="w-5 h-5 text-rose-500" />, value: "5★", label: "Reyting" },
             ].map((s) => (
               <div
                 key={s.label}

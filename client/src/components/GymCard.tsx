@@ -132,30 +132,30 @@ export default function GymCard({
             <p className="text-white/70 text-sm mt-1">{category}</p>
           </div>
         </div>
-        <div className="p-3 flex gap-2">
+        <div className="p-3 flex gap-2 items-stretch">
           <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 shrink-0 rounded-xl border border-border"
             onClick={(e) => {
               e.stopPropagation();
               setShowDetails(true);
             }}
             data-testid={`button-gym-details-${id}`}
+            aria-label="Batafsil"
           >
-            <Info className="w-3.5 h-3.5 mr-1.5" />
-            Batafsil
+            <Info className="w-4 h-4" />
           </Button>
           <Button
             size="sm"
-            className="flex-1"
+            className="flex-1 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white border-0 font-bold shadow-md shadow-orange-500/30"
             onClick={(e) => {
               e.stopPropagation();
               onBook(id);
             }}
             data-testid={`button-gym-book-${id}`}
           >
-            <CalendarCheck className="w-3.5 h-3.5 mr-1.5" />
+            <CalendarCheck className="w-4 h-4 mr-1.5" />
             Band qilish
           </Button>
         </div>
