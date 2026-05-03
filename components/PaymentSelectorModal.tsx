@@ -36,7 +36,7 @@ const METHODS = [
     id: "card",
     label: "Karta orqali",
     icon: "layers" as const,
-    color: "#16a34a",
+    color: "#F97316",
     bgColor: "#dcfce7",
     available: true,
   },
@@ -102,7 +102,7 @@ export default function PaymentSelectorModal({ visible, onClose, onSelectCard }:
 
                 {method.available ? (
                   <View style={styles.activeChevron}>
-                    <Feather name="chevron-right" size={18} color="#16a34a" />
+                    <Feather name="chevron-right" size={18} color="#F97316" />
                   </View>
                 ) : (
                   <View style={styles.soonBadge}>

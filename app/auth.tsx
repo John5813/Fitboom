@@ -114,7 +114,7 @@ export default function AuthScreen() {
   if (step === "welcome") {
     return (
       <LinearGradient
-        colors={["#0a1f3c", "#0a2d1e", "#0d3a28"]}
+        colors={["#0B1229", "#0F1A33", "#15213D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradContainer}
@@ -196,7 +196,7 @@ export default function AuthScreen() {
               activeOpacity={0.85}
             >
               <LinearGradient
-                colors={["#16a34a", "#15803d"]}
+                colors={[Colors.primary, Colors.primaryDark]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.startBtnGrad}
@@ -218,7 +218,7 @@ export default function AuthScreen() {
   if (step === "telegram") {
     return (
       <LinearGradient
-        colors={["#0a1f3c", "#0a2d1e", "#0d3a28"]}
+        colors={["#0B1229", "#0F1A33", "#15213D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradContainer}
@@ -299,7 +299,7 @@ export default function AuthScreen() {
 
   return (
     <LinearGradient
-      colors={["#0a1f3c", "#0a2d1e", "#0d3a28"]}
+      colors={["#0B1229", "#0F1A33", "#15213D"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.gradContainer}
@@ -395,7 +395,7 @@ export default function AuthScreen() {
                     <Text style={styles.countdownText}>{countdown}s</Text>
                   ) : (
                     <TouchableOpacity onPress={sendCode}>
-                      <Text style={[styles.linkText, { color: "#22c55e" }]}>
+                      <Text style={[styles.linkText, { color: Colors.primary }]}>
                         {t("auth.resend")}
                       </Text>
                     </TouchableOpacity>
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: "rgba(34,197,94,0.08)",
+    backgroundColor: "rgba(249,115,22,0.10)",
   },
   decorCircle2: {
     position: "absolute",
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "rgba(37,99,235,0.07)",
+    backgroundColor: "rgba(251,191,36,0.06)",
   },
 
   welcomeContent: {
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#16a34a",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
   },
   logoBoom: {
-    color: "#22c55e",
+    color: Colors.primary,
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 8,
   },
   headlineAccent: {
-    color: "#4ade80",
+    color: Colors.accent,
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
@@ -550,8 +550,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   methodBtnActive: {
-    backgroundColor: "#1d4ed8",
-    shadowColor: "#1d4ed8",
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#16a34a",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
     shadowRadius: 12,
@@ -716,12 +716,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   button: {
-    backgroundColor: "#16a34a",
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 4,
-    shadowColor: "#16a34a",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,

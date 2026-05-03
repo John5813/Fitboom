@@ -1,11 +1,45 @@
-const BLUE = "#2563EB";
-const BLUE_DARK = "#1D4ED8";
-const BLUE_LIGHT = "rgba(37,99,235,0.10)";
+const ORANGE = "#F97316";
+const ORANGE_DARK = "#EA580C";
+const ORANGE_LIGHT = "rgba(249,115,22,0.10)";
+const AMBER = "#FBBF24";
+
+const NAVY_900 = "#0B1229";
+const NAVY_800 = "#0F1A33";
+const NAVY_700 = "#15213D";
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+};
+
+export const Radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  pill: 999,
+};
+
+export const Text = {
+  h1: { fontSize: 32, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  h2: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  h3: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
+  body: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  bodyBold: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  caption: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  small: { fontSize: 11, fontFamily: "Inter_500Medium" },
+};
 
 export default {
-  primary: BLUE,
-  primaryDark: BLUE_DARK,
-  primaryLight: BLUE_LIGHT,
+  primary: ORANGE,
+  primaryDark: ORANGE_DARK,
+  primaryLight: ORANGE_LIGHT,
+  accent: AMBER,
+
   background: "#FFFFFF",
   surface: "#F8F9FA",
   card: "#FFFFFF",
@@ -13,17 +47,32 @@ export default {
   text: "#0F172A",
   textSecondary: "#64748B",
   border: "#E2E8F0",
+
   success: "#16A34A",
   error: "#EF4444",
   warning: "#F59E0B",
+  info: "#0EA5E9",
+
   green: "#16a34a",
   purple: "#7C3AED",
   coursePurple: "#7C3AED",
+
+  navy: NAVY_900,
+  navy2: NAVY_800,
+  navy3: NAVY_700,
+
   light: {
     text: "#0F172A",
     background: "#FFFFFF",
-    tint: BLUE,
+    tint: ORANGE,
     tabIconDefault: "#94A3B8",
-    tabIconSelected: BLUE,
+    tabIconSelected: ORANGE,
+  },
+  dark: {
+    text: "#F8FAFC",
+    background: NAVY_900,
+    tint: ORANGE,
+    tabIconDefault: "#64748B",
+    tabIconSelected: ORANGE,
   },
 };
