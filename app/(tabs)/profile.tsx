@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -129,15 +130,21 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
+    const doLogout = async () => {
+      await logout();
+      router.replace("/auth" as any);
+    };
+    if (Platform.OS === "web") {
+      const ok = typeof window !== "undefined" && window.confirm(t("profile.logout_confirm"));
+      if (ok) void doLogout();
+      return;
+    }
     Alert.alert(t("profile.logout"), t("profile.logout_confirm"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("profile.logout"),
         style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/auth" as any);
-        },
+        onPress: doLogout,
       },
     ]);
   };
