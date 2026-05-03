@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const ORANGE = "#2563EB";
+const BRAND_BLUE = "#2563EB";
 
 type TabDef = {
   name: string;
@@ -81,7 +81,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             <Feather
               name={tab.icon}
               size={21}
-              color={focused ? ORANGE : "#999"}
+              color={focused ? BRAND_BLUE : "#999"}
             />
             <Text style={[styles.label, focused && styles.labelFocused]}>
               {tab.label}
@@ -137,8 +137,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   centerCircleFocused: {
-    backgroundColor: ORANGE,
-    shadowColor: ORANGE,
+    backgroundColor: BRAND_BLUE,
+    shadowColor: BRAND_BLUE,
     shadowOpacity: 0.5,
   },
   label: {
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   labelFocused: {
-    color: ORANGE,
+    color: BRAND_BLUE,
   },
 });
 

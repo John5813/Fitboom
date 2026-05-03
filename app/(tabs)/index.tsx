@@ -179,29 +179,32 @@ export default function HomeScreen() {
         colors={
           isExpired
             ? ["#ef4444", "#b91c1c"]
-            : ["#22c55e", "#16a34a", "#15803d"]
+            : [Colors.primary, Colors.primaryDark]
         }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.creditCard}
       >
-        <View style={styles.creditLeft}>
-          <View style={styles.creditIconBox}>
-            <Feather name="zap" size={24} color="#fff" />
-          </View>
+        <View style={styles.creditCardTopRow}>
           <View>
             <Text style={styles.creditLabel}>{t("home.balance")}</Text>
-            <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
-            {daysLeft !== null && !isExpired && (
-              <View style={styles.daysRow}>
-                <Feather name="clock" size={11} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.daysText}>{daysLeft} {t("home.days_left")}</Text>
-              </View>
-            )}
-            {isExpired && (
-              <Text style={styles.daysText}>{t("home.expired")}</Text>
-            )}
+            <View style={styles.creditNumberRow}>
+              <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
+              <Text style={styles.creditUnit}>kredit</Text>
+            </View>
           </View>
+          {daysLeft !== null && !isExpired && (
+            <View style={styles.daysPill}>
+              <Text style={styles.daysPillText}>
+                {daysLeft} {t("home.days_left")}
+              </Text>
+            </View>
+          )}
+          {isExpired && (
+            <View style={styles.daysPill}>
+              <Text style={styles.daysPillText}>{t("home.expired")}</Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -209,7 +212,7 @@ export default function HomeScreen() {
           onPress={() => { setSelectorMode("topup"); setSelectorVisible(true); }}
           activeOpacity={0.85}
         >
-          <Feather name="plus" size={14} color={Colors.primary} />
+          <Feather name="plus" size={18} color={Colors.primary} />
           <Text style={styles.topupBtnText}>
             {isExpired ? t("home.renew") : t("home.topup")}
           </Text>
@@ -369,63 +372,65 @@ const styles = StyleSheet.create({
 
   /* Credit Card */
   creditCard: {
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    borderRadius: 24,
+    padding: 24,
     marginBottom: 28,
-    shadowColor: "#16a34a",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 10,
+    elevation: 8,
   },
-  creditLeft: {
+  creditCardTopRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    flex: 1,
-  },
-  creditIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
   },
   creditLabel: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.75)",
-    fontFamily: "Inter_400Regular",
-    marginBottom: 2,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: "Inter_500Medium",
+    marginBottom: 4,
+  },
+  creditNumberRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
   },
   creditNumber: {
-    fontSize: 32,
+    fontSize: 38,
     fontFamily: "Inter_700Bold",
     color: "#fff",
-    lineHeight: 36,
+    lineHeight: 42,
   },
-  daysRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 4,
+  creditUnit: {
+    fontSize: 18,
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: "Inter_500Medium",
   },
-  daysText: {
+  daysPill: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  daysPillText: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.8)",
-    fontFamily: "Inter_400Regular",
+    color: "#fff",
+    fontFamily: "Inter_500Medium",
   },
   topupBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    justifyContent: "center",
+    gap: 8,
     backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingVertical: 14,
+    width: "100%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -434,7 +439,7 @@ const styles = StyleSheet.create({
   },
   topupBtnText: {
     color: Colors.primary,
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: "Inter_700Bold",
   },
 
