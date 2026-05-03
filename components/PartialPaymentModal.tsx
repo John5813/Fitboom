@@ -170,7 +170,7 @@ export default function PartialPaymentModal({
           </View>
 
           <View style={styles.instructionBox}>
-            <Feather name="info" size={16} color="#F97316" style={{ marginTop: 2 }} />
+            <Feather name="info" size={16} color="#16A34A" style={{ marginTop: 2 }} />
             <Text style={styles.instructionText}>
               Quyidagi karta raqamiga{" "}
               <Text style={styles.instructionBold}>
@@ -222,7 +222,7 @@ export default function PartialPaymentModal({
                 style={styles.changeReceiptBtn}
                 onPress={pickReceipt}
               >
-                <Feather name="refresh-cw" size={14} color="#F97316" />
+                <Feather name="refresh-cw" size={14} color="#16A34A" />
                 <Text style={styles.changeReceiptText}>Rasmni almashtirish</Text>
               </TouchableOpacity>
             </View>
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   changeReceiptText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: "#F97316",
+    color: "#16A34A",
   },
 
   submitBtn: {

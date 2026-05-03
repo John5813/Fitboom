@@ -67,7 +67,7 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
 
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#F97316" />
+            <ActivityIndicator size="large" color="#16A34A" />
           </View>
         ) : (
           <WebView
@@ -79,7 +79,7 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
             startInLoadingState
             renderLoading={() => (
               <View style={styles.loadingBox}>
-                <ActivityIndicator size="large" color="#F97316" />
+                <ActivityIndicator size="large" color="#16A34A" />
               </View>
             )}
             javaScriptEnabled

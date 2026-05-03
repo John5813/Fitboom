@@ -1,6 +1,6 @@
-const ORANGE = "#F97316";
-const ORANGE_DARK = "#EA580C";
-const ORANGE_LIGHT = "rgba(249,115,22,0.10)";
+const GREEN = "#16A34A";
+const GREEN_DARK = "#15803D";
+const GREEN_LIGHT = "rgba(22,163,74,0.10)";
 const AMBER = "#FBBF24";
 
 const NAVY_900 = "#0B1229";
@@ -35,9 +35,9 @@ export const Text = {
 };
 
 export default {
-  primary: ORANGE,
-  primaryDark: ORANGE_DARK,
-  primaryLight: ORANGE_LIGHT,
+  primary: GREEN,
+  primaryDark: GREEN_DARK,
+  primaryLight: GREEN_LIGHT,
   accent: AMBER,
 
   background: "#FFFFFF",
@@ -64,15 +64,15 @@ export default {
   light: {
     text: "#0F172A",
     background: "#FFFFFF",
-    tint: ORANGE,
+    tint: GREEN,
     tabIconDefault: "#94A3B8",
-    tabIconSelected: ORANGE,
+    tabIconSelected: GREEN,
   },
   dark: {
     text: "#F8FAFC",
     background: NAVY_900,
-    tint: ORANGE,
+    tint: GREEN,
     tabIconDefault: "#64748B",
-    tabIconSelected: ORANGE,
+    tabIconSelected: GREEN,
   },
 };
