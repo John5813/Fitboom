@@ -29,11 +29,11 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const BRAND = theme.primary;
 
   const tabs: TabDef[] = [
-    { name: "index",    icon: "home",        label: "Asosiy" },
-    { name: "gyms",     icon: "activity",    label: "Zallar" },
-    { name: "scanner",  icon: "grid",        label: "Skaner",       isCenter: true },
-    { name: "courses",  icon: "play-circle", label: "Video darslar" },
-    { name: "bookings", icon: "calendar",    label: "Bronlar" },
+    { name: "index",    icon: "home",        label: t("nav.home") },
+    { name: "gyms",     icon: "activity",    label: t("nav.gyms") },
+    { name: "scanner",  icon: "grid",        label: t("nav.scanner"), isCenter: true },
+    { name: "courses",  icon: "play-circle", label: t("nav.classes") },
+    { name: "bookings", icon: "calendar",    label: t("nav.bookings") },
   ];
 
   const inactiveColor = isDark ? "#64748B" : "#999";

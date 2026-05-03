@@ -173,7 +173,7 @@ export default function ProfileScreen() {
     },
     {
       icon: (isDark ? "sun" : "moon") as any,
-      label: isDark ? "Yorug' rejim" : "Tungi rejim",
+      label: isDark ? t("common.theme_light") : t("common.theme_dark"),
       onPress: () => { haptics.select(); toggleTheme(); },
       color: isDark ? "#FBBF24" : "#0F172A",
     },
@@ -232,7 +232,7 @@ export default function ProfileScreen() {
             <Text style={styles.userPhone}>{user?.phone || ""}</Text>
             <View style={styles.genderAgeBadge}>
               <Text style={styles.genderAgeText}>
-                {user?.gender || ""}{user?.age ? `, ${user.age} yosh` : ""}
+                {user?.gender || ""}{user?.age ? `, ${user.age} ${t("profile.years")}` : ""}
               </Text>
             </View>
           </View>

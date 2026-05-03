@@ -77,8 +77,8 @@ export default function GymDetailScreen() {
   const distanceText =
     distanceKm != null && !isNaN(distanceKm)
       ? distanceKm < 1
-        ? `${Math.round(distanceKm * 1000)} m uzoqlikda`
-        : `${distanceKm.toFixed(1)} km uzoqlikda`
+        ? `${Math.round(distanceKm * 1000)} ${t("gym.distance_away_m")}`
+        : `${distanceKm.toFixed(1)} ${t("gym.distance_away_km")}`
       : null;
 
   const selectedDate = new Date();
@@ -103,10 +103,10 @@ export default function GymDetailScreen() {
       refetchUser();
       setBookingModal(false);
       setSelectedSlot(null);
-      Alert.alert(t("gym.booked"), `${gym?.credits} kredit hisobingizdan chiqarildi`);
+      Alert.alert(t("gym.booked"), `${gym?.credits} ${t("gym.booked_msg")}`);
     },
     onError: (err: any) => {
-      Alert.alert(t("common.error"), err.message || "Bron qilishda xatolik");
+      Alert.alert(t("common.error"), err.message || t("gym.book_error"));
     },
   });
 
@@ -118,7 +118,7 @@ export default function GymDetailScreen() {
     if ((user.credits || 0) < (gym?.credits || 0)) {
       Alert.alert(
         t("gym.not_enough"),
-        `Sizda ${user.credits} kredit bor. ${gym?.credits} kredit kerak.`,
+        `${t("gym.not_enough_have")} ${user.credits} ${t("gym.not_enough_credits_word")} ${gym?.credits} ${t("gym.not_enough_need")}`,
         [
           { text: t("common.cancel"), style: "cancel" },
           {
@@ -134,7 +134,7 @@ export default function GymDetailScreen() {
 
   const confirmBooking = () => {
     if (slots.length > 0 && !selectedSlot) {
-      Alert.alert("Vaqt tanlang", "Iltimos, bron uchun vaqt oralig'ini tanlang");
+      Alert.alert(t("gym.select_time_required_title"), t("gym.select_time_required_msg"));
       return;
     }
     bookMutation.mutate({
@@ -205,7 +205,7 @@ export default function GymDetailScreen() {
   if (!gym) {
     return (
       <View style={styles.loader}>
-        <Text style={styles.errorText}>Zal topilmadi</Text>
+        <Text style={styles.errorText}>{t("gym.not_found")}</Text>
       </View>
     );
   }
@@ -261,7 +261,7 @@ export default function GymDetailScreen() {
           >
             <View style={styles.creditBadge}>
               <Feather name="key" size={14} color="#fff" />
-              <Text style={styles.creditBadgeText}>{gym.credits} kredit</Text>
+              <Text style={styles.creditBadgeText}>{gym.credits} {t("common.credit")}</Text>
             </View>
           </LinearGradient>
         </View>
@@ -296,7 +296,7 @@ export default function GymDetailScreen() {
                   <Feather name="map-pin" size={16} color={Colors.primary} />
                 </View>
                 <View style={styles.infoText}>
-                  <Text style={styles.infoLabel}>Masofa</Text>
+                  <Text style={styles.infoLabel}>{t("gym.distance_label")}</Text>
                   <Text style={styles.infoValue}>{distanceText}</Text>
                 </View>
               </View>
@@ -314,11 +314,11 @@ export default function GymDetailScreen() {
               <View style={[styles.mapBtnRow, styles.infoRowBorder]}>
                 <TouchableOpacity style={styles.mapActionBtn} onPress={viewOnMap}>
                   <Feather name="map" size={16} color="#fff" />
-                  <Text style={styles.mapActionText}>Xaritada ko'rish</Text>
+                  <Text style={styles.mapActionText}>{t("gym.view_on_map")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.directionsBtn} onPress={getDirections}>
                   <Feather name="navigation" size={16} color={Colors.primary} />
-                  <Text style={styles.directionsBtnText}>Yo'l boshlash</Text>
+                  <Text style={styles.directionsBtnText}>{t("gym.directions")}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -326,7 +326,7 @@ export default function GymDetailScreen() {
 
           {gym.description && (
             <View style={styles.descCard}>
-              <Text style={styles.descTitle}>Tavsif</Text>
+              <Text style={styles.descTitle}>{t("gym.description")}</Text>
               <Text style={styles.descText}>{gym.description}</Text>
             </View>
           )}
@@ -349,8 +349,8 @@ export default function GymDetailScreen() {
         ]}
       >
         <View style={styles.bottomCreditInfo}>
-          <Text style={styles.bottomCreditLabel}>Sizda:</Text>
-          <Text style={styles.bottomCreditAmount}>{user?.credits ?? 0} kredit</Text>
+          <Text style={styles.bottomCreditLabel}>{t("gym.you_have")}</Text>
+          <Text style={styles.bottomCreditAmount}>{user?.credits ?? 0} {t("common.credit")}</Text>
         </View>
         <TouchableOpacity style={styles.bookBtn} onPress={handleBook}>
           <Text style={styles.bookBtnText}>{t("gym.book_now")}</Text>
@@ -425,13 +425,13 @@ export default function GymDetailScreen() {
             {slotsLoading ? (
               <View style={styles.dayOffBox}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.dayOffSub}>Yuklanmoqda...</Text>
+                <Text style={styles.dayOffSub}>{t("common.loading_short")}</Text>
               </View>
             ) : isDayOff ? (
               <View style={styles.dayOffBox}>
                 <Feather name="moon" size={24} color={Colors.textSecondary} />
-                <Text style={styles.dayOffText}>Dam olish kuni</Text>
-                <Text style={styles.dayOffSub}>Bu kunda zal yopiq</Text>
+                <Text style={styles.dayOffText}>{t("gym.day_off")}</Text>
+                <Text style={styles.dayOffSub}>{t("gym.day_off_desc")}</Text>
               </View>
             ) : slots.length === 0 ? (
               <Text style={styles.noSlotsText}>{t("gym.no_slots")}</Text>
@@ -490,10 +490,10 @@ export default function GymDetailScreen() {
                           numberOfLines={1}
                         >
                           {isFull
-                            ? "To'la"
+                            ? t("gym.slot_full")
                             : lowSpots
-                            ? `Kam joy · ${slot.availableSpots}/${slot.capacity}`
-                            : `${slot.availableSpots}/${slot.capacity} joy`}
+                            ? `${t("gym.slot_low")} · ${slot.availableSpots}/${slot.capacity}`
+                            : `${slot.availableSpots}/${slot.capacity} ${t("gym.slot_spots")}`}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -517,8 +517,8 @@ export default function GymDetailScreen() {
                 ) : (
                   <Text style={styles.confirmBtnText}>
                     {needSlot
-                      ? "Vaqt tanlang"
-                      : `${t("gym.confirm_booking")} (${gym.credits} kredit)`}
+                      ? t("gym.select_slot")
+                      : `${t("gym.confirm_booking")} (${gym.credits} ${t("gyms.credits")})`}
                   </Text>
                 )}
               </TouchableOpacity>

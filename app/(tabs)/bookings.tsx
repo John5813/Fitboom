@@ -239,10 +239,10 @@ export default function BookingsScreen() {
             }
             description={
               tab === "upcoming"
-                ? "Yangi mashg'ulot uchun zalni tanlang va broning."
+                ? t("bookings.empty_upcoming_desc")
                 : undefined
             }
-            actionLabel={tab === "upcoming" ? "Zallarni ko'rish" : undefined}
+            actionLabel={tab === "upcoming" ? t("bookings.view_gyms") : undefined}
             onAction={tab === "upcoming" ? () => router.push("/(tabs)/gyms" as any) : undefined}
           />
         ) : (

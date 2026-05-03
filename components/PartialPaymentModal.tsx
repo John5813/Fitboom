@@ -123,7 +123,7 @@ export default function PartialPaymentModal({
       if (err?.message === "Token topilmadi") {
         Alert.alert(t("common.error"), "Iltimos qayta kiring");
       } else {
-        Alert.alert(t("common.error"), err?.message || "Chek yuborishda xatolik");
+        Alert.alert(t("common.error"), err?.message || t("payment.send_error"));
       }
     } finally {
       setSubmitting(false);
@@ -160,12 +160,12 @@ export default function PartialPaymentModal({
             <View style={styles.amountIconBox}>
               <Feather name="alert-circle" size={28} color="#fff" />
             </View>
-            <Text style={styles.amountLabel}>To'lash kerak bo'lgan summa</Text>
+            <Text style={styles.amountLabel}>{t("payment.amount_to_pay")}</Text>
             <Text style={styles.amountValue}>
               {Number(remainingAmount).toLocaleString()} so'm
             </Text>
             <Text style={styles.amountCredits}>
-              {credits} kredit uchun qolgan qarz
+              {credits} {t("payment.remaining_debt")}
             </Text>
           </View>
 
@@ -268,7 +268,7 @@ export default function PartialPaymentModal({
           </TouchableOpacity>
 
           <Text style={styles.footerNote}>
-            Chek tekshirilgach adminlar tomonidan tasdiqlanadi va kredit hisobingizga qo'shiladi.
+            {t("payment.review_note")}
           </Text>
         </ScrollView>
       </SafeAreaView>

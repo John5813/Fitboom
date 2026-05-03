@@ -194,8 +194,8 @@ export default function GymsScreen() {
           <EmptyState
             icon="search"
             title={t("gyms.no_results")}
-            description={search ? `"${search}" bo'yicha hech narsa topilmadi.` : undefined}
-            actionLabel={search ? "Qidiruvni tozalash" : undefined}
+            description={search ? `"${search}" — ${t("gyms.no_results_for")}` : undefined}
+            actionLabel={search ? t("gyms.clear_search") : undefined}
             onAction={search ? () => setSearch("") : undefined}
           />
         ) : (
