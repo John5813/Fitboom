@@ -48,6 +48,30 @@ uri = "file://attached_assets/generated_images/fitboom_logo_8.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "rNGeTaEI5ONbxtsCZG_pR"
+uri = "file://attached_assets/generated_images/fitboom_logo_11.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "miAMXA1b_f7XvCvnTRKWJ"
+uri = "file://attached_assets/generated_images/fitboom_logo_12.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "HPIZlV7lG2ObeU6qXxAae"
+uri = "file://attached_assets/generated_images/fitboom_logo_9.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "REOBF9JfM8fLICUw8XM5O"
+uri = "file://attached_assets/generated_images/fitboom_logo_10.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "iloBCXekLbrVgyKDLwJRa"
 uri = "file://README.md"
@@ -143,3 +167,27 @@ id = "KqHtO1hB1BHnnIeKXEZdL"
 uri = "file://attached_assets/generated_images/fitboom_logo_8.png"
 type = "image"
 title = "Logo 8 — Cartoon Tiger Mascot"
+
+[[outputs]]
+id = "FmtErZRx2iDqHX73ppLPb"
+uri = "file://attached_assets/generated_images/fitboom_logo_9.png"
+type = "image"
+title = "Logo 9 — Origami Paper Runner"
+
+[[outputs]]
+id = "zP-27broYmSQUIF4iFciE"
+uri = "file://attached_assets/generated_images/fitboom_logo_10.png"
+type = "image"
+title = "Logo 10 — Ink Brush Calligraphy"
+
+[[outputs]]
+id = "Bwb-tm0lhBOM5kFh74tPZ"
+uri = "file://attached_assets/generated_images/fitboom_logo_11.png"
+type = "image"
+title = "Logo 11 — Glassmorphism iOS Style"
+
+[[outputs]]
+id = "aD4_UgyxGB231217Df04p"
+uri = "file://attached_assets/generated_images/fitboom_logo_12.png"
+type = "image"
+title = "Logo 12 — Pop Art Comic BOOM"
