@@ -93,8 +93,8 @@ export default function BookingsScreen() {
         return {
           label: t("bookings.status_missed"),
           bg: "rgba(249,115,22,0.1)",
-          color: "#f97316",
-          stripe: "#f97316",
+          color: "#F59E0B",
+          stripe: "#F59E0B",
         };
       case "cancelled":
         return {

@@ -24,7 +24,7 @@ function getStatusInfo(status: string) {
     case "completed":
       return { label: "Tashrif buyurildi", bg: "rgba(16,185,129,0.12)", text: "#10b981" };
     case "missed":
-      return { label: "Kelmadi", bg: "rgba(239,68,68,0.07)", text: "#f97316" };
+      return { label: "Kelmadi", bg: "rgba(239,68,68,0.07)", text: "#F59E0B" };
     case "cancelled":
       return { label: "Bekor qilindi", bg: "rgba(239,68,68,0.1)", text: Colors.error };
     default:
@@ -62,7 +62,7 @@ export default function BookingCard({
     booking.status === "pending" ? "#f59e0b" :
     booking.status === "completed" ? "#10b981" :
     booking.status === "cancelled" ? Colors.error :
-    booking.status === "missed" ? "#f97316" :
+    booking.status === "missed" ? "#F59E0B" :
     Colors.textSecondary;
 
   return (
