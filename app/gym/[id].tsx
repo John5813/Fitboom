@@ -368,17 +368,21 @@ export default function GymDetailScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t("gym.book")}</Text>
-              <TouchableOpacity onPress={() => setBookingModal(false)}>
-                <Feather name="x" size={20} color={Colors.text} />
+              <TouchableOpacity onPress={() => setBookingModal(false)} hitSlop={10}>
+                <Feather name="x" size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
 
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 14, paddingBottom: 8 }}
+            >
             <Text style={styles.sectionLabel}>{t("gym.select_date")}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.dayScroll}
-              contentContainerStyle={{ gap: 8 }}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}
             >
               {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
                 const d = new Date();
@@ -433,40 +437,71 @@ export default function GymDetailScreen() {
               <Text style={styles.noSlotsText}>{t("gym.no_slots")}</Text>
             ) : (
               <View style={styles.slotsGrid}>
-                {slots.map((slot: any) => (
-                  <TouchableOpacity
-                    key={slot.id}
-                    style={[
-                      styles.slotBtn,
-                      selectedSlot?.id === slot.id && styles.slotBtnActive,
-                      slot.availableSpots === 0 && styles.slotBtnFull,
-                    ]}
-                    onPress={() => {
-                      if (slot.availableSpots !== 0) setSelectedSlot(slot);
-                    }}
-                    disabled={slot.availableSpots === 0}
-                  >
-                    <Text
+                {slots.map((slot: any) => {
+                  const isFull = slot.availableSpots === 0;
+                  const isActive = selectedSlot?.id === slot.id;
+                  const lowSpots = slot.availableSpots > 0 && slot.availableSpots <= 3;
+                  return (
+                    <TouchableOpacity
+                      key={slot.id}
                       style={[
-                        styles.slotBtnText,
-                        selectedSlot?.id === slot.id && styles.slotBtnTextActive,
-                        slot.availableSpots === 0 && styles.slotBtnTextFull,
+                        styles.slotBtn,
+                        isActive && styles.slotBtnActive,
+                        isFull && styles.slotBtnFull,
                       ]}
+                      onPress={() => {
+                        if (!isFull) setSelectedSlot(slot);
+                      }}
+                      disabled={isFull}
+                      activeOpacity={0.85}
                     >
-                      {slot.startTime} - {slot.endTime}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.slotCapacity,
-                        selectedSlot?.id === slot.id && { color: "#fff" },
-                      ]}
-                    >
-                      {slot.availableSpots}/{slot.capacity}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.slotBtnText,
+                          isActive && styles.slotBtnTextActive,
+                          isFull && styles.slotBtnTextFull,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {slot.startTime} – {slot.endTime}
+                      </Text>
+                      <View style={styles.slotMetaRow}>
+                        <View
+                          style={[
+                            styles.slotDot,
+                            {
+                              backgroundColor: isActive
+                                ? "#fff"
+                                : isFull
+                                ? "#9CA3AF"
+                                : lowSpots
+                                ? "#F59E0B"
+                                : Colors.primary,
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.slotCapacity,
+                            isActive && { color: "#fff" },
+                            isFull && { color: "#9CA3AF", textDecorationLine: "line-through" },
+                            lowSpots && !isActive && { color: "#B45309", fontFamily: "Inter_600SemiBold" },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {isFull
+                            ? "To'la"
+                            : lowSpots
+                            ? `Kam joy · ${slot.availableSpots}/${slot.capacity}`
+                            : `${slot.availableSpots}/${slot.capacity} joy`}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
+            </ScrollView>
 
             {!isDayOff && !slotsLoading && (
               <TouchableOpacity
@@ -738,10 +773,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
-    gap: 14,
-    paddingBottom: 40,
-    maxHeight: "85%",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    gap: 12,
+    maxHeight: "90%",
+    minHeight: "55%",
     borderTopWidth: 1,
     borderTopColor: Colors.cardBorder,
   },
@@ -813,34 +850,54 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: 8,
   },
-  slotsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  slotsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 10,
+    rowGap: 10,
+  },
   slotBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    flexBasis: "48%",
+    flexGrow: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
     alignItems: "center",
-    minWidth: 100,
+    gap: 4,
   },
   slotBtnActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
   },
-  slotBtnFull: { opacity: 0.4 },
+  slotBtnFull: {
+    opacity: 0.55,
+    backgroundColor: "#F1F5F9",
+    borderStyle: "dashed",
+  },
   slotBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
   },
   slotBtnTextActive: { color: "#fff" },
-  slotBtnTextFull: { color: Colors.textSecondary },
+  slotBtnTextFull: { color: Colors.textSecondary, textDecorationLine: "line-through" },
+  slotMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  slotDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   slotCapacity: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
-    marginTop: 2,
   },
   confirmBtn: {
     backgroundColor: Colors.primary,
