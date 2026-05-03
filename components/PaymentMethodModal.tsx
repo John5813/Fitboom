@@ -13,8 +13,8 @@ import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
-const PAY_BASE = "https://fitboom.replit.app/mobile-pay";
+const BASE_URL = "https://fitboom-absdefgx7.replit.app/api/mobile/v1";
+const PAY_BASE = "https://fitboom-absdefgx7.replit.app/mobile-pay";
 
 interface Props {
   visible: boolean;

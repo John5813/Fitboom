@@ -12,7 +12,7 @@ import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
 
-const MAP_BASE = "https://fitboom.replit.app/map";
+const MAP_BASE = "https://fitboom-absdefgx7.replit.app/map";
 
 interface Props {
   visible: boolean;

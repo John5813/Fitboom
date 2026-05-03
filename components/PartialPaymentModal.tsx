@@ -17,7 +17,7 @@ import { Image } from "expo-image";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getAccessToken } from "@/services/api";
 
-const BASE_URL = "https://fitboom.replit.app/api/mobile/v1";
+const BASE_URL = "https://fitboom-absdefgx7.replit.app/api/mobile/v1";
 
 const CARD_NUMBER = "9860 1701 1740 5213";
 const CARD_OWNER = "FitBoom To'lov";
