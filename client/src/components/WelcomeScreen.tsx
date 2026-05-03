@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dumbbell, KeyRound, QrCode, Video, MapPin, ArrowRight, Zap, Users, Trophy } from "lucide-react";
+import fitboomLogo from "@/assets/fitboom-logo.png";
 
 interface WelcomeScreenProps {
   onStart: () => void;
@@ -35,14 +36,14 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
         {/* Content */}
         <div className="relative z-10 w-full max-w-lg text-center space-y-8">
 
-          {/* Logo badge */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
-              <Dumbbell className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-3xl font-extrabold tracking-tight text-white">
-              Fit<span className="text-orange-400">Boom</span>
-            </span>
+          {/* Logo */}
+          <div className="flex items-center justify-center">
+            <img
+              src={fitboomLogo}
+              alt="FitBoom"
+              className="h-32 w-auto drop-shadow-2xl"
+              data-testid="img-logo"
+            />
           </div>
 
           {/* Headline */}

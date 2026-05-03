@@ -247,9 +247,12 @@ export default function AdminDashboard() {
         <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm">
-                <LayoutDashboard className="h-6 w-6" />
-              </div>
+              <img
+                src="/icon-192.png"
+                alt="FitBoom"
+                className="h-12 w-12 rounded-xl shadow-lg"
+                data-testid="img-logo"
+              />
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold">Admin Panel</h1>
                 <p className="text-blue-200/60 text-sm">FitBoom boshqaruv tizimi</p>

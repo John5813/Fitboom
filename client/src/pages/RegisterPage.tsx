@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Send, Phone, ChevronLeft, Dumbbell } from "lucide-react";
+import fitboomLogo from "@/assets/fitboom-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -201,12 +202,12 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-2xl mb-4 shadow-lg">
-            <Dumbbell className="text-white" size={30} />
-          </div>
-          <h1 className="text-3xl font-black tracking-tight">
-            Fit<span className="text-yellow-400">Boom</span>
-          </h1>
+          <img
+            src={fitboomLogo}
+            alt="FitBoom"
+            className="h-28 w-auto mx-auto mb-2 rounded-2xl"
+            data-testid="img-logo"
+          />
           <p className="text-gray-500 text-sm mt-1">Sport platformasi</p>
         </div>
 
