@@ -72,6 +72,18 @@ uri = "file://attached_assets/generated_images/fitboom_logo_10.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "n9CkbSui38U0RYGFALUyt"
+uri = "file://attached_assets/generated_images/fitboom_logo_13.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "B6XfQoALiED3fyQO451fD"
+uri = "file://attached_assets/generated_images/fitboom_logo_14.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "iloBCXekLbrVgyKDLwJRa"
 uri = "file://README.md"
@@ -191,3 +203,15 @@ id = "aD4_UgyxGB231217Df04p"
 uri = "file://attached_assets/generated_images/fitboom_logo_12.png"
 type = "image"
 title = "Logo 12 — Pop Art Comic BOOM"
+
+[[outputs]]
+id = "ZVAm3iDnulD8VmRIVbjBv"
+uri = "file://attached_assets/generated_images/fitboom_logo_13.png"
+type = "image"
+title = "Logo 13 — Glass + Flame Fusion (App Icon)"
+
+[[outputs]]
+id = "eACkxfKJA4h2AtHw1C1mg"
+uri = "file://attached_assets/generated_images/fitboom_logo_14.png"
+type = "image"
+title = "Logo 14 — Hexagonal Glass Shard + Burst"
