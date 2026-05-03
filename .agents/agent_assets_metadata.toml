@@ -24,6 +24,30 @@ uri = "file://attached_assets/generated_images/fitboom_logo_4.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "QjH6OgXDXiUtEk_glr0B_"
+uri = "file://attached_assets/generated_images/fitboom_logo_5.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GowedwYL8qNM5RUNOOngO"
+uri = "file://attached_assets/generated_images/fitboom_logo_6.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "yesOLSeQpT_ZctqntKsu5"
+uri = "file://attached_assets/generated_images/fitboom_logo_7.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "kNY_tJ2TqP47v1RuPl42K"
+uri = "file://attached_assets/generated_images/fitboom_logo_8.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "iloBCXekLbrVgyKDLwJRa"
 uri = "file://README.md"
@@ -95,3 +119,27 @@ id = "c1ZNxnyh4IwvfM4s5todM"
 uri = "file://attached_assets/generated_images/fitboom_logo_4.png"
 type = "image"
 title = "Logo 4 — Typographic B + Kettlebell"
+
+[[outputs]]
+id = "syLOfJEvIbHjNoixLkHNm"
+uri = "file://attached_assets/generated_images/fitboom_logo_5.png"
+type = "image"
+title = "Logo 5 — Retro Synthwave Neon"
+
+[[outputs]]
+id = "VJ65KYm8HA-Kr4T4v8Zc-"
+uri = "file://attached_assets/generated_images/fitboom_logo_6.png"
+type = "image"
+title = "Logo 6 — Vintage Athletic Crest"
+
+[[outputs]]
+id = "mkmM1Bj1IL04oI41pLNiF"
+uri = "file://attached_assets/generated_images/fitboom_logo_7.png"
+type = "image"
+title = "Logo 7 — Futuristic 3D Chrome"
+
+[[outputs]]
+id = "KqHtO1hB1BHnnIeKXEZdL"
+uri = "file://attached_assets/generated_images/fitboom_logo_8.png"
+type = "image"
+title = "Logo 8 — Cartoon Tiger Mascot"
