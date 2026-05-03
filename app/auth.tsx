@@ -234,9 +234,11 @@ export default function AuthScreen() {
             </TouchableOpacity>
 
             <View style={styles.authLogoRow}>
-              <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.authLogoIcon}>
-                <Feather name="zap" size={20} color="#fff" />
-              </LinearGradient>
+              <Image
+                source={require("@/assets/images/logo.png")}
+                style={styles.authLogoIcon}
+                contentFit="contain"
+              />
               <Text style={styles.logoText}>
                 <Text style={styles.logoFit}>Fit</Text>
                 <Text style={styles.logoBoom}>Boom</Text>
@@ -316,9 +318,11 @@ export default function AuthScreen() {
           </TouchableOpacity>
 
           <View style={styles.authLogoRow}>
-            <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.authLogoIcon}>
-              <Feather name="zap" size={20} color="#fff" />
-            </LinearGradient>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={styles.authLogoIcon}
+              contentFit="contain"
+            />
             <Text style={styles.logoText}>
               <Text style={styles.logoFit}>Fit</Text>
               <Text style={styles.logoBoom}>Boom</Text>
@@ -628,9 +632,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#16a34a",
+    shadowColor: "#f97316",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 6,
     elevation: 6,
   },
