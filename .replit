@@ -6,9 +6,9 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-run = ["bash", "-c", "NODE_ENV=production node dist/migrate.js && NODE_ENV=production node dist/index.js"]
+run = ["node", "./dist/index.cjs"]
 
 [[ports]]
 localPort = 5000
@@ -38,12 +38,13 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=development npx tsx server/index.ts"
+args = "npm run dev"
 waitForPort = 5000
 
 [agent]
 integrations = ["javascript_stripe:1.0.0", "javascript_mem_db:1.0.0", "javascript_database:1.0.0", "javascript_object_storage:2.0.0"]
 expertMode = true
+stack = "FULLSTACK_JS"
 
 [userenv]
 
