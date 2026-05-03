@@ -16,6 +16,8 @@ import * as Location from "expo-location";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { haptics } from "@/hooks/useHaptics";
 import { getGyms, getCredits } from "@/services/api";
 import { usePartialPaymentDismiss } from "@/hooks/usePartialPaymentDismiss";
 import GymCard from "@/components/GymCard";
@@ -23,6 +25,8 @@ import PaymentMethodModal from "@/components/PaymentMethodModal";
 import PartialPaymentModal from "@/components/PartialPaymentModal";
 import PaymentSelectorModal from "@/components/PaymentSelectorModal";
 import MapWebViewModal from "@/components/MapWebViewModal";
+import { GymCardSkeleton } from "@/components/Skeleton";
+import { AnimatedListItem } from "@/components/AnimatedListItem";
 import Colors from "@/constants/Colors";
 
 const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
@@ -42,6 +46,7 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number 
 export default function HomeScreen() {
   const { user, refetchUser } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { theme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [selectorVisible, setSelectorVisible] = useState(false);
   const [selectorMode, setSelectorMode] = useState<"topup" | "partial">("topup");
@@ -126,9 +131,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top"]}>
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.content,
         { paddingBottom: 110 },
@@ -249,26 +254,24 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity
           style={styles.viewAllBtn}
-          onPress={() => setMapModalVisible(true)}
+          onPress={() => { haptics.light(); setMapModalVisible(true); }}
         >
           <Text style={styles.viewAll}>{t("home.view_all")}</Text>
           <Feather name="arrow-right" size={14} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {gyms.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Feather name="activity" size={36} color="#CBD5E1" />
-          <Text style={styles.emptyText}>{t("home.loading")}</Text>
-        </View>
+      {gymsData === undefined ? (
+        <GymCardSkeleton count={3} />
       ) : (
-        gyms.map((gym: any) => (
-          <GymCard
-            key={gym.id}
-            gym={gym}
-            onPress={() => router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any)}
-            onBook={() => router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any)}
-          />
+        gyms.map((gym: any, idx: number) => (
+          <AnimatedListItem key={gym.id} index={Math.min(idx, 6)}>
+            <GymCard
+              gym={gym}
+              onPress={() => { haptics.light(); router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any); }}
+              onBook={() => { haptics.medium(); router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any); }}
+            />
+          </AnimatedListItem>
         ))
       )}
 

@@ -11,9 +11,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
-import Colors from "@/constants/Colors";
-
-const BRAND = Colors.primary;
+import { useTheme } from "@/contexts/ThemeContext";
+import { haptics } from "@/hooks/useHaptics";
 
 type TabDef = {
   name: string;
@@ -25,18 +24,32 @@ type TabDef = {
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { theme, isDark } = useTheme();
   const TAB_BOTTOM = Platform.OS === "web" ? 0 : insets.bottom;
+  const BRAND = theme.primary;
 
   const tabs: TabDef[] = [
-    { name: "index",    icon: "home",       label: "Asosiy" },
-    { name: "gyms",     icon: "activity",   label: "Zallar" },
-    { name: "scanner",  icon: "grid",       label: "Skaner",       isCenter: true },
+    { name: "index",    icon: "home",        label: "Asosiy" },
+    { name: "gyms",     icon: "activity",    label: "Zallar" },
+    { name: "scanner",  icon: "grid",        label: "Skaner",       isCenter: true },
     { name: "courses",  icon: "play-circle", label: "Video darslar" },
-    { name: "bookings", icon: "calendar",   label: "Bronlar" },
+    { name: "bookings", icon: "calendar",    label: "Bronlar" },
   ];
 
+  const inactiveColor = isDark ? "#64748B" : "#999";
+
   return (
-    <View style={[styles.bar, { paddingBottom: TAB_BOTTOM, height: 64 + TAB_BOTTOM }]}>
+    <View
+      style={[
+        styles.bar,
+        {
+          paddingBottom: TAB_BOTTOM,
+          height: 64 + TAB_BOTTOM,
+          backgroundColor: theme.card,
+          borderTopColor: theme.cardBorder,
+        },
+      ]}
+    >
       {tabs.map((tab) => {
         const route = state.routes.find((r) => r.name === tab.name);
         if (!route) return null;
@@ -44,6 +57,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         const focused = state.index === idx;
 
         const onPress = () => {
+          haptics.select();
           const event = navigation.emit({
             type: "tabPress",
             target: route.key,
@@ -62,10 +76,26 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
               style={styles.centerWrapper}
               activeOpacity={0.85}
             >
-              <View style={[styles.centerCircle, focused && styles.centerCircleFocused]}>
+              <View
+                style={[
+                  styles.centerCircle,
+                  { borderColor: theme.card },
+                  focused && {
+                    backgroundColor: BRAND,
+                    shadowColor: BRAND,
+                    shadowOpacity: 0.5,
+                  },
+                ]}
+              >
                 <Feather name={tab.icon} size={26} color="#fff" />
               </View>
-              <Text style={[styles.label, focused && styles.labelFocused]}>
+              <Text
+                style={[
+                  styles.label,
+                  { color: inactiveColor },
+                  focused && { color: BRAND },
+                ]}
+              >
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -82,9 +112,15 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             <Feather
               name={tab.icon}
               size={21}
-              color={focused ? BRAND : "#999"}
+              color={focused ? BRAND : inactiveColor}
             />
-            <Text style={[styles.label, focused && styles.labelFocused]}>
+            <Text
+              style={[
+                styles.label,
+                { color: inactiveColor },
+                focused && { color: BRAND },
+              ]}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -97,9 +133,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: "#ebebeb",
     alignItems: "center",
     paddingHorizontal: 4,
     shadowColor: "#000",
@@ -130,26 +164,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#fff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 10,
   },
-  centerCircleFocused: {
-    backgroundColor: BRAND,
-    shadowColor: BRAND,
-    shadowOpacity: 0.5,
-  },
   label: {
     fontSize: 9,
     fontFamily: "Inter_500Medium",
-    color: "#999",
     textAlign: "center",
-  },
-  labelFocused: {
-    color: BRAND,
   },
 });
 

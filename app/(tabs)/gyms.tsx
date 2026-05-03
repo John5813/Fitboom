@@ -15,9 +15,14 @@ import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
 
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { haptics } from "@/hooks/useHaptics";
 import { getGyms, getCategories } from "@/services/api";
 import Colors from "@/constants/Colors";
 import GymCard from "@/components/GymCard";
+import { GymCardSkeleton } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { AnimatedListItem } from "@/components/AnimatedListItem";
 
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -33,6 +38,7 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number 
 
 export default function GymsScreen() {
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [search, setSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,8 +111,8 @@ export default function GymsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={[styles.header, { paddingTop: 12 }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={["top"]}>
+      <View style={[styles.header, { paddingTop: 12, backgroundColor: theme.card, borderBottomColor: theme.cardBorder }]}>
         <Text style={styles.title}>{t("gyms.title")}</Text>
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
@@ -156,7 +162,7 @@ export default function GymsScreen() {
                 styles.categoryChip,
                 selectedCategoryId === cat.id && styles.categoryChipActive,
               ]}
-              onPress={() => setSelectedCategoryId(cat.id)}
+              onPress={() => { haptics.select(); setSelectedCategoryId(cat.id); }}
             >
               <Text
                 style={[
@@ -182,18 +188,24 @@ export default function GymsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {filtered.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather name="activity" size={40} color={Colors.textSecondary} />
-            <Text style={styles.emptyTitle}>{t("gyms.no_results")}</Text>
-          </View>
+        {data === undefined ? (
+          <GymCardSkeleton count={4} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title={t("gyms.no_results")}
+            description={search ? `"${search}" bo'yicha hech narsa topilmadi.` : undefined}
+            actionLabel={search ? "Qidiruvni tozalash" : undefined}
+            onAction={search ? () => setSearch("") : undefined}
+          />
         ) : (
-          filtered.map((gym: any) => (
-            <GymCard
-              key={gym.id}
-              gym={gym}
-              onPress={() => router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any)}
-            />
+          filtered.map((gym: any, idx: number) => (
+            <AnimatedListItem key={gym.id} index={Math.min(idx, 6)}>
+              <GymCard
+                gym={gym}
+                onPress={() => { haptics.light(); router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any); }}
+              />
+            </AnimatedListItem>
           ))
         )}
       </ScrollView>

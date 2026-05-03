@@ -18,6 +18,8 @@ import { Image } from "expo-image";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { haptics } from "@/hooks/useHaptics";
 import { useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -41,6 +43,7 @@ const LANGUAGES = [
 export default function ProfileScreen() {
   const { user, logout, refetchUser } = useAuth();
   const { t, language, setLanguage } = useLanguage();
+  const { theme, isDark, toggle: toggleTheme } = useTheme();
   const [editModal, setEditModal] = useState(false);
   const [langModal, setLangModal] = useState(false);
   const [adminModal, setAdminModal] = useState(false);
@@ -168,6 +171,12 @@ export default function ProfileScreen() {
       onPress: () => setLangModal(true),
       color: Colors.text,
     },
+    {
+      icon: (isDark ? "sun" : "moon") as any,
+      label: isDark ? "Yorug' rejim" : "Tungi rejim",
+      onPress: () => { haptics.select(); toggleTheme(); },
+      color: isDark ? "#FBBF24" : "#0F172A",
+    },
     ...(user?.isAdmin
       ? [
           {
@@ -187,9 +196,9 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top"]}>
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.content,
         { paddingTop: 16, paddingBottom: 100 },

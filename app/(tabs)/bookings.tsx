@@ -16,8 +16,13 @@ import { Feather } from "@expo/vector-icons";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { haptics } from "@/hooks/useHaptics";
 import { getBookings, cancelBooking, getAccessToken } from "@/services/api";
 import Colors from "@/constants/Colors";
+import { BookingCardSkeleton } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { AnimatedListItem } from "@/components/AnimatedListItem";
 
 const todayStart = () => {
   const d = new Date();
@@ -43,6 +48,7 @@ function isWithin2Hours(booking: any): boolean {
 export default function BookingsScreen() {
   const { t } = useLanguage();
   const { refetchUser } = useAuth();
+  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [refreshing, setRefreshing] = useState(false);
@@ -220,20 +226,27 @@ export default function BookingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading && !refreshing ? (
-          <View style={styles.emptyState}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+            <BookingCardSkeleton count={3} />
           </View>
         ) : list.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather name="calendar" size={48} color={Colors.textSecondary} />
-            <Text style={styles.emptyTitle}>
-              {tab === "upcoming"
+          <EmptyState
+            icon="calendar"
+            title={
+              tab === "upcoming"
                 ? t("bookings.empty_upcoming")
-                : t("bookings.empty_past")}
-            </Text>
-          </View>
+                : t("bookings.empty_past")
+            }
+            description={
+              tab === "upcoming"
+                ? "Yangi mashg'ulot uchun zalni tanlang va broning."
+                : undefined
+            }
+            actionLabel={tab === "upcoming" ? "Zallarni ko'rish" : undefined}
+            onAction={tab === "upcoming" ? () => router.push("/(tabs)/gyms" as any) : undefined}
+          />
         ) : (
-          list.map((booking: any) => {
+          list.map((booking: any, _bookingIdx: number) => {
             const isPending = booking.status === "pending";
             const statusInfo = getStatusInfo(booking.status || "pending");
             const gymName =
@@ -266,7 +279,8 @@ export default function BookingsScreen() {
             const within2h = isPending && isWithin2Hours(booking);
 
             return (
-              <View key={bookingId || Math.random()} style={styles.card}>
+              <AnimatedListItem key={bookingId || Math.random()} index={Math.min(_bookingIdx, 6)}>
+              <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
                 <View
                   style={[
                     styles.leftStripe,
@@ -403,6 +417,7 @@ export default function BookingsScreen() {
                   )}
                 </View>
               </View>
+              </AnimatedListItem>
             );
           })
         )}
