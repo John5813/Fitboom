@@ -36,6 +36,15 @@ interface TimeSlot {
   capacity: number;
 }
 
+/** /api/time-slots?date= qaytaradigan, sanaga bog'langan slot */
+interface BookingSlot extends TimeSlot {
+  bookedCount: number;
+  effectiveCapacity: number;
+  state: 'open' | 'peak-limited' | 'peak-blocked' | 'closed';
+  isAvailable: boolean;
+  reason?: string;
+}
+
 // Function to calculate distance between two lat/lng points
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Radius of the earth in km
@@ -236,32 +245,52 @@ export default function HomePage() {
     }
   };
 
-  // Fetch video collections from API
-  const { data: gymTimeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
-    queryKey: ['/api/time-slots', selectedGymForBooking?.id],
+  /*
+   * Bo'sh joylar SANAGA bog'liq, shuning uchun so'rovga sana qo'shiladi.
+   *
+   * Ilgari bu yerda butun haftalik shablon olinardi va `availableSpots`
+   * sanaga bog'lanmagan umumiy hisoblagichdan kelardi — foydalanuvchi
+   * noto'g'ri (ko'pincha "to'liq") joy sonini ko'rardi.
+   * Server endi shu kun uchun haqiqiy bandlikni, pik vaqt va ish vaqtini
+   * hisobga olgan holda qaytaradi.
+   */
+  const { data: gymTimeSlotsData } = useQuery<{ timeSlots: BookingSlot[] }>({
+    queryKey: ['/api/time-slots', selectedGymForBooking?.id, selectedBookingDate],
     refetchInterval: 15000,
-    enabled: !!selectedGymForBooking?.id,
-    queryFn: () => fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}`, { credentials: 'include' }).then(res => res.json()),
+    enabled: !!selectedGymForBooking?.id && !!selectedBookingDate,
+    queryFn: () =>
+      fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}&date=${selectedBookingDate}`, {
+        credentials: 'include',
+      }).then(res => res.json()),
   });
 
-  const gymTimeSlots = gymTimeSlotsData?.timeSlots || [];
+  // Zal jadvali — sana tasmasida yopiq kunlarni o'tkazib yuborish uchun
+  const { data: gymScheduleData } = useQuery<{
+    hours: Array<{ dayOfWeek: number; isClosed: boolean }>;
+    closures: Array<{ date: string }>;
+  }>({
+    queryKey: ['/api/gyms', selectedGymForBooking?.id, 'schedule'],
+    enabled: !!selectedGymForBooking?.id,
+    queryFn: () =>
+      fetch(`/api/gyms/${selectedGymForBooking?.id}/schedule`, { credentials: 'include' })
+        .then(res => res.json()),
+  });
 
-  const getDayOfWeekFromDateStr = (dateStr: string): string => {
-    const date = new Date(dateStr + 'T12:00:00');
-    return DAY_NAMES[date.getDay()];
-  };
+  const closureDates = new Set((gymScheduleData?.closures ?? []).map(c => c.date));
+  const closedWeekdays = new Set(
+    (gymScheduleData?.hours ?? []).filter(h => h.isClosed).map(h => h.dayOfWeek),
+  );
 
-  const slotsForSelectedDate = selectedBookingDate
-    ? gymTimeSlots
-        .filter(slot => {
-          if (slot.dayOfWeek !== getDayOfWeekFromDateStr(selectedBookingDate)) return false;
-          if (tashkentTime && selectedBookingDate === tashkentTime.date) {
-            return slot.endTime > tashkentTime.time;
-          }
-          return true;
-        })
-        .sort((a, b) => a.startTime.localeCompare(b.startTime))
-    : [];
+  const slotsForSelectedDate = (gymTimeSlotsData?.timeSlots ?? [])
+    // Server ish vaqti va yopiq kunlarni allaqachon hisobga olgan; bu yerda
+    // faqat bugungi o'tib ketgan vaqtlarni olib tashlaymiz
+    .filter(slot => {
+      if (slot.state === 'closed') return false;
+      if (tashkentTime && selectedBookingDate === tashkentTime.date) {
+        return slot.endTime > tashkentTime.time;
+      }
+      return true;
+    });
 
 
   // Fetch bookings from API
@@ -841,7 +870,13 @@ export default function HomePage() {
                     while (dates.length < 7) {
                       const d = new Date(startDate);
                       d.setDate(startDate.getDate() + dayOffset);
-                      if (!gymClosedDays.includes(String(d.getDay()))) {
+                      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      // Uch manba: eski closedDays, haftalik ish vaqti va
+                      // aniq sanadagi istisnolar (bayram, ta'mir)
+                      const isClosed = gymClosedDays.includes(String(d.getDay()))
+                        || closedWeekdays.has(d.getDay())
+                        || closureDates.has(iso);
+                      if (!isClosed) {
                         dates.push(d);
                       }
                       dayOffset++;
@@ -881,26 +916,35 @@ export default function HomePage() {
                   <h3 className="text-xs font-semibold mb-2">Vaqtni tanlang</h3>
                   {slotsForSelectedDate.length === 0 ? (
                     <div className="text-center py-3 bg-muted/30 rounded-md">
-                      <p className="text-xs text-muted-foreground">Vaqtlar mavjud emas</p>
+                      <p className="text-xs text-muted-foreground">
+                        {gymTimeSlotsData ? 'Bu kunga bo\'sh vaqt yo\'q' : 'Yuklanmoqda...'}
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-4 gap-1">
                       {slotsForSelectedDate.map((slot) => {
                         const isSelected = selectedTimeSlot?.id === slot.id;
+                        const isPeakBlocked = slot.state === 'peak-blocked';
                         const isFull = slot.availableSpots <= 0;
+                        const disabled = isPeakBlocked || isFull;
                         return (
                           <Button
                             key={slot.id}
                             variant={isSelected ? "default" : "outline"}
                             size="sm"
-                            className={`text-[10px] px-1 flex flex-col h-auto py-1 ${isSelected ? 'border-primary' : ''} ${isFull ? 'opacity-40' : ''}`}
-                            disabled={isFull}
+                            className={`text-[10px] px-1 flex flex-col h-auto py-1 ${isSelected ? 'border-primary' : ''} ${disabled ? 'opacity-40' : ''}`}
+                            disabled={disabled}
+                            title={slot.reason}
                             onClick={() => setSelectedTimeSlot(slot)}
                             data-testid={`button-slot-${slot.startTime}`}
                           >
                             <span className="font-bold">{slot.startTime}</span>
-                            <span className={`text-[8px] leading-tight ${isFull ? 'text-destructive' : 'opacity-70'}`}>
-                              {isFull ? 'To\'liq' : `${slot.availableSpots} ta`}
+                            <span className={`text-[8px] leading-tight ${disabled ? 'text-destructive' : 'opacity-70'}`}>
+                              {isPeakBlocked
+                                ? 'Band vaqt'
+                                : isFull
+                                  ? 'To\'liq'
+                                  : `${slot.availableSpots} ta`}
                             </span>
                           </Button>
                         );

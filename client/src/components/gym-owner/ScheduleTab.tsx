@@ -269,7 +269,7 @@ export default function ScheduleTab({ gymId, ownerHeaders }: ScheduleTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {/* Haftalik to'r */}
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">

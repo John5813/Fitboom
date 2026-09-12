@@ -63,7 +63,7 @@ export default function ScheduleGrid({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="w-full max-w-full overflow-x-auto">
       <div className="min-w-[520px]">
         {/* Kun sarlavhalari */}
         <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1 mb-1">

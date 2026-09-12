@@ -11,10 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History, TrendingUp, Building2, Star, Check } from "lucide-react";
+import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarSign, CreditCard, History, TrendingUp, Building2, Star, Check, CalendarClock, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
+import StatTile from "@/components/admin/StatTile";
+import ScheduleTab from "@/components/gym-owner/ScheduleTab";
+import { formatSom, formatCompactSom } from "@/lib/format";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import type { GymPayment } from "@shared/schema";
@@ -42,6 +46,7 @@ export default function AdminGymsPage() {
   const [, setLocation] = useLocation();
   const [selectedGym, setSelectedGym] = useState<GymWithRating | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [scheduleGymId, setScheduleGymId] = useState<string | null>(null);
   const [isTimeSlotDialogOpen, setIsTimeSlotDialogOpen] = useState(false);
   const [createdGym, setCreatedGym] = useState<Gym | null>(null);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
@@ -260,7 +265,7 @@ export default function AdminGymsPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
+    return formatSom(amount);
   };
 
   const toggleCategory = (categoryName: string) => {
@@ -780,80 +785,46 @@ export default function AdminGymsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <Button variant="ghost" size="icon" className="text-blue-200/70 hover:text-white hover:bg-white/10 h-9 w-9" data-testid="button-back">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold">Zallar</h1>
-                <p className="text-blue-200/60 text-sm">{gyms.length} ta sport zal</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-200/70 hover:text-white hover:bg-white/10 hidden sm:flex"
-                onClick={async () => {
-                  try {
-                    const res = await apiRequest("/api/fix-gym-coordinates", "POST", {});
-                    const data = await res.json();
-                    const fixed = data.results?.filter((r: any) => r.status === "fixed").length || 0;
-                    toast({ title: "Koordinatalar yangilandi", description: `${fixed} ta zal koordinatalari topildi.` });
-                    queryClient.invalidateQueries({ queryKey: ['/api/gyms'] });
-                  } catch { toast({ title: "Xatolik", variant: "destructive" }); }
-                }}
-                data-testid="button-fix-coordinates"
-              >
-                <MapPin className="h-4 w-4 mr-1" />
-                Koordinata
-              </Button>
-              <Button size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0" onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-gym">
-                <Plus className="h-4 w-4 mr-1" />
-                Yangi Zal
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminHeader
+        title="Zallar"
+        subtitle={`${gyms.length} ta sport zal`}
+        backHref="/admin"
+        action={
+          <Button
+            size="sm"
+            className="h-9 border-0 bg-white/15 text-white hover:bg-white/25"
+            onClick={() => setIsCreateDialogOpen(true)}
+            data-testid="button-create-gym"
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            <span className="hidden xs:inline">Yangi zal</span>
+            <span className="xs:hidden">Yangi</span>
+          </Button>
+        }
+      />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-3">
+      <AdminOverlapSection className="-mt-3">
         {lastPaymentInfo && (
           <div className="mb-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <p className="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
-              {lastPaymentInfo.gymName}: {new Intl.NumberFormat('uz-UZ').format(lastPaymentInfo.amount)} so'm qayd qilindi
+              {lastPaymentInfo.gymName}: {formatSom(lastPaymentInfo.amount)} qayd qilindi
             </p>
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="rounded-xl bg-card border shadow-sm p-3.5">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-[11px] text-muted-foreground">Zallar</span>
-            </div>
-            <p className="text-xl font-bold">{gyms.length}</p>
-          </div>
-          <div className="rounded-xl bg-card border shadow-sm p-3.5">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-[11px] text-muted-foreground">Daromad</span>
-            </div>
-            <p className="text-lg font-bold truncate">{formatCurrency(totalEarnings)}</p>
-          </div>
-          <div className="rounded-xl bg-card border shadow-sm p-3.5">
-            <div className="flex items-center gap-2 mb-1">
-              <CreditCard className="h-3.5 w-3.5 text-red-500" />
-              <span className="text-[11px] text-muted-foreground">Qarz</span>
-            </div>
-            <p className="text-lg font-bold truncate text-red-600 dark:text-red-400">{formatCurrency(totalDebt)}</p>
-          </div>
+        {/* 360px li ekranlarda uch ustunga pul qiymatlari sig'maydi —
+            shu kenglikda ikki ustunga tushadi, "Qarz" butun kenglikni oladi */}
+        <div className="mb-5 grid grid-cols-2 gap-3 xs:grid-cols-3 [&>*:last-child]:col-span-2 xs:[&>*:last-child]:col-span-1">
+          <StatTile label="Zallar" value={gyms.length} icon={Building2} />
+          <StatTile label="Daromad" value={totalEarnings} icon={TrendingUp} money tone="money" />
+          <StatTile
+            label="Qarz"
+            value={totalDebt}
+            icon={CreditCard}
+            money
+            tone={totalDebt > 0 ? "warning" : "neutral"}
+          />
         </div>
 
         {isLoading ? (
@@ -897,28 +868,53 @@ export default function AdminGymsPage() {
                 }}
               >
                 <CardContent className="p-0">
+                  {/* Ilgari chapda faqat tartib raqami turgan katta gradient
+                      kvadrat bor edi — u joy egallardi, ma'lumot bermasdi.
+                      Endi o'sha joyda zal rasmi yoki ikonka turadi, nom esa
+                      kesilmasdan ikki qatorgacha o'raladi. */}
                   <div className="flex items-center gap-3 p-4">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate" data-testid={`text-gym-name-${gym.id}`}>{gym.name}</h3>
-                      <div className="flex items-center gap-3 mt-0.5">
+                    {gym.imageUrl ? (
+                      <img
+                        src={gym.imageUrl}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted">
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="line-clamp-2 text-sm font-semibold leading-snug"
+                        data-testid={`text-gym-name-${gym.id}`}
+                      >
+                        {gym.name}
+                      </h3>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
                         {gym.avgRating != null && (
-                          <span className="text-xs text-amber-500 font-medium" data-testid={`text-gym-rating-${gym.id}`}>
+                          <span className="text-xs font-medium text-amber-500" data-testid={`text-gym-rating-${gym.id}`}>
                             ⭐ {gym.avgRating.toFixed(1)} ({gym.ratingCount})
                           </span>
                         )}
-                        <span className="text-xs text-muted-foreground">{gym.credits} kr</span>
+                        <span className="text-xs tabular-nums text-muted-foreground">{gym.credits} kredit</span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400" data-testid={`text-gym-earnings-${gym.id}`}>
-                        {formatCurrency(gym.totalEarnings || 0)}
+                    <div className="shrink-0 text-right">
+                      <p
+                        className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400"
+                        title={formatCurrency(gym.totalEarnings || 0)}
+                        data-testid={`text-gym-earnings-${gym.id}`}
+                      >
+                        {formatCompactSom(gym.totalEarnings || 0)}
                       </p>
                       {(gym.currentDebt || 0) > 0 && (
-                        <p className="text-xs text-red-500 font-medium mt-0.5" data-testid={`text-gym-debt-${gym.id}`}>
-                          Qarz: {formatCurrency(gym.currentDebt || 0)}
+                        <p
+                          className="mt-0.5 text-xs font-medium tabular-nums text-red-500"
+                          title={formatCurrency(gym.currentDebt || 0)}
+                          data-testid={`text-gym-debt-${gym.id}`}
+                        >
+                          Qarz: {formatCompactSom(gym.currentDebt || 0)}
                         </p>
                       )}
                     </div>
@@ -928,23 +924,43 @@ export default function AdminGymsPage() {
             ))}
           </div>
         )}
-      </div>
+      </AdminOverlapSection>
+
+      {/* Jadval muharriri — mobil'da deyarli to'liq ekran, desktopda keng */}
+      <Dialog open={!!scheduleGymId} onOpenChange={(open) => !open && setScheduleGymId(null)}>
+        <DialogContent className="flex h-[92vh] w-[96vw] max-w-5xl flex-col gap-0 overflow-hidden p-0" data-testid="dialog-schedule">
+          <DialogHeader className="border-b p-4">
+            <DialogTitle className="text-left text-base">
+              Jadval — {gyms.find((g) => g.id === scheduleGymId)?.name ?? ''}
+            </DialogTitle>
+            <DialogDescription className="text-left text-xs">
+              Ish vaqti, dam kunlari, pik vaqtlar va yopiq sanalar
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-w-0 flex-1 overflow-y-auto p-4">
+            {scheduleGymId && <ScheduleTab gymId={scheduleGymId} ownerHeaders={() => ({})} />}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!selectedGym} onOpenChange={(open) => !open && setSelectedGym(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-gym-detail">
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-5 text-white">
+        <DialogContent className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden p-0 lg:max-w-3xl" data-testid="dialog-gym-detail">
+          <div className="border-b p-5">
             <DialogHeader>
-              <DialogTitle className="text-xl text-white">
+              <DialogTitle className="pr-8 text-left text-lg">
                 {selectedGym?.name}
               </DialogTitle>
-              <DialogDescription className="text-blue-100/80">
-                {selectedGym?.categories?.join(', ') || 'Sport zal'}
+              <DialogDescription className="text-left">
+                {/* Ilgari bu yerda kategoriya ID lari ("gym") chiqardi */}
+                {(selectedGym?.categories || [])
+                  .map((id) => CATEGORIES.find((c) => c.id === id)?.name ?? id)
+                  .join(', ') || 'Sport zal'}
               </DialogDescription>
             </DialogHeader>
             {(selectedGym as any)?.ownerAccessCode && (
-              <div className="mt-3 bg-white/15 backdrop-blur-sm rounded-lg p-2.5 flex items-center justify-between">
-                <span className="text-xs text-blue-100">Egasi paroli:</span>
-                <span className="font-bold font-mono text-lg tracking-wider" data-testid="text-gym-owner-code">
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-muted p-2.5">
+                <span className="text-xs text-muted-foreground">Egasi kirish kodi:</span>
+                <span className="font-mono text-lg font-bold tracking-wider" data-testid="text-gym-owner-code">
                   {(selectedGym as any).ownerAccessCode}
                 </span>
               </div>
@@ -987,49 +1003,36 @@ export default function AdminGymsPage() {
                         data-testid="input-edit-gym-credits"
                       />
                     </div>
-                    <div>
-                      <Label>Ish vaqti</Label>
-                      <Input
-                        value={gymForm.hours}
-                        onChange={(e) => setGymForm({...gymForm, hours: e.target.value})}
-                        placeholder="09:00 - 22:00"
-                        data-testid="input-edit-gym-hours"
-                      />
-                    </div>
                   </div>
-                  <div>
-                    <Label>Dam kunlari</Label>
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                      {CLOSED_DAYS.map((d) => {
-                        const isChecked = gymForm.closedDays.includes(d.value);
-                        return (
-                          <button
-                            key={d.value}
-                            type="button"
-                            onClick={() => setGymForm(prev => ({
-                              ...prev,
-                              closedDays: isChecked
-                                ? prev.closedDays.filter(v => v !== d.value)
-                                : [...prev.closedDays, d.value]
-                            }))}
-                            className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                              isChecked
-                                ? 'bg-destructive text-destructive-foreground border-destructive'
-                                : 'bg-background text-foreground border-border hover:bg-muted'
-                            }`}
-                            data-testid={`button-edit-closed-day-${d.value}`}
-                          >
-                            {d.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {gymForm.closedDays.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Tanlangan dam kunlari brondan chiqariladi
+
+                  {/*
+                    Ish vaqti va dam kunlari endi bu yerda erkin matn sifatida
+                    tahrirlanmaydi. Ular `gym_hours` jadvalida tarkibiy saqlanadi
+                    va quyidagi jadval muharririda o'zgartiriladi — shunda
+                    ma'lumotning yagona manbai bo'ladi va zal egasi paneli bilan
+                    ziddiyat chiqmaydi.
+                  */}
+                  {/*
+                    Jadval muharriri alohida oynada ochiladi: u haftalik to'rni
+                    o'z ichiga oladi va bu dialogda joy yetmaydi. Bu yerda faqat
+                    qisqa xulosa turadi.
+                  */}
+                  <button
+                    type="button"
+                    onClick={() => setScheduleGymId(selectedGym?.id ?? null)}
+                    className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
+                    data-testid="button-open-schedule"
+                  >
+                    <CalendarClock className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold">Ish vaqti va pik vaqtlar</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        Haftalik jadval, dam kunlari, yopiq sanalar
                       </p>
-                    )}
-                  </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+
                   <div>
                     <Label>Tavsif</Label>
                     <Textarea
@@ -1394,7 +1397,8 @@ export default function AdminGymsPage() {
             <div className="p-3 border rounded-md bg-muted/30">
               <p className="text-sm font-medium mb-2">Tez sozlash</p>
               <p className="text-xs text-muted-foreground mb-3">
-                Du-Sh, 09:00-21:00, har soatga 15 kishi. Dam kunlari zal sozlamalaridan aniqlanadi.
+                Slotlar zalning o'z ish vaqtidan kelib chiqib yaratiladi. Dam kunlari
+                va pik vaqtlar hisobga olinadi, kelgusi broni bor slotlar saqlanadi.
               </p>
               <Button
                 onClick={handleAutoGenerate}
@@ -1402,7 +1406,7 @@ export default function AdminGymsPage() {
                 className="w-full"
                 data-testid="button-auto-generate-slots"
               >
-                {isAutoGenerating ? 'Yaratilmoqda...' : 'Avtomatik yaratish (Du-Sh, 09:00-21:00)'}
+                {isAutoGenerating ? 'Yaratilmoqda...' : 'Vaqt slotlarini yaratish'}
               </Button>
             </div>
 

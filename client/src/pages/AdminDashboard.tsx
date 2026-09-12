@@ -9,6 +9,8 @@ import {
   Lock, ShieldCheck, TrendingUp, ChevronRight, Settings, LayoutDashboard, Eye, BarChart3
 } from "lucide-react";
 import { Link } from "wouter";
+import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
+import StatTile from "@/components/admin/StatTile";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { Gym } from "@shared/schema";
@@ -200,11 +202,12 @@ export default function AdminDashboard() {
     );
   }
 
+  // Rang endi faqat diqqat talab qiladigan qiymat uchun ishlatiladi
   const statCards = [
-    { label: "Zallar", value: gyms.length, icon: Building2, color: "from-blue-500 to-cyan-500" },
-    { label: "Foydalanuvchilar", value: usersList.length, icon: Users, color: "from-violet-500 to-purple-500" },
-    { label: "Jami kreditlar", value: totalCredits, icon: TrendingUp, color: "from-emerald-500 to-green-500" },
-    { label: "So'rovlar", value: pendingCount, icon: MessageSquare, color: "from-amber-500 to-orange-500" },
+    { label: "Zallar", value: gyms.length, icon: Building2 },
+    { label: "Foydalanuvchilar", value: usersList.length, icon: Users },
+    { label: "Jami kreditlar", value: totalCredits, icon: TrendingUp },
+    { label: "So'rovlar", value: pendingCount, icon: MessageSquare, tone: pendingCount > 0 ? "warning" as const : undefined },
   ];
 
   const navItems = [
@@ -214,18 +217,12 @@ export default function AdminDashboard() {
       icon: Building2,
       href: "/admin/gyms",
       count: gyms.length,
-      gradient: "from-blue-500/10 to-cyan-500/10",
-      iconColor: "text-blue-600",
-      iconBg: "bg-blue-100 dark:bg-blue-900/30",
     },
     {
       title: "Video To'plamlar",
       desc: "Darslik to'plamlarni boshqarish",
       icon: Video,
       href: "/admin/collections",
-      gradient: "from-violet-500/10 to-purple-500/10",
-      iconColor: "text-violet-600",
-      iconBg: "bg-violet-100 dark:bg-violet-900/30",
     },
     {
       title: "Foydalanuvchilar",
@@ -233,98 +230,54 @@ export default function AdminDashboard() {
       icon: Users,
       href: "/admin/users",
       count: usersList.length,
-      gradient: "from-emerald-500/10 to-green-500/10",
-      iconColor: "text-emerald-600",
-      iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
     },
     {
       title: "Analitika",
       desc: "Biznes ko'rsatkichlari va moliya",
       icon: BarChart3,
       href: "/admin/analytics",
-      gradient: "from-orange-500/10 to-red-500/10",
-      iconColor: "text-orange-600",
-      iconBg: "bg-orange-100 dark:bg-orange-900/30",
     },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.35) 0%, transparent 65%)",
-          }}
-        />
-        <div className="relative max-w-5xl mx-auto px-4 py-6 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src="/icon-192.png"
-                alt="FitBoom"
-                className="h-12 w-12 rounded-xl shadow-lg ring-1 ring-orange-400/30"
-                data-testid="img-logo"
-              />
-              <div>
-                <h1 className="text-xl sm:text-2xl font-display font-bold">Admin Panel</h1>
-                <p className="text-orange-200/70 text-sm">FitBoom boshqaruv tizimi</p>
-              </div>
-            </div>
-            <Link href="/home">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-orange-200/80 hover:text-white hover:bg-white/10"
-                data-testid="button-back"
-                onClick={() => localStorage.setItem("lastUserRole", "user")}
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Mijoz bo'limiga</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <AdminHeader
+        title="Admin Panel"
+        subtitle="FitBoom boshqaruv tizimi"
+        backHref="/home"
+        onBack={() => localStorage.setItem("lastUserRole", "user")}
+      />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* AdminOverlapSection `relative z-10` beradi — ilgari bu blok sarlavha
+          ostida qolib, yuqori qismi ko'rinmasdi */}
+      <AdminOverlapSection className="-mt-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {statCards.map((s) => (
-            <div key={s.label} className="rounded-xl bg-card border shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`p-1.5 rounded-lg bg-gradient-to-br ${s.color}`}>
-                  <s.icon className="h-3.5 w-3.5 text-white" />
-                </div>
-                <span className="text-xs text-muted-foreground">{s.label}</span>
-              </div>
-              <p className="text-2xl font-bold" data-testid={`stat-${s.label}`}>{s.value}</p>
-            </div>
+            <StatTile key={s.label} label={s.label} value={s.value} icon={s.icon} tone={s.tone} />
           ))}
         </div>
-      </div>
+      </AdminOverlapSection>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Boshqaruv</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Ilgari har bir karta ~140px balandlikda edi va 4 tasi ekranni
+              to'ldirib yuborardi. Endi bir qatorli, bosish sohasi katta. */}
           {navItems.map((item) => (
             <Link key={item.title} href={item.href}>
-              <Card className={`group cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 bg-gradient-to-br ${item.gradient} border`} data-testid={`card-nav-${item.title}`}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-xl ${item.iconBg}`}>
-                      <item.icon className={`h-6 w-6 ${item.iconColor}`} />
-                    </div>
-                    {item.count !== undefined && (
-                      <Badge variant="secondary" className="font-mono">{item.count}</Badge>
-                    )}
+              <Card className="group cursor-pointer transition-colors hover:bg-muted/50" data-testid={`card-nav-${item.title}`}>
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <item.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-base mb-1">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{item.desc}</p>
-                  <div className="flex items-center text-sm text-primary font-medium group-hover:gap-2 transition-all">
-                    <span>Boshqarish</span>
-                    <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-base font-semibold">{item.title}</h3>
+                    <p className="truncate text-sm text-muted-foreground">{item.desc}</p>
                   </div>
+                  {item.count !== undefined && (
+                    <Badge variant="secondary" className="shrink-0 tabular-nums">{item.count}</Badge>
+                  )}
+                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </CardContent>
               </Card>
             </Link>

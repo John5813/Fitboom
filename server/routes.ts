@@ -17,7 +17,7 @@ import { registerMobileRoutes } from "./mobileRoutes";
 import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
 import { createGymQr, isAuthenticGymQr } from "./qrSignature";
 import { registerScheduleRoutes, checkBookingAllowed, buildAvailability, loadGymSchedule } from "./scheduleRoutes";
-import { dayOfWeekFromDate, dayName, dayNumberFromName, toMinutes, toTimeString } from "@shared/schedule";
+import { dayOfWeekFromDate, dayName, dayNumberFromName, toMinutes, toTimeString, parseLegacyHours } from "@shared/schedule";
 
 let _osClientPromise: Promise<ObjectStorageClient | null> | null = null;
 function getOsClient(): Promise<ObjectStorageClient | null> {
@@ -518,6 +518,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actualQR = createGymQr(gym.id, gym.name);
 
       await storage.updateGym(gym.id, { qrCode: actualQR });
+
+      /*
+       * Zal yaratilganda tarkibiy ish vaqtini ham yozamiz.
+       *
+       * Aks holda `gyms.hours` matni saqlanardi-yu, `gym_hours` bo'sh qolardi
+       * va jadval standart qiymatga (09:00-22:00) tushib, admin kiritgan
+       * vaqt e'tiborga olinmasdi.
+       */
+      const { openTime, closeTime } = parseLegacyHours(gym.hours);
+      const closed = new Set(gym.closedDays || []);
+      await storage.setGymHours(
+        gym.id,
+        [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+          dayOfWeek,
+          openTime,
+          closeTime,
+          isClosed: closed.has(String(dayOfWeek)),
+        })),
+      );
 
       // qrCode va ownerAccessCode faqat zal yaratilgan paytda, adminga bir marta
       // qaytariladi — boshqa hech qanday endpoint ularni oshkor qilmaydi.

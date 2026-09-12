@@ -13,6 +13,8 @@ import {
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
+import StatTile from "@/components/admin/StatTile";
 import { apiRequest } from "@/lib/queryClient";
 
 interface UserData {
@@ -144,37 +146,22 @@ export default function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/admin">
-              <Button variant="ghost" size="icon" className="text-blue-200/70 hover:text-white hover:bg-white/10 h-9 w-9" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold">Foydalanuvchilar</h1>
-              <p className="text-blue-200/60 text-sm">Jami {users.length} ta</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminHeader
+        title="Foydalanuvchilar"
+        subtitle={`Jami ${users.length} ta`}
+        backHref="/admin"
+      />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-3">
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          {[
-            { icon: Users, color: "text-blue-500", label: "Jami", val: users.length },
-            { icon: TrendingUp, color: "text-emerald-500", label: "Aktiv (kredit bor)", val: activeUsers },
-            { icon: AlertTriangle, color: "text-red-500", label: "Muddati o'tgan", val: expiredUsers },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl bg-card border shadow-sm p-3.5">
-              <div className="flex items-center gap-2 mb-1">
-                <s.icon className={`h-3.5 w-3.5 ${s.color}`} />
-                <span className="text-[11px] text-muted-foreground">{s.label}</span>
-              </div>
-              <p className="text-xl font-bold">{s.val}</p>
-            </div>
-          ))}
+      <AdminOverlapSection className="-mt-3">
+        <div className="mb-5 grid grid-cols-3 gap-3">
+          <StatTile label="Jami" value={users.length} icon={Users} />
+          <StatTile label="Kredit bor" value={activeUsers} icon={TrendingUp} />
+          <StatTile
+            label="Muddati o'tgan"
+            value={expiredUsers}
+            icon={AlertTriangle}
+            tone={expiredUsers > 0 ? "warning" : "neutral"}
+          />
         </div>
 
         <div className="relative mb-5">
@@ -260,7 +247,7 @@ export default function AdminUsersPage() {
             })}
           </div>
         )}
-      </div>
+      </AdminOverlapSection>
 
       {/* User Detail Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={(open) => { if (!open) { setSelectedUser(null); setCreditAmount(""); } }}>
