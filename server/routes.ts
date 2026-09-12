@@ -829,9 +829,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? days.map((d: string) => dayNumberFromName(d)).filter((n): n is number => n !== undefined)
         : undefined;
 
-      await storage.deleteTimeSlotsForGym(gymId);
-
-      const createdSlots = [];
+      // Kerakli slotlar to'plamini hisoblaymiz
+      const desired: Array<{ dayOfWeek: string; startTime: string; endTime: string }> = [];
       for (const dayRow of gymHoursRows) {
         if (dayRow.isClosed) continue;
         if (requestedDayNums && !requestedDayNums.includes(dayRow.dayOfWeek)) continue;
@@ -848,23 +847,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // To'liq soatlarga tekislash
         for (let m = Math.ceil(fromMin / 60) * 60; m + 60 <= toMin; m += 60) {
-          const slot = await storage.createTimeSlot({
-            gymId,
+          desired.push({
             dayOfWeek: dayName(dayRow.dayOfWeek),
             startTime: toTimeString(m),
             endTime: toTimeString(m + 60),
+          });
+        }
+      }
+
+      /*
+       * Slotlarni o'chirib qayta yaratish o'rniga FARQNI qo'llaymiz.
+       *
+       * Ilgari bu yerda `deleteTimeSlotsForGym()` bor edi. Yangi model bilan bu
+       * xavfli bo'lib qoldi: bandlik `slot_occupancy` da slot ID ga bog'langan,
+       * shuning uchun slotlarni qayta yaratish kelgusi bronlarning bandligini
+       * yo'q qilib, o'sha sanalarda sig'imdan oshib ketishga yo'l ochardi.
+       */
+      const existing = await storage.getTimeSlots(gymId);
+      const keyOf = (x: { dayOfWeek: string; startTime: string }) => `${x.dayOfWeek}|${x.startTime}`;
+      const desiredKeys = new Set(desired.map(keyOf));
+      const existingByKey = new Map(existing.map((x) => [keyOf(x), x]));
+
+      let created = 0;
+      let updated = 0;
+      let removed = 0;
+
+      for (const want of desired) {
+        const current = existingByKey.get(keyOf(want));
+        if (current) {
+          if (current.capacity !== cap || current.endTime !== want.endTime) {
+            await storage.updateTimeSlot(current.id, { capacity: cap, endTime: want.endTime });
+            updated++;
+          }
+        } else {
+          await storage.createTimeSlot({
+            gymId,
+            dayOfWeek: want.dayOfWeek,
+            startTime: want.startTime,
+            endTime: want.endTime,
             capacity: cap,
             // Eski ustun — bandlik endi `slot_occupancy` da sana bo'yicha yuritiladi
             availableSpots: cap,
           });
-          createdSlots.push(slot);
+          created++;
         }
       }
 
+      // Endi kerak bo'lmagan slotlarni olib tashlaymiz (kelgusi broni bo'lmasa)
+      const allBookings = await storage.getBookings();
+      const todayStr = getTashkentDateStr();
+      const slotsWithFutureBookings = new Set(
+        allBookings
+          .filter((b) =>
+            b.timeSlotId
+            && b.gymId === gymId
+            && b.status !== 'cancelled'
+            && b.status !== 'missed'
+            && !b.isCompleted
+            && (b.date || '').split('T')[0] >= todayStr)
+          .map((b) => b.timeSlotId as string),
+      );
+
+      let keptForBookings = 0;
+      for (const slot of existing) {
+        if (desiredKeys.has(keyOf(slot))) continue;
+        if (slotsWithFutureBookings.has(slot.id)) {
+          keptForBookings++;
+          continue;
+        }
+        await storage.deleteTimeSlot(slot.id);
+        removed++;
+      }
+
+      const timeSlots = await storage.getTimeSlots(gymId);
+
       res.json({
-        message: `${createdSlots.length} ta vaqt sloti yaratildi`,
-        timeSlots: createdSlots,
-        count: createdSlots.length
+        message: keptForBookings > 0
+          ? `${timeSlots.length} ta slot. ${keptForBookings} ta eski slot kelgusi bronlari borligi uchun saqlab qolindi.`
+          : `${timeSlots.length} ta vaqt sloti tayyor`,
+        timeSlots,
+        count: timeSlots.length,
+        created,
+        updated,
+        removed,
+        keptForBookings,
       });
     } catch (error: any) {
       console.error("Error auto-generating time slots:", error);
