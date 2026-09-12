@@ -13,6 +13,19 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle({ client: pool });
 
 // Ensure all tables that may have been added after initial migration exist
+/**
+ * Ba'zi DDL amallar allaqachon bajarilgan bo'lsa xato beradi — bu normal.
+ * Lekin ilgari `.catch(() => {})` HAR QANDAY xatoni jim yutardi, shu sababli
+ * haqiqiy muammolar ham ko'rinmay qolardi. Endi kamida log'ga yoziladi.
+ */
+async function tryDdl(client: any, label: string, sqlText: string) {
+  try {
+    await client.query(sqlText);
+  } catch (err: any) {
+    console.warn(`[migrate] "${label}" o'tkazib yuborildi: ${err.message}`);
+  }
+}
+
 async function ensureTablesExist() {
   const client = await pool.connect();
   try {
@@ -41,22 +54,49 @@ async function ensureTablesExist() {
     `);
 
     // users jadvalidagi age, gender, name ustunlaridan NOT NULL olib tashlash
-    await client.query(`
+    await tryDdl(client, 'users NOT NULL olib tashlash', `
       ALTER TABLE users
         ALTER COLUMN age DROP NOT NULL,
         ALTER COLUMN gender DROP NOT NULL,
         ALTER COLUMN name DROP NOT NULL
-    `).catch(() => {});
+    `);
 
     // gyms.category — eski NOT NULL o'chiriladi (categories array'ga o'tilgan)
-    await client.query(`
+    await tryDdl(client, 'gyms.category NOT NULL olib tashlash', `
       ALTER TABLE gyms ALTER COLUMN category DROP NOT NULL
-    `).catch(() => {});
+    `);
 
     // video_collections.is_free — mavjud bo'lmasa qo'shiladi
-    await client.query(`
+    await tryDdl(client, 'video_collections.is_free qo\'shish', `
       ALTER TABLE video_collections ADD COLUMN IF NOT EXISTS is_free BOOLEAN NOT NULL DEFAULT false
-    `).catch(() => {});
+    `);
+
+    /**
+     * Indekslar.
+     *
+     * Sxemada birorta index yo'q edi, holbuki deyarli har bir so'rov
+     * user_id / gym_id bo'yicha filtrlaydi. IF NOT EXISTS tufayli bu qism
+     * har safar xavfsiz qayta ishga tushadi.
+     */
+    const indexes: Array<[string, string]> = [
+      ['idx_bookings_user_id', 'CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings (user_id)'],
+      ['idx_bookings_gym_id', 'CREATE INDEX IF NOT EXISTS idx_bookings_gym_id ON bookings (gym_id)'],
+      ['idx_bookings_status', 'CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)'],
+      ['idx_bookings_created_at', 'CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings (created_at)'],
+      ['idx_time_slots_gym_id', 'CREATE INDEX IF NOT EXISTS idx_time_slots_gym_id ON time_slots (gym_id)'],
+      ['idx_gym_visits_gym_id', 'CREATE INDEX IF NOT EXISTS idx_gym_visits_gym_id ON gym_visits (gym_id)'],
+      ['idx_gym_payments_gym_id', 'CREATE INDEX IF NOT EXISTS idx_gym_payments_gym_id ON gym_payments (gym_id)'],
+      ['idx_gym_ratings_gym_id', 'CREATE INDEX IF NOT EXISTS idx_gym_ratings_gym_id ON gym_ratings (gym_id)'],
+      ['idx_gym_ratings_user_id', 'CREATE INDEX IF NOT EXISTS idx_gym_ratings_user_id ON gym_ratings (user_id)'],
+      ['idx_user_purchases_user_id', 'CREATE INDEX IF NOT EXISTS idx_user_purchases_user_id ON user_purchases (user_id)'],
+      ['idx_credit_payments_user_id', 'CREATE INDEX IF NOT EXISTS idx_credit_payments_user_id ON credit_payments (user_id)'],
+      ['idx_credit_payments_status', 'CREATE INDEX IF NOT EXISTS idx_credit_payments_status ON credit_payments (status)'],
+      ['idx_online_classes_collection_id', 'CREATE INDEX IF NOT EXISTS idx_online_classes_collection_id ON online_classes (collection_id)'],
+      ['idx_login_codes_expires_at', 'CREATE INDEX IF NOT EXISTS idx_login_codes_expires_at ON login_codes (expires_at)'],
+    ];
+    for (const [label, ddl] of indexes) {
+      await tryDdl(client, label, ddl);
+    }
 
     console.log("ensureTablesExist: all checks passed.");
   } finally {

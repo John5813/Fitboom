@@ -47,7 +47,10 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // Ilgari `staleTime: Infinity` edi — kredit balansi, bo'sh joylar va
+      // bronlar kabi tez o'zgaradigan ma'lumot hech qachon o'zi yangilanmasdi.
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
       retry: false,
     },
     mutations: {

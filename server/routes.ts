@@ -10,10 +10,12 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import Stripe from "stripe";
-import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl } from "./telegram";
+import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl, syncAdminFlag } from "./telegram";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
+import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
+import { createGymQr, isAuthenticGymQr } from "./qrSignature";
 
 let _osClientPromise: Promise<ObjectStorageClient | null> | null = null;
 function getOsClient(): Promise<ObjectStorageClient | null> {
@@ -196,7 +198,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/receipts/:filename", async (req, res) => {
+  // Cheklar shaxsiy moliyaviy ma'lumot — faqat admin ko'ra oladi.
+  // Telegram'ga cheklar Buffer sifatida yuboriladi (URL orqali emas), shuning
+  // uchun bu endpointni yopish bot ishiga ta'sir qilmaydi.
+  app.get("/api/receipts/:filename", requireAuth, requireAdmin, async (req, res) => {
     try {
       const filename = req.params.filename;
 
@@ -219,80 +224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authentication routes
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-
-      if (userData.phone) {
-        const existingUser = await storage.getUserByPhone(userData.phone);
-        if (existingUser) {
-          req.login({
-            id: existingUser.id,
-            phone: existingUser.phone || undefined,
-            name: existingUser.name || undefined,
-            credits: existingUser.credits,
-            isAdmin: existingUser.isAdmin
-          }, (err) => {
-            if (err) {
-              return next(err);
-            }
-            return res.json({
-              user: {
-                id: existingUser.id,
-                phone: existingUser.phone,
-                name: existingUser.name,
-                credits: existingUser.credits,
-                isAdmin: existingUser.isAdmin
-              },
-              existingUser: true
-            });
-          });
-          return;
-        }
-      }
-
-      const user = await storage.createUser(userData);
-
-      req.login({ id: user.id, phone: user.phone || undefined, name: user.name || undefined, credits: user.credits, isAdmin: user.isAdmin }, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.json({
-          user: {
-            id: user.id,
-            phone: user.phone,
-            name: user.name,
-            credits: user.credits,
-            isAdmin: user.isAdmin
-          }
-        });
-      });
-    } catch (error: any) {
-      console.error('Register error details:', error);
-      res.status(400).json({
-        message: error.message || "Noto'g'ri ma'lumotlar",
-        errors: error.errors || undefined
-      });
-    }
-  });
-
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(400).json({ message: info?.message || "Telefon raqami noto'g'ri" });
-      }
-      req.login(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.json({ user });
-      });
-    })(req, res, next);
-  });
+  // Eslatma: /api/register va /api/login endpointlari olib tashlandi.
+  // Ular faqat telefon raqamini talab qilardi va raqam bazada mavjud bo'lsa
+  // hech qanday tasdiqlashsiz o'sha akkauntga kirgizardi (akkaunt o'g'irlash).
+  // Ro'yxatdan o'tish va kirish faqat Telegram kodi yoki SMS OTP orqali:
+  //   POST /api/telegram/verify-code, POST /api/sms/send + /api/sms/verify
 
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
@@ -304,7 +240,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mobil ilova JWT tokeni bilan web session ochish
-  app.post("/api/auth/token-login", async (req, res) => {
+  app.post("/api/auth/token-login", rateLimit('token-login', {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
     try {
       const { token } = req.body;
       if (!token) return res.status(400).json({ message: "Token talab qilinadi" });
@@ -318,7 +257,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(payload.userId);
       if (!user) return res.status(401).json({ message: "Foydalanuvchi topilmadi" });
 
-      req.logIn(user, (err) => {
+      req.logIn({
+        id: user.id,
+        phone: user.phone || undefined,
+        telegramId: user.telegramId || undefined,
+        name: user.name || undefined,
+        credits: user.credits,
+        isAdmin: user.isAdmin,
+        profileCompleted: user.profileCompleted,
+      }, (err) => {
         if (err) return res.status(500).json({ message: "Session yaratishda xatolik" });
         return res.json({ user });
       });
@@ -347,8 +294,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getGymAverageRatings(),
       ]);
       const ratingsMap = new Map(avgRatings.map(r => [r.gymId, r]));
+      // publicGym() qrCode va ownerAccessCode ni olib tashlaydi — ilgari bu
+      // ikkisi ham ommaviy javobda ketardi, ya'ni har kim zal egasi panelining
+      // kirish kodini va kirish QR kodini o'qiy olardi.
       const gymsWithRatings = gyms.map(gym => ({
-        ...gym,
+        ...publicGym(gym),
         avgRating: ratingsMap.get(gym.id)?.average ?? null,
         ratingCount: ratingsMap.get(gym.id)?.count ?? 0,
       }));
@@ -358,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/resolve-maps-url", requireAuth, async (req, res) => {
+  app.post("/api/resolve-maps-url", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { url } = req.body;
       if (!url) {
@@ -422,7 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/fix-gym-coordinates", requireAuth, async (req, res) => {
+  app.post("/api/fix-gym-coordinates", requireAuth, requireAdmin, async (req, res) => {
     try {
       const gyms = await storage.getGyms();
       const results: any[] = [];
@@ -486,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/gyms", requireAuth, async (req, res) => {
+  app.post("/api/gyms", requireAuth, requireAdmin, async (req, res) => {
     try {
       const gymData = insertGymSchema.parse(req.body);
 
@@ -548,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerAccessCode = generateAccessCode();
       }
 
-      // Create placeholder QR code - will be updated after gym is created with its ID
+      // Vaqtinchalik QR — zal yaratilgach, ID bilan imzolangan QR ga almashtiriladi
       const placeholderQR = JSON.stringify({
         type: 'gym',
         name: gymData.name,
@@ -561,17 +511,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerAccessCode
       });
 
-      // Now update with actual QR code containing the gym ID
-      const actualQR = JSON.stringify({
-        gymId: gym.id,
-        type: 'gym',
-        name: gym.name,
-        timestamp: new Date().toISOString()
-      });
-      
+      // HMAC bilan imzolangan haqiqiy QR kod. Imzo tufayli QR ni faqat server
+      // yasay oladi — foydalanuvchi gym ID ni bilgani bilan soxta QR tuza olmaydi.
+      const actualQR = createGymQr(gym.id, gym.name);
+
       await storage.updateGym(gym.id, { qrCode: actualQR });
-      
-      res.json({ gym: { ...gym, qrCode: actualQR } });
+
+      // qrCode va ownerAccessCode faqat zal yaratilgan paytda, adminga bir marta
+      // qaytariladi — boshqa hech qanday endpoint ularni oshkor qilmaydi.
+      res.json({ gym: { ...gym, qrCode: actualQR, ownerAccessCode } });
     } catch (error: any) {
       console.error("Error creating gym:", error);
       res.status(400).json({ error: error.message || "Invalid gym data" });
@@ -584,39 +532,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!gym) {
         return res.status(404).json({ error: "Gym not found" });
       }
-      res.json({ gym });
+      res.json({ gym: publicGym(gym) });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch gym" });
     }
   });
 
-  app.put("/api/gyms/:id", requireAuth, async (req, res) => {
+  // Zalni tahrirlash — faqat admin.
+  // pickFields() mass-assignment ni yopadi: ilgari `insertGymSchema.partial()`
+  // orqali ownerAccessCode, qrCode, totalEarnings va currentDebt ni ham
+  // o'zgartirish mumkin edi.
+  const updateGymHandler = async (req: any, res: any) => {
     try {
-      const updateData = insertGymSchema.partial().parse(req.body);
+      const parsed = insertGymSchema.partial().parse(req.body);
+      const updateData = pickFields(parsed, GYM_ADMIN_EDITABLE_FIELDS);
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "O'zgartirish uchun maydon berilmadi" });
+      }
       const gym = await storage.updateGym(req.params.id, updateData);
       if (!gym) {
         return res.status(404).json({ error: "Gym not found" });
       }
-      res.json({ gym });
+      res.json({ gym: publicGym(gym) });
     } catch (error) {
       res.status(400).json({ error: "Invalid gym data" });
     }
-  });
+  };
 
-  app.patch("/api/gyms/:id", requireAuth, async (req, res) => {
-    try {
-      const updateData = insertGymSchema.partial().parse(req.body);
-      const gym = await storage.updateGym(req.params.id, updateData);
-      if (!gym) {
-        return res.status(404).json({ error: "Gym not found" });
-      }
-      res.json({ gym });
-    } catch (error) {
-      res.status(400).json({ error: "Invalid gym data" });
-    }
-  });
+  app.put("/api/gyms/:id", requireAuth, requireAdmin, updateGymHandler);
+  app.patch("/api/gyms/:id", requireAuth, requireAdmin, updateGymHandler);
 
-  app.delete("/api/gyms/:id", requireAuth, async (req, res) => {
+  app.delete("/api/gyms/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       await storage.deleteTimeSlotsForGym(req.params.id);
       const success = await storage.deleteGym(req.params.id);
@@ -706,6 +652,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Time Slots routes
+  /**
+   * "Admin YOKI shu zalning egasi" tekshiruvi.
+   *
+   * Vaqt slotlarini ham admin paneli, ham zal egasi paneli boshqaradi.
+   * Ilgari bu endpointlar faqat `requireAuth` ostida edi — ya'ni istalgan
+   * foydalanuvchi istalgan zalga slot qo'sha, o'zgartira va o'chira olardi.
+   *
+   * @param gymIdFrom so'rovdan zal ID sini ajratib beruvchi funksiya
+   */
+  const requireGymManager = (gymIdFrom: (req: any) => Promise<string | undefined> | string | undefined) =>
+    async (req: any, res: any, next: any) => {
+      if (req.isAuthenticated?.() && (req.user?.isAdmin || req.session?.adminVerified)) {
+        return next();
+      }
+
+      const accessCode = (req.body?.accessCode || req.query?.accessCode || req.headers['x-gym-access-code']) as string | undefined;
+      if (!accessCode) {
+        return res.status(403).json({ error: "Bu amal uchun admin huquqi yoki zal kirish kodi kerak" });
+      }
+
+      const gymId = await gymIdFrom(req);
+      if (!gymId) {
+        return res.status(400).json({ error: "Zal aniqlanmadi" });
+      }
+
+      const gym = await storage.getGymByAccessCode(String(accessCode).toUpperCase());
+      if (!gym || gym.id !== gymId) {
+        return res.status(403).json({ error: "Sizda bu zalni boshqarish huquqi yo'q" });
+      }
+
+      next();
+    };
+
+  const gymIdFromBody = (req: any) => req.body?.gymId as string | undefined;
+  const gymIdFromSlotParam = async (req: any) => {
+    const slot = await storage.getTimeSlot(req.params.id);
+    return slot?.gymId;
+  };
+
   app.get("/api/time-slots", async (req, res) => {
     try {
       const gymId = req.query.gymId as string | undefined;
@@ -728,7 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/time-slots", requireAuth, async (req, res) => {
+  app.post("/api/time-slots", requireAuth, requireGymManager(gymIdFromBody), async (req, res) => {
     try {
       const timeSlotData = insertTimeSlotSchema.parse(req.body);
 
@@ -759,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/time-slots/:id", requireAuth, async (req, res) => {
+  app.put("/api/time-slots/:id", requireAuth, requireGymManager(gymIdFromSlotParam), async (req, res) => {
     try {
       const updateData = insertTimeSlotSchema.partial().parse(req.body);
 
@@ -792,7 +777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/time-slots/:id", requireAuth, async (req, res) => {
+  app.delete("/api/time-slots/:id", requireAuth, requireGymManager(gymIdFromSlotParam), async (req, res) => {
     try {
       const success = await storage.deleteTimeSlot(req.params.id);
       if (!success) {
@@ -804,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/time-slots/auto-generate", requireAuth, async (req, res) => {
+  app.post("/api/time-slots/auto-generate", requireAuth, requireGymManager(gymIdFromBody), async (req, res) => {
     try {
       const { gymId, startHour, endHour, capacity, days } = req.body;
 
@@ -866,57 +851,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const allowedCreditPackages = [60, 130, 240];
 
   // Purchase credits (simplified - with validation)
-  app.post('/api/purchase-credits', requireAuth, async (req, res) => {
-    try {
-      const { credits } = req.body;
-
-      // Faqat ruxsat etilgan paketlarni qabul qilish
-      if (!credits || !allowedCreditPackages.includes(credits)) {
-        return res.status(400).json({ message: "Noto'g'ri kredit paketi. Faqat 60, 130 yoki 240 kredit sotib olish mumkin" });
-      }
-
-      const user = await storage.getUser(req.user!.id);
-      if (!user) {
-        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-      }
-
-      const newCredits = user.credits + credits;
-      
-      // Faqat agar mavjud aktiv muddat yo'q bo'lsa, yangi 30 kunlik muddat belgilash
-      // Agar muddat hali o'tmagan bo'lsa, yangi kreditlar eski muddatga qo'shiladi
-      let expiryDate: Date;
-      const now = new Date();
-      
-      if (user.creditExpiryDate && new Date(user.creditExpiryDate) > now) {
-        // Mavjud aktiv muddat bor - saqlab qolish
-        expiryDate = new Date(user.creditExpiryDate);
-        console.log(`📌 Mavjud muddat saqlanmoqda: ${expiryDate.toISOString()}`);
-      } else {
-        // Yangi 30 kunlik muddat belgilash
-        expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        console.log(`🆕 Yangi 30 kunlik muddat: ${expiryDate.toISOString()}`);
-      }
-      
-      await storage.updateUserCreditsWithExpiry(req.user!.id, newCredits, expiryDate);
-
-      console.log(`✅ Kredit qo'shildi: ${credits} kredit foydalanuvchi ${req.user!.id} ga. Yangi balans: ${newCredits}. Muddat: ${expiryDate.toISOString()}`);
-
-      res.json({
-        success: true,
-        message: "Kredit muvaffaqiyatli qo'shildi. 30 kun ichida ishlatishingiz kerak.",
-        credits: newCredits,
-        expiryDate: expiryDate.toISOString()
-      });
-    } catch (error: any) {
-      console.error('Kredit qo\'shish xatosi:', error);
-      res.status(500).json({ message: error.message });
-    }
-  });
+  // Eslatma: POST /api/purchase-credits endpointi olib tashlandi.
+  //
+  // U hech qanday to'lov tasdig'isiz foydalanuvchi hisobiga kredit qo'shardi —
+  // ya'ni istalgan foydalanuvchi `{"credits": 240}` yuborib, bepul kredit olishi
+  // mumkin edi. Kredit endi faqat ikki yo'l bilan qo'shiladi:
+  //   1. POST /api/credit-payments/submit -> chek admin tomonidan Telegram'da
+  //      tasdiqlanadi (telegram.ts, handleCallbackQuery)
+  //   2. POST /api/admin/users/:id/adjust-credits -> admin qo'lda qo'shadi
 
   const receiptUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
+    // Chek sifatida faqat rasm qabul qilinadi — ilgari filtr yo'q edi va
+    // istalgan turdagi fayl yuklash mumkin edi.
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Chek sifatida faqat rasm yuklash mumkin'));
+      }
+    },
   });
 
   app.post('/api/credit-payments/submit', requireAuth, receiptUpload.single('receipt'), async (req, res) => {
@@ -1097,18 +1052,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      if (booking.timeSlotId) {
-        const timeSlot = await storage.getTimeSlot(booking.timeSlotId);
-        if (timeSlot) {
-          await storage.updateTimeSlot(booking.timeSlotId, {
-            availableSpots: Math.min(timeSlot.availableSpots + 1, timeSlot.capacity)
-          });
-        }
-      }
-
+      // Bronni avval o'chiramiz — shunda parallel ikkinchi so'rov kreditni
+      // ikki marta qaytarib bera olmaydi (deleteBooking faqat bir marta true qaytaradi).
       const success = await storage.deleteBooking(bookingId);
       if (!success) {
         return res.status(500).json({ message: "Bron o'chirilmadi" });
+      }
+
+      if (booking.timeSlotId) {
+        await storage.releaseTimeSlotSpot(booking.timeSlotId);
       }
 
       if (noRefund) {
@@ -1119,8 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const newCredits = user.credits + gym.credits;
-      await storage.updateUserCredits(user.id, newCredits);
+      await storage.refundUserCredits(user.id, gym.credits);
 
       res.json({
         message: "Bron bekor qilindi va kredit qaytarildi",
@@ -1174,8 +1125,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Bu kun bu zal uchun dam olish kuni. Bron qilib bo'lmaydi." });
       }
 
-      const newCredits = user.credits - gym.credits;
-      await storage.updateUserCredits(user.id, newCredits);
+      // Kreditni atomik yechish: `WHERE credits >= gym.credits` sharti tufayli
+      // parallel so'rovlar bir xil kreditni ikki marta ishlata olmaydi.
+      const chargedUser = await storage.spendUserCredits(user.id, gym.credits);
+      if (!chargedUser) {
+        return res.status(400).json({ message: "Kredit yetarli emas yoki muddati o'tgan" });
+      }
 
       // Yangi bron yaratish
       const qrCodeData = JSON.stringify({
@@ -1198,23 +1153,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (timeSlotId) {
         const timeSlot = await storage.getTimeSlot(timeSlotId);
         if (!timeSlot) {
-          await storage.updateUserCredits(user.id, user.credits);
+          await storage.refundUserCredits(user.id, gym.credits);
           return res.status(400).json({ message: "Vaqt sloti topilmadi" });
         }
-        if (timeSlot.availableSpots <= 0) {
-          await storage.updateUserCredits(user.id, user.credits);
+        if (timeSlot.gymId !== gymId) {
+          await storage.refundUserCredits(user.id, gym.credits);
+          return res.status(400).json({ message: "Vaqt sloti bu zalga tegishli emas" });
+        }
+
+        // Joyni atomik band qilish — bo'sh joy bo'lmasa undefined qaytadi
+        const reserved = await storage.reserveTimeSlotSpot(timeSlotId);
+        if (!reserved) {
+          await storage.refundUserCredits(user.id, gym.credits);
           return res.status(400).json({ message: "Bu vaqtda joy qolmagan" });
         }
+
         bookingToCreate.timeSlotId = timeSlotId;
         bookingToCreate.scheduledStartTime = scheduledStartTime;
         bookingToCreate.scheduledEndTime = scheduledEndTime;
-
-        await storage.updateTimeSlot(timeSlotId, {
-          availableSpots: timeSlot.availableSpots - 1
-        });
       }
 
-      const booking = await storage.createBooking(bookingToCreate);
+      let booking;
+      try {
+        booking = await storage.createBooking(bookingToCreate);
+      } catch (createErr) {
+        // Bron yaratilmasa, yechilgan kredit va band qilingan joyni qaytaramiz
+        await storage.refundUserCredits(user.id, gym.credits);
+        if (timeSlotId) await storage.releaseTimeSlotSpot(timeSlotId);
+        throw createErr;
+      }
 
       res.json({
         message: "Zal muvaffaqiyatli bron qilindi",
@@ -1271,7 +1238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/collections', requireAuth, async (req, res) => {
+  app.post('/api/collections', requireAuth, requireAdmin, async (req, res) => {
     try {
       const collectionData = insertVideoCollectionSchema.parse(req.body);
       const collection = await storage.createVideoCollection(collectionData);
@@ -1281,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/collections/:id', requireAuth, async (req, res) => {
+  app.put('/api/collections/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       const updateData = insertVideoCollectionSchema.partial().parse(req.body);
       const collection = await storage.updateVideoCollection(req.params.id, updateData);
@@ -1294,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/collections/:id', requireAuth, async (req, res) => {
+  app.delete('/api/collections/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       const success = await storage.deleteVideoCollection(req.params.id);
       if (!success) {
@@ -1306,8 +1273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin panel endpointlari - kelajakda alohida kirish tizimi qo'shiladi
-  app.get('/api/admin/classes', async (req, res) => {
+  // Admin panel endpointlari — barchasi requireAuth + requireAdmin ostida.
+  // Ilgari bu to'rt endpoint umuman himoyalanmagan edi: istalgan odam
+  // video darslarni yarata, o'zgartira va o'chira olardi.
+  app.get('/api/admin/classes', requireAuth, requireAdmin, async (req, res) => {
     try {
       const collectionId = req.query.collectionId as string | undefined;
       const classes = await storage.getClasses(collectionId);
@@ -1317,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/classes', async (req, res) => {
+  app.post('/api/admin/classes', requireAuth, requireAdmin, async (req, res) => {
     try {
       const classData = insertOnlineClassSchema.parse(req.body);
       const newClass = await storage.createClass(classData);
@@ -1327,7 +1296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/classes/:id', async (req, res) => {
+  app.put('/api/admin/classes/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       const updateData = insertOnlineClassSchema.partial().parse(req.body);
       const updatedClass = await storage.updateClass(req.params.id, updateData);
@@ -1340,7 +1309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/classes/:id', async (req, res) => {
+  app.delete('/api/admin/classes/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       await storage.deleteClass(req.params.id);
       res.json({ success: true });
@@ -1510,7 +1479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Zalni topish - avval to'g'ridan-to'g'ri ID orqali
       const allGyms = await storage.getGyms();
       let gym = allGyms.find(g => g.id === qrData.gymId);
-      
+
       // Agar topilmasa, saqlangan QR kod orqali qidirish
       if (!gym) {
         gym = allGyms.find(g => {
@@ -1523,10 +1492,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
-      
+
       if (!gym) {
         return res.status(404).json({
           message: "Zal topilmadi. QR kod eskirgan bo'lishi mumkin.",
+          success: false
+        });
+      }
+
+      // QR haqiqiyligini tekshirish.
+      //
+      // Ilgari serverga faqat `{"gymId": "..."}` yuborish kifoya edi va gym ID lar
+      // ommaviy bo'lgani uchun foydalanuvchi zalga bormasdan bronni yopib,
+      // zalga pul hisoblanishiga sabab bo'lishi mumkin edi.
+      // Endi QR yo HMAC imzosiga ega bo'lishi, yo bazadagi saqlangan matn bilan
+      // aynan mos kelishi shart (saqlangan matn endi hech qayerda oshkor qilinmaydi).
+      if (!isAuthenticGymQr(qrCode, qrData, gym.qrCode)) {
+        console.warn(`[QR] Soxta QR urinishi: user=${req.user!.id}, gym=${gym.id}`);
+        return res.status(400).json({
+          message: "QR kod haqiqiy emas. Zaldagi rasmiy QR kodni skanerlang.",
           success: false
         });
       }
@@ -1666,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "QR kod tasdiqlandi! Xush kelibsiz!",
         booking,
-        gym
+        gym: publicGym(gym)
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1674,7 +1658,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SMS kirish endpointlari
-  app.post('/api/sms/send', async (req, res) => {
+  app.post('/api/sms/send', rateLimit('sms-send', {
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: "Juda ko'p SMS so'raldi. Bir soatdan keyin urinib ko'ring.",
+  }), async (req, res) => {
     try {
       const { phone } = req.body;
       if (!phone) return res.status(400).json({ message: "Telefon raqami talab qilinadi" });
@@ -1693,7 +1681,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/sms/verify', async (req, res) => {
+  app.post('/api/sms/verify', rateLimit('sms-verify', {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
     try {
       const { phone, code } = req.body;
       if (!phone || !code) return res.status(400).json({ message: "Telefon va kod talab qilinadi" });
@@ -1760,10 +1751,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUser(existingTgUser.id, { telegramId: null as any, chatId: null as any });
       }
 
-      await storage.updateUser(currentUser.id, {
+      const linkedUser = await storage.updateUser(currentUser.id, {
         telegramId: loginData.telegramId,
         chatId: loginData.chatId,
       });
+
+      // Telegram akkaunti ulangach, ADMIN_IDS bo'yicha huquqni moslash
+      if (linkedUser) {
+        await syncAdminFlag(storage, linkedUser);
+      }
 
       await storage.deleteLoginCode(upperCode);
       sess.linkFailedAttempts = 0;
@@ -1827,31 +1823,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin qilish endpoint (faqat ma'lum Telegram ID uchun)
-  app.post("/api/make-admin/:telegramId", async (req, res) => {
-    try {
-      const { telegramId } = req.params;
-      const ADMIN_TELEGRAM_ID = "5304482470";
-
-      if (telegramId !== ADMIN_TELEGRAM_ID) {
-        return res.status(403).json({ message: "Ruxsat yo'q" });
-      }
-
-      const user = await storage.getUserByTelegramId(telegramId);
-      if (!user) {
-        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-      }
-
-      const updatedUser = await storage.updateUser(user.id, { isAdmin: true } as any);
-
-      res.json({
-        message: "Foydalanuvchi admin qilindi",
-        user: updatedUser
-      });
-    } catch (error: any) {
-      console.error("Admin qilishda xatolik:", error);
-      res.status(500).json({ message: "Server xatosi" });
-    }
-  });
+  // Eslatma: POST /api/make-admin/:telegramId olib tashlandi — u autentifikatsiyasiz
+  // ishlardi va qattiq yozilgan Telegram ID ga tayanardi. Admin huquqi endi
+  // ADMIN_IDS env o'zgaruvchisi va bazadagi is_admin ustuni orqali beriladi.
 
   // Admin - barcha foydalanuvchilarni ko'rish
   app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
@@ -1910,40 +1884,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin login verification with password (bcrypt hashed)
-  app.post('/api/admin/verify-password', async (req, res) => {
+  /**
+   * Admin paroli bilan kirish.
+   *
+   * Ilgari bu yerda qattiq yozilgan standart parol bor edi va rate limit yo'q edi.
+   * Endi birinchi sozlash ADMIN_PASSWORD env o'zgaruvchisidan olinadi va
+   * urinishlar soni cheklangan.
+   */
+  app.post('/api/admin/verify-password', requireAuth, rateLimit('admin-password', {
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: "Juda ko'p urinish. 15 daqiqadan keyin qayta urinib ko'ring.",
+  }), async (req, res) => {
     try {
       const { password } = req.body;
-      
-      if (!password) {
+
+      if (!password || typeof password !== 'string') {
         return res.status(400).json({ message: "Parol kiritilmagan" });
       }
-      
-      const adminPasswordSetting = await storage.getAdminSetting('admin_password_hash');
-      
+
+      let adminPasswordSetting = await storage.getAdminSetting('admin_password_hash');
+
       if (!adminPasswordSetting) {
-        // First time setup - hash the default password and store it
-        const defaultPassword = 'Javlon58_13.';
-        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-        await storage.setAdminSetting('admin_password_hash', hashedPassword);
-        
-        if (password === defaultPassword) {
+        // Birinchi sozlash — parol faqat env orqali beriladi
+        const bootstrapPassword = process.env.ADMIN_PASSWORD;
+        if (!bootstrapPassword) {
+          console.error('[Admin] ADMIN_PASSWORD sozlanmagan — admin paneliga kirib bo\'lmaydi');
+          return res.status(503).json({
+            message: "Admin paroli hali sozlanmagan. ADMIN_PASSWORD environment o'zgaruvchisini sozlang.",
+          });
+        }
+        if (bootstrapPassword.length < 10) {
+          console.error('[Admin] ADMIN_PASSWORD juda qisqa (kamida 10 belgi kerak)');
+          return res.status(503).json({ message: "Admin paroli xavfsizlik talablariga javob bermaydi." });
+        }
+        const hashedPassword = await bcrypt.hash(bootstrapPassword, 12);
+        adminPasswordSetting = await storage.setAdminSetting('admin_password_hash', hashedPassword);
+      }
+
+      const isValid = await bcrypt.compare(password, adminPasswordSetting.settingValue);
+
+      if (!isValid) {
+        console.warn(`[Admin] Noto'g'ri parol urinishi: user=${req.user!.id}`);
+        return res.status(401).json({ success: false, message: "Parol noto'g'ri" });
+      }
+
+      // Session fixation ga qarshi: huquq ko'tarilishidan oldin session ID ni yangilash
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Admin session regenerate error:', err);
+          return res.status(500).json({ message: "Server xatosi" });
+        }
+        // regenerate() passport ma'lumotini ham tozalaydi — qayta tiklaymiz
+        req.logIn(req.user!, (loginErr) => {
+          if (loginErr) {
+            console.error('Admin re-login error:', loginErr);
+            return res.status(500).json({ message: "Server xatosi" });
+          }
           (req.session as any).adminVerified = true;
           res.json({ success: true, message: "Kirish muvaffaqiyatli" });
-        } else {
-          res.status(401).json({ success: false, message: "Parol noto'g'ri" });
-        }
-        return;
-      }
-      
-      const isValid = await bcrypt.compare(password, adminPasswordSetting.settingValue);
-      
-      if (isValid) {
-        (req.session as any).adminVerified = true;
-        res.json({ success: true, message: "Kirish muvaffaqiyatli" });
-      } else {
-        res.status(401).json({ success: false, message: "Parol noto'g'ri" });
-      }
+        });
+      });
     } catch (error: any) {
       console.error("Admin login error:", error);
       res.status(500).json({ message: "Server xatosi" });
@@ -1951,7 +1952,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Gym owner access code verification
-  app.post('/api/gym-owner/verify-code', async (req, res) => {
+  app.post('/api/gym-owner/verify-code', rateLimit('gym-owner-code', {
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: "Juda ko'p urinish. 15 daqiqadan keyin qayta urinib ko'ring.",
+  }), async (req, res) => {
     try {
       const { accessCode } = req.body;
       
@@ -1972,8 +1977,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * Zal egasi kirish kodini tekshiradigan middleware.
+   *
+   * Ilgari GET /api/gym-owner/:gymId umuman himoyalanmagan edi — zal ID sini
+   * bilgan har kim o'sha zalning tashriflari, daromadi, qarzi va QR kodini
+   * ko'ra olardi (IDOR).
+   */
+  const requireGymOwner = async (req: any, res: any, next: any) => {
+    const accessCode = (req.body?.accessCode || req.query?.accessCode || req.headers['x-gym-access-code']) as string | undefined;
+
+    // Admin ham kira oladi
+    if (req.isAuthenticated?.() && (req.user?.isAdmin || req.session?.adminVerified)) {
+      return next();
+    }
+
+    if (!accessCode) {
+      return res.status(401).json({ message: "Kirish kodi talab qilinadi" });
+    }
+
+    const gym = await storage.getGymByAccessCode(String(accessCode).toUpperCase());
+    if (!gym || gym.id !== req.params.gymId) {
+      return res.status(403).json({ message: "Sizda bu zal ma'lumotlarini ko'rish huquqi yo'q" });
+    }
+
+    req.ownerGym = gym;
+    next();
+  };
+
   // Get gym owner data (gym details, visitors, earnings)
-  app.get('/api/gym-owner/:gymId', async (req, res) => {
+  app.get('/api/gym-owner/:gymId', requireGymOwner, async (req, res) => {
     try {
       const gym = await storage.getGym(req.params.gymId);
       if (!gym) {
@@ -2006,26 +2039,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update gym owner's gym (only name and imageUrl allowed)
-  app.put('/api/gym-owner/:gymId', async (req, res) => {
+  app.put('/api/gym-owner/:gymId', requireGymOwner, async (req, res) => {
     try {
-      const { name, imageUrl, images, accessCode } = req.body;
-      
-      if (!accessCode) {
-        return res.status(401).json({ message: "Kirish kodi talab qilinadi" });
+      const updateData = pickFields(req.body, GYM_OWNER_EDITABLE_FIELDS);
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "O'zgartirish uchun maydon berilmadi" });
       }
-      
-      const gym = await storage.getGymByAccessCode(accessCode.toUpperCase());
-      if (!gym || gym.id !== req.params.gymId) {
-        return res.status(403).json({ message: "Sizda bu zalni tahrirlash huquqi yo'q" });
-      }
-      
-      const updateData: { name?: string; imageUrl?: string; images?: string[] } = {};
-      if (name) updateData.name = name;
-      if (imageUrl) updateData.imageUrl = imageUrl;
-      if (images) updateData.images = images;
-      
+
       const updatedGym = await storage.updateGym(req.params.gymId, updateData);
-      res.json({ gym: updatedGym });
+      res.json({ gym: publicGym(updatedGym || {}) });
     } catch (error: any) {
       console.error("Gym owner update error:", error);
       res.status(500).json({ message: "Server xatosi" });
@@ -2033,11 +2055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Record gym payment from admin (reduces gym debt)
-  app.post('/api/gym-payments', async (req, res) => {
-    // Check if admin is verified via password
-    if (!(req.session as any).adminVerified && !(req.user as any)?.isAdmin) {
-      return res.status(403).json({ message: "Admin huquqi talab qilinadi" });
-    }
+  app.post('/api/gym-payments', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { gymId, amount, notes } = req.body;
       
@@ -2083,7 +2101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Change admin password (requires authentication only)
-  app.post('/api/admin/change-password', requireAuth, async (req, res) => {
+  app.post('/api/admin/change-password', requireAuth, requireAdmin, rateLimit('admin-change-password', {
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+  }), async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
       
@@ -2091,8 +2112,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Joriy va yangi parol kiritilishi kerak" });
       }
       
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak" });
+      if (typeof newPassword !== 'string' || newPassword.length < 10) {
+        return res.status(400).json({ message: "Yangi parol kamida 10 ta belgidan iborat bo'lishi kerak" });
       }
       
       const adminPasswordSetting = await storage.getAdminSetting('admin_password_hash');
@@ -2107,7 +2128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Joriy parol noto'g'ri" });
       }
       
-      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
       await storage.setAdminSetting('admin_password_hash', hashedNewPassword);
       
       res.json({ success: true, message: "Parol muvaffaqiyatli o'zgartirildi" });
@@ -2118,7 +2139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Partnership messages routes (requires authentication only)
-  app.get('/api/admin/partnership-messages', requireAuth, async (req, res) => {
+  app.get('/api/admin/partnership-messages', requireAuth, requireAdmin, async (req, res) => {
     try {
       const messages = await storage.getPartnershipMessages();
       res.json({ messages });
@@ -2127,7 +2148,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/partnership-request', async (req, res) => {
+  app.post('/api/partnership-request', rateLimit('partnership', {
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  }), async (req, res) => {
     try {
       const { hallName, phone } = req.body;
       
@@ -2144,7 +2168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/partnership-messages/:id', requireAuth, async (req, res) => {
+  app.put('/api/admin/partnership-messages/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { status } = req.body;
       const message = await storage.updatePartnershipMessageStatus(req.params.id, status);
@@ -2159,7 +2183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/partnership-messages/:id', requireAuth, async (req, res) => {
+  app.delete('/api/admin/partnership-messages/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
       const success = await storage.deletePartnershipMessage(req.params.id);
       

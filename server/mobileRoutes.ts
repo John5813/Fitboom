@@ -15,8 +15,10 @@ import multer from 'multer';
 import path from 'path';
 import { storage } from './storage';
 import { sendSmsCode, verifySmsCode, normalizePhone } from './sms';
-import { sendPaymentReceiptToAdmin, getAppUrl } from './telegram';
+import { sendPaymentReceiptToAdmin, getAppUrl, syncAdminFlag } from './telegram';
 import { Client as ObjectStorageClient } from '@replit/object-storage';
+import { publicGym, rateLimit } from './security';
+import { isAuthenticGymQr } from './qrSignature';
 import {
   requireMobileAuth,
   generateTokenPair,
@@ -53,9 +55,13 @@ function fixImageUrl(url: string | null | undefined): string {
   return `${getAppUrl()}${url}`;
 }
 
+/**
+ * Rasm URL larini to'g'rilaydi va maxfiy maydonlarni (qrCode, ownerAccessCode)
+ * olib tashlaydi — ilgari ular mobil javoblarda ham ochiq ketardi.
+ */
 function fixGymImages(gym: any): any {
   return {
-    ...gym,
+    ...publicGym(gym),
     imageUrl: fixImageUrl(gym.imageUrl),
     images: (gym.images || []).map((img: string) => fixImageUrl(img)),
   };
@@ -192,7 +198,10 @@ export function registerMobileRoutes(app: Express) {
    * SMS OTP yuboradi
    * Body: { phone: string }
    */
-  router.post('/auth/sms/send', async (req, res) => {
+  router.post('/auth/sms/send', rateLimit('mobile-sms-send', {
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+  }), async (req, res) => {
     try {
       const { phone } = req.body;
       if (!phone) return mobileError(res, 'Telefon raqami talab qilinadi');
@@ -213,7 +222,10 @@ export function registerMobileRoutes(app: Express) {
    * SMS OTP ni tekshiradi va JWT qaytaradi
    * Body: { phone: string, code: string }
    */
-  router.post('/auth/sms/verify', async (req, res) => {
+  router.post('/auth/sms/verify', rateLimit('mobile-sms-verify', {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
     try {
       const { phone, code } = req.body;
       if (!phone || !code) return mobileError(res, 'Telefon va kod talab qilinadi');
@@ -225,7 +237,7 @@ export function registerMobileRoutes(app: Express) {
       let user = await storage.getUserByPhone(normalized);
 
       if (!user) {
-        user = await storage.createUser({ phone: normalized, name: null });
+        user = await storage.createUser({ phone: normalized });
       }
 
       const updatedUser = await storage.checkAndResetExpiredCredits(user.id);
@@ -248,7 +260,10 @@ export function registerMobileRoutes(app: Express) {
    * Telegram bot orqali olingan kodni tekshiradi va JWT qaytaradi
    * Body: { code: string }
    */
-  router.post('/auth/telegram/verify', async (req, res) => {
+  router.post('/auth/telegram/verify', rateLimit('mobile-tg-verify', {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
     try {
       const { code } = req.body;
       if (!code) return mobileError(res, 'Kod talab qilinadi');
@@ -268,8 +283,9 @@ export function registerMobileRoutes(app: Express) {
 
       await storage.incrementLoginCodeAttempts(upperCode);
 
-      const user = await storage.getUserByTelegramId(loginData.telegramId);
+      let user = await storage.getUserByTelegramId(loginData.telegramId);
       if (!user) return mobileError(res, 'Foydalanuvchi topilmadi', 404);
+      user = await syncAdminFlag(storage, user);
 
       await storage.deleteLoginCode(upperCode);
 
@@ -324,7 +340,10 @@ export function registerMobileRoutes(app: Express) {
    * Access token yangilash
    * Body: { refreshToken: string }
    */
-  router.post('/auth/refresh', async (req, res) => {
+  router.post('/auth/refresh', rateLimit('mobile-refresh', {
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+  }), async (req, res) => {
     try {
       const { refreshToken } = req.body;
       if (!refreshToken) return mobileError(res, 'Refresh token talab qilinadi');
@@ -795,6 +814,10 @@ export function registerMobileRoutes(app: Express) {
         return mobileError(res, `Kredit yetarli emas. Kerak: ${gym.credits}, mavjud: ${currentUser.credits}`);
       }
 
+      // Yuqoridagi tekshiruvlar faqat tez javob berish uchun; haqiqiy kafolatni
+      // quyidagi atomik SQL amallari beradi (double-spend va overbooking himoyasi).
+
+
       const existingBookings = await storage.getBookings(mobileUser.id);
       const dateNorm = (d: any) => (typeof d === 'string' ? d.split('T')[0] : new Date(d).toISOString().split('T')[0]);
       const hasConflict = existingBookings.some(b =>
@@ -817,22 +840,35 @@ export function registerMobileRoutes(app: Express) {
         timestamp: Date.now(),
       });
 
-      const booking = await storage.createBooking({
-        userId: mobileUser.id,
-        gymId,
-        date,
-        time: timeSlot.startTime,
-        qrCode: qrData,
-        timeSlotId,
-        scheduledStartTime: timeSlot.startTime,
-        scheduledEndTime: timeSlot.endTime,
-        status: 'pending',
-      });
+      const chargedUser = await storage.spendUserCredits(mobileUser.id, gym.credits);
+      if (!chargedUser) {
+        return mobileError(res, `Kredit yetarli emas. Kerak: ${gym.credits}`);
+      }
 
-      await storage.updateUserCredits(mobileUser.id, currentUser.credits - gym.credits);
-      await storage.updateTimeSlot(timeSlotId, {
-        availableSpots: Math.max(0, timeSlot.availableSpots - 1),
-      });
+      const reserved = await storage.reserveTimeSlotSpot(timeSlotId);
+      if (!reserved) {
+        await storage.refundUserCredits(mobileUser.id, gym.credits);
+        return mobileError(res, "Bu vaqt slotida joy qolmagan");
+      }
+
+      let booking;
+      try {
+        booking = await storage.createBooking({
+          userId: mobileUser.id,
+          gymId,
+          date,
+          time: timeSlot.startTime,
+          qrCode: qrData,
+          timeSlotId,
+          scheduledStartTime: timeSlot.startTime,
+          scheduledEndTime: timeSlot.endTime,
+          status: 'pending',
+        });
+      } catch (createErr) {
+        await storage.refundUserCredits(mobileUser.id, gym.credits);
+        await storage.releaseTimeSlotSpot(timeSlotId);
+        throw createErr;
+      }
 
       mobileSuccess(res, {
         booking: {
@@ -847,7 +883,7 @@ export function registerMobileRoutes(app: Express) {
           },
         },
         creditsUsed: gym.credits,
-        remainingCredits: currentUser.credits - gym.credits,
+        remainingCredits: chargedUser.credits,
       }, 201);
     } catch (err: any) {
       console.error('[Mobile] Book gym error:', err);
@@ -896,6 +932,10 @@ export function registerMobileRoutes(app: Express) {
       const user = await storage.getUser(mobileUser.id);
       if (!user || !gym) return mobileError(res, 'Ma\'lumot topilmadi', 404);
 
+      // Statusni avval o'zgartiramiz — parallel ikkinchi so'rov yuqoridagi
+      // 'cancelled' tekshiruviga tushib, kreditni ikki marta qaytara olmaydi.
+      await storage.updateBookingStatus(booking.id, 'cancelled');
+
       let refunded = false;
       if (booking.scheduledStartTime && booking.date) {
         const [slotH, slotM] = booking.scheduledStartTime.split(':').map(Number);
@@ -905,22 +945,15 @@ export function registerMobileRoutes(app: Express) {
           const slotUTC = Date.UTC(year, month - 1, day, slotH - 5, slotM);
           const diffHours = (slotUTC - Date.now()) / 3600000;
           if (diffHours >= 2) {
-            await storage.updateUserCredits(mobileUser.id, user.credits + gym.credits);
+            await storage.refundUserCredits(mobileUser.id, gym.credits);
             refunded = true;
           }
         }
       }
 
       if (booking.timeSlotId) {
-        const timeSlot = await storage.getTimeSlot(booking.timeSlotId);
-        if (timeSlot) {
-          await storage.updateTimeSlot(booking.timeSlotId, {
-            availableSpots: Math.min(timeSlot.availableSpots + 1, timeSlot.capacity),
-          });
-        }
+        await storage.releaseTimeSlotSpot(booking.timeSlotId);
       }
-
-      await storage.updateBookingStatus(booking.id, 'cancelled');
 
       mobileSuccess(res, {
         message: refunded
@@ -968,6 +1001,14 @@ export function registerMobileRoutes(app: Express) {
 
       const gym = await storage.getGym(gymId);
       if (!gym) return mobileError(res, 'Sport zal topilmadi', 404);
+
+      // QR haqiqiyligini tekshirish — web'dagi /api/verify-qr bilan bir xil qoida.
+      // Imzosiz, o'zi yasalgan QR bilan bronni yopib bo'lmaydi.
+      const rawQr = typeof qrData === 'string' ? qrData : JSON.stringify(qrData);
+      if (!isAuthenticGymQr(rawQr, parsedQR, gym.qrCode)) {
+        console.warn(`[Mobile][QR] Soxta QR urinishi: user=${mobileUser.id}, gym=${gym.id}`);
+        return mobileError(res, "QR kod haqiqiy emas. Zaldagi rasmiy QR kodni skanerlang.");
+      }
 
       const bookings = await storage.getBookings(mobileUser.id);
       const todayStr = getTashkentDateStr();
@@ -1343,7 +1384,10 @@ export function registerMobileRoutes(app: Express) {
    * Hamkorlik so'rovi yuborish
    * Body: { hallName: string, phone: string }
    */
-  router.post('/partnership', async (req, res) => {
+  router.post('/partnership', rateLimit('mobile-partnership', {
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  }), async (req, res) => {
     try {
       const { hallName, phone } = req.body;
       if (!hallName || !phone) return mobileError(res, "Zal nomi va telefon talab qilinadi");

@@ -2,6 +2,8 @@ import type { Express } from 'express';
 import type { IStorage } from './storage';
 import { generateFiscalReceiptPDF } from './pdfReceipt';
 import path from 'path';
+import crypto from 'crypto';
+import { rateLimit } from './security';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'uzfitboom_bot';
@@ -200,6 +202,15 @@ async function editMessageText(chatId: number | string, messageId: number, text:
   return telegramApi('editMessageText', body);
 }
 
+/**
+ * Webhook uchun sir. Sozlanmagan bo'lsa, SESSION_SECRET dan barqaror tarzda
+ * hosil qilinadi — shunda qayta ishga tushirishda ham bir xil qiymat chiqadi.
+ */
+const WEBHOOK_SECRET: string = process.env.TELEGRAM_WEBHOOK_SECRET
+  || (process.env.SESSION_SECRET
+    ? crypto.createHmac('sha256', process.env.SESSION_SECRET).update('telegram-webhook').digest('hex').slice(0, 48)
+    : '');
+
 function getAdminChatIds(): string[] {
   const adminIds = process.env.ADMIN_IDS || '';
   return adminIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
@@ -207,6 +218,26 @@ function getAdminChatIds(): string[] {
 
 function isAdmin(chatId: string): boolean {
   return getAdminChatIds().includes(chatId);
+}
+
+/**
+ * Foydalanuvchining `is_admin` bayrog'ini ADMIN_IDS env o'zgaruvchisiga
+ * moslaydi va yangilangan foydalanuvchini qaytaradi.
+ *
+ * ADMIN_IDS — admin huquqining yagona manbai: ro'yxatga qo'shilgan Telegram ID
+ * kirganda huquq beriladi, ro'yxatdan chiqarilganda esa olib tashlanadi.
+ * (Ilgari huquq autentifikatsiyasiz /api/make-admin endpointi orqali berilardi.)
+ */
+export async function syncAdminFlag<T extends { id: string; telegramId: string | null; isAdmin: boolean }>(
+  storage: IStorage,
+  user: T,
+): Promise<T> {
+  const shouldBeAdmin = !!user.telegramId && isAdmin(user.telegramId);
+  if (shouldBeAdmin === user.isAdmin) return user;
+
+  console.log(`[Admin] ${user.id} uchun is_admin -> ${shouldBeAdmin} (ADMIN_IDS bo'yicha)`);
+  const updated = await storage.updateUser(user.id, { isAdmin: shouldBeAdmin } as any);
+  return (updated as unknown as T) || { ...user, isAdmin: shouldBeAdmin };
 }
 
 function generateCode(): string {
@@ -222,6 +253,20 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
 
   app.post('/api/telegram/webhook', async (req, res) => {
     try {
+      // Telegram setWebhook(secret_token) bilan o'rnatilgan sirni har bir
+      // so'rovda X-Telegram-Bot-Api-Secret-Token sarlavhasida yuboradi.
+      //
+      // Ilgari bu tekshiruv yo'q edi: istalgan odam webhook ga soxta
+      // callback_query yuborib, o'z to'lovini "admin nomidan" tasdiqlab,
+      // bepul kredit olishi mumkin edi.
+      if (WEBHOOK_SECRET) {
+        const provided = req.headers['x-telegram-bot-api-secret-token'];
+        if (provided !== WEBHOOK_SECRET) {
+          console.warn('[Telegram] Webhook secret mos kelmadi — so\'rov rad etildi');
+          return res.sendStatus(401);
+        }
+      }
+
       const update: TelegramUpdate = req.body;
       console.log('[Telegram] Webhook update:', JSON.stringify(update).substring(0, 200));
 
@@ -242,7 +287,10 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
     }
   });
 
-  app.post('/api/telegram/verify-code', async (req, res) => {
+  app.post('/api/telegram/verify-code', rateLimit('telegram-verify', {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
     try {
       const { code } = req.body;
       if (!code) return res.status(400).json({ message: 'Kod talab qilinadi' });
@@ -285,10 +333,11 @@ export function setupTelegramBot(app: Express, storage: IStorage) {
       // Increment for every valid (non-expired, non-blocked) attempt
       await storage.incrementLoginCodeAttempts(upperCode);
 
-      const user = await storage.getUserByTelegramId(loginData.telegramId);
+      let user = await storage.getUserByTelegramId(loginData.telegramId);
       if (!user) {
         return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
       }
+      user = await syncAdminFlag(storage, user);
 
       await storage.deleteLoginCode(upperCode);
       sess.failedCodeAttempts = 0;
@@ -349,6 +398,17 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, storage
   const isPhoto = !!(callbackQuery.message?.photo && callbackQuery.message.photo.length > 0);
 
   console.log(`[Telegram] Callback: data=${data}, chatId=${chatId}, msgId=${messageId}, isPhoto=${isPhoto}`);
+
+  // To'lovni tasdiqlash/rad etish — faqat ADMIN_IDS ro'yxatidagi chatlardan.
+  // Ilgari bu tekshiruv yo'q edi: tugma bosgan har qanday foydalanuvchi
+  // to'lovni tasdiqlab, kredit qo'shdira olardi.
+  const isPaymentAction = data.startsWith('pay_approve_') || data.startsWith('pay_reject_') || data.startsWith('pay_amount_');
+  const callbackFromId = callbackQuery.from?.id?.toString() || '';
+  if (isPaymentAction && !isAdmin(callbackFromId) && !isAdmin(chatId)) {
+    console.warn(`[Telegram] Ruxsatsiz to'lov amali: from=${callbackFromId}, chat=${chatId}, data=${data}`);
+    await answerCallbackQuery(callbackQuery.id, "Bu amal uchun ruxsat yo'q");
+    return;
+  }
 
   try {
     let paymentId = '';
@@ -677,9 +737,13 @@ export async function setupTelegramWebhook() {
   }
   const webhookUrl = getWebhookUrl();
   console.log(`[Telegram] Setting webhook to: ${webhookUrl}`);
+  if (!WEBHOOK_SECRET) {
+    console.warn('[Telegram] WEBHOOK_SECRET yo\'q — webhook imzosiz o\'rnatilmoqda. SESSION_SECRET yoki TELEGRAM_WEBHOOK_SECRET ni sozlang.');
+  }
   const result = await telegramApi('setWebhook', {
     url: webhookUrl,
     allowed_updates: ['message', 'callback_query'],
+    ...(WEBHOOK_SECRET ? { secret_token: WEBHOOK_SECRET } : {}),
   });
   if (result?.ok) {
     console.log('[Telegram] Webhook set successfully');

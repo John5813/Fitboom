@@ -5,3 +5,14 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+
+# Ishga tushirish paytida yuklangan fayllar — git'da saqlanmasligi kerak
+uploads/
+
+# Muhit o'zgaruvchilari
+.env
+.env.local
+.env.*.local
+
+# Test natijalari
+coverage/

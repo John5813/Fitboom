@@ -104,11 +104,19 @@ export default function GymOwnerPage() {
   const gymId = localStorage.getItem("gymOwnerId");
   const accessCode = localStorage.getItem("gymOwnerCode");
 
+  // Zal egasining amallari serverda kirish kodi bilan tekshiriladi.
+  // Ilgari bu endpointlar faqat "tizimga kirgan" shartini talab qilardi,
+  // ya'ni istalgan foydalanuvchi istalgan zalning slotlarini boshqara olardi.
+  const ownerHeaders = (extra: Record<string, string> = {}) => ({
+    ...extra,
+    ...(accessCode ? { "X-Gym-Access-Code": accessCode } : {}),
+  });
+
   const updateCapacityMutation = useMutation({
     mutationFn: async ({ slotId, capacity }: { slotId: string; capacity: number }) => {
       const response = await fetch(`/api/time-slots/${slotId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: ownerHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
         body: JSON.stringify({ capacity }),
       });
@@ -198,7 +206,12 @@ export default function GymOwnerPage() {
   const { data, isLoading, isError } = useQuery<GymOwnerData>({
     queryKey: ["/api/gym-owner", gymId],
     queryFn: async () => {
-      const res = await fetch(`/api/gym-owner/${gymId}`, { credentials: "include" });
+      // Kirish kodi endi server tomonda tekshiriladi (ilgari bu endpoint
+      // umuman himoyalanmagan edi), shuning uchun uni sarlavhada yuboramiz.
+      const res = await fetch(`/api/gym-owner/${gymId}`, {
+        credentials: "include",
+        headers: ownerHeaders(),
+      });
       if (!res.ok) throw new Error("Failed to fetch gym data");
       return res.json();
     },
@@ -226,7 +239,7 @@ export default function GymOwnerPage() {
     try {
       const response = await fetch('/api/time-slots/auto-generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: ownerHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
         body: JSON.stringify({ gymId }),
       });
@@ -248,6 +261,7 @@ export default function GymOwnerPage() {
     try {
       const response = await fetch(`/api/time-slots/${slotId}`, {
         method: 'DELETE',
+        headers: ownerHeaders(),
         credentials: 'include',
       });
       if (response.ok) {

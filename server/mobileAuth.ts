@@ -2,7 +2,15 @@ import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
 import { storage } from './storage';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fitboom-mobile-secret-change-in-prod';
+/**
+ * JWT_SECRET majburiy — ilgari bu yerda qattiq yozilgan zaxira qiymat bor edi,
+ * ya'ni secret sozlanmagan muhitda istalgan odam istalgan `userId` uchun
+ * token yasab, har qanday akkauntga kira olardi.
+ */
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required (mobil API tokenlari uchun)');
+}
+const JWT_SECRET: string = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '90d';
 

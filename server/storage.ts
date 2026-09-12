@@ -9,6 +9,10 @@ export interface IStorage {
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserCredits(id: string, credits: number): Promise<User | undefined>;
+  /** Atomik: yetarli kredit bo'lsagina yechadi, aks holda undefined qaytaradi */
+  spendUserCredits(id: string, amount: number): Promise<User | undefined>;
+  /** Atomik: kreditni qaytaradi */
+  refundUserCredits(id: string, amount: number): Promise<User | undefined>;
   updateUserCreditsWithExpiry(id: string, credits: number, expiryDate: Date): Promise<User | undefined>;
   checkAndResetExpiredCredits(id: string): Promise<User | undefined>;
   updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined>;
@@ -43,6 +47,10 @@ export interface IStorage {
   getTimeSlot(id: string): Promise<TimeSlot | undefined>;
   createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
   updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined>;
+  /** Atomik: bo'sh joy bo'lsagina bittasini band qiladi */
+  reserveTimeSlotSpot(id: string): Promise<TimeSlot | undefined>;
+  /** Atomik: band joyni bo'shatadi (capacity dan oshmaydi) */
+  releaseTimeSlotSpot(id: string): Promise<TimeSlot | undefined>;
   deleteTimeSlot(id: string): Promise<boolean>;
   deleteTimeSlotsForGym(gymId: string): Promise<void>;
   getAdminSetting(key: string): Promise<AdminSetting | undefined>;
@@ -128,6 +136,32 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ credits })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  /**
+   * Kreditni bitta atomik SQL bilan yechadi.
+   *
+   * Ilgari kod `o'qish -> hisoblash -> yozish` shaklida edi va parallel
+   * so'rovlarda foydalanuvchi bir xil kreditni bir necha marta ishlatishi
+   * mumkin edi (double-spend). `WHERE credits >= amount` sharti buni yopadi:
+   * yetarli kredit bo'lmasa hech qanday qator yangilanmaydi.
+   */
+  async spendUserCredits(id: string, amount: number): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ credits: sql`${users.credits} - ${amount}` })
+      .where(and(eq(users.id, id), sql`${users.credits} >= ${amount}`))
+      .returning();
+    return user || undefined;
+  }
+
+  async refundUserCredits(id: string, amount: number): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ credits: sql`${users.credits} + ${amount}` })
       .where(eq(users.id, id))
       .returning();
     return user || undefined;
@@ -389,6 +423,28 @@ export class DatabaseStorage implements IStorage {
     const [timeSlot] = await db
       .update(timeSlots)
       .set(updateData)
+      .where(eq(timeSlots.id, id))
+      .returning();
+    return timeSlot || undefined;
+  }
+
+  /**
+   * Bo'sh joy bo'lsagina bittasini atomik band qiladi.
+   * `WHERE available_spots > 0` sharti overbooking ni yopadi.
+   */
+  async reserveTimeSlotSpot(id: string): Promise<TimeSlot | undefined> {
+    const [timeSlot] = await db
+      .update(timeSlots)
+      .set({ availableSpots: sql`${timeSlots.availableSpots} - 1` })
+      .where(and(eq(timeSlots.id, id), sql`${timeSlots.availableSpots} > 0`))
+      .returning();
+    return timeSlot || undefined;
+  }
+
+  async releaseTimeSlotSpot(id: string): Promise<TimeSlot | undefined> {
+    const [timeSlot] = await db
+      .update(timeSlots)
+      .set({ availableSpots: sql`LEAST(${timeSlots.availableSpots} + 1, ${timeSlots.capacity})` })
       .where(eq(timeSlots.id, id))
       .returning();
     return timeSlot || undefined;

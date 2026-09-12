@@ -375,40 +375,10 @@ export default function HomePage() {
     }
   };
 
-  const purchaseMutation = useMutation({
-    mutationFn: async (data: { credits: number; price: number }) => {
-      const response = await fetch('/api/purchase-credits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Xarid amalga oshmadi');
-      }
-      return response.json();
-    },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      toast({
-        title: "Muvaffaqiyatli!",
-        description: `${data.credits} kredit sotib olindi. Jami: ${data.totalCredits} kredit`,
-      });
-      setIsPurchaseDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Xatolik",
-        description: error.message || "Kredit sotib olishda xatolik yuz berdi.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handlePurchase = (creditAmount: number, price: number) => {
-    purchaseMutation.mutate({ credits: creditAmount, price });
-  };
+  // Eslatma: purchaseMutation/handlePurchase olib tashlandi — ular serverdagi
+  // /api/purchase-credits endpointiga tayanardi va hech qanday to'lov tasdig'isiz
+  // kredit qo'shardi. Kredit endi faqat PaymentMethodDialog -> chek yuklash ->
+  // adminning Telegram'da tasdiqlashi orqali keladi.
 
   const handleScanQR = (bookingId: string) => {
     const booking = bookings.find(b => b.id === bookingId);
@@ -775,7 +745,13 @@ export default function HomePage() {
         onClose={() => setIsPaymentMethodDialogOpen(false)}
         onSelectCardTransfer={() => setIsPurchaseDialogOpen(true)}
       />
-      <PurchaseCreditsDialog isOpen={isPurchaseDialogOpen} onClose={() => setIsPurchaseDialogOpen(false)} onPurchase={handlePurchase} />
+      {/* Chek yuklash oynasi — kredit shu yerdan admin tasdig'i bilan qo'shiladi.
+          onPurchase propi berilmaydi: u xavfsiz bo'lmagan /api/purchase-credits
+          endpointiga ulangan edi va o'sha endpoint olib tashlandi. */}
+      <PurchaseCreditsDialog
+        isOpen={isPurchaseDialogOpen}
+        onClose={() => setIsPurchaseDialogOpen(false)}
+      />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
 
       <Dialog open={showSuccessAnimation} onOpenChange={setShowSuccessAnimation}>

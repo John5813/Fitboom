@@ -168,9 +168,9 @@ export default function VideoPlayerPage() {
                       <span>{video.instructor}</span>
                     </div>
                   )}
-                  {video.category && (
-                    <Badge variant="outline">{video.category}</Badge>
-                  )}
+                  {(video.categories || []).map((category) => (
+                    <Badge key={category} variant="outline">{category}</Badge>
+                  ))}
                 </div>
               </div>
             </div>
