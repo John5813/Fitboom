@@ -97,6 +97,17 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function AuthLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Yuklanmoqda...</p>
+      </div>
+    </div>
+  );
+}
+
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -107,20 +118,35 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, setLocation]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Yuklanmoqda...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AuthLoading />;
+  if (!isAuthenticated) return null;
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  return <>{children}</>;
+}
+
+/**
+ * Admin sahifalari uchun.
+ *
+ * Bu faqat UI darajasidagi to'siq — haqiqiy nazorat serverdagi requireAdmin
+ * middleware'ida. Lekin ilgari admin sahifalari oddiy ProtectedRoute ostida edi,
+ * ya'ni istalgan foydalanuvchi panelni ochib, ichidagi ma'lumot so'rovlarini
+ * yuborardi. Endi admin bo'lmagan foydalanuvchi bosh sahifaga qaytariladi.
+ */
+export function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      setLocation("/login");
+    } else if (!user?.isAdmin) {
+      setLocation("/home");
+    }
+  }, [user, isAuthenticated, isLoading, setLocation]);
+
+  if (isLoading) return <AuthLoading />;
+  if (!isAuthenticated || !user?.isAdmin) return null;
 
   return <>{children}</>;
 }

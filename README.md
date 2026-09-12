@@ -165,13 +165,47 @@ FitBoom sport hayotini boshqarishni soddalashtiradi. Telefon raqami va Telegram 
 
 ### Muhit o'zgaruvchilari
 
+To'liq ro'yxat va izohlar: **`.env.example`**. Sirlar hech qachon repozitoriyga
+commit qilinmaydi — ular Replit Secrets panelida saqlanadi.
+
 ```env
+# Majburiy — bularsiz server ishga tushmaydi
 DATABASE_URL=postgresql://...
+SESSION_SECRET=...               # openssl rand -base64 32
+JWT_SECRET=...                   # openssl rand -base64 48
+
+# Muhim
+ADMIN_PASSWORD=...               # admin paneliga birinchi kirish (min 10 belgi)
 TELEGRAM_BOT_TOKEN=123456789:AAF...
-ADMIN_IDS=123456789,987654321
-STRIPE_SECRET_KEY=sk_...         # ixtiyoriy
-VITE_STRIPE_PUBLIC_KEY=pk_...    # ixtiyoriy
+ADMIN_IDS=123456789,987654321    # admin huquqining yagona manbai
+TELEGRAM_WEBHOOK_SECRET=...      # berilmasa SESSION_SECRET dan hosil qilinadi
+
+# Ixtiyoriy
+QR_SECRET=...                    # berilmasa SESSION_SECRET ishlatiladi
+DEVSMS_API_KEY=...               # SMS OTP
+ALLOWED_ORIGINS=https://fitboom.uz
 ```
+
+> **`ADMIN_IDS` haqida:** admin huquqi shu ro'yxat asosida beriladi. Ro'yxatdagi
+> Telegram ID bilan kirgan foydalanuvchiga `is_admin` avtomatik beriladi,
+> ro'yxatdan chiqarilganda esa olib tashlanadi.
+
+### Xavfsizlik qoidalari
+
+Loyihada pul (kalit) aylanadi. Quyidagilar buzilmasligi kerak:
+
+- **Kalit faqat tasdiqlangan to'lovdan keyin qo'shiladi** — chek yuklanadi,
+  admin Telegram'da tasdiqlaydi. Kalit qo'shadigan yangi endpoint qo'shishdan
+  oldin yaxshilab o'ylang.
+- **Kalit va joy hisob-kitobi atomik** — `spendUserCredits`, `refundUserCredits`,
+  `reserveTimeSlotSpot`, `releaseTimeSlotSpot` metodlaridan foydalaning.
+  `o'qish → hisoblash → yozish` naqshi double-spend'ga olib keladi.
+- **Zal QR kodi HMAC bilan imzolangan** (`server/qrSignature.ts`) — tekshiruvda
+  `isAuthenticGymQr()` ni chetlab o'tmang.
+- **`qrCode` va `ownerAccessCode` javobga tushmaydi** — `publicGym()` dan
+  foydalaning.
+- **Har bir yozuv endpointi huquq tekshiruvidan o'tadi** — `requireAdmin`,
+  `requireGymManager` yoki `requireGymOwner`.
 
 ### Ishga tushirish
 
@@ -185,10 +219,17 @@ npm run db:push
 # Ishlab chiqish rejimi
 npm run dev
 
+# Sifat tekshiruvlari
+npm run check     # TypeScript (0 xato bo'lishi kerak)
+npm test          # Vitest testlari
+
 # Production build
 npm run build
 npm start
 ```
+
+CI (`.github/workflows/ci.yml`) har bir push va PR da yuqoridagi uchta
+tekshiruvni avtomatik ishga tushiradi.
 
 ---
 

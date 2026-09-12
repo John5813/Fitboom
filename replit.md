@@ -42,20 +42,60 @@ A digital fitness aggregator platform for gyms in Uzbekistan. Users can discover
 
 ## Environment Variables / Secrets
 
-- `DATABASE_URL` — Neon PostgreSQL connection string (runtime managed)
-- `SESSION_SECRET` — Express session secret
-- `TELEGRAM_BOT_TOKEN` — Telegram bot token (for user auth and notifications)
-- `ADMIN_IDS` — Comma-separated Telegram IDs of admins
-- `JWT_SECRET` — JWT signing secret
+Full list with comments: `.env.example`. Secrets are **never** committed — they
+live in the Replit Secrets panel.
+
+**Required** (the server refuses to start without them):
+
+- `DATABASE_URL` — Neon PostgreSQL connection string
+- `SESSION_SECRET` — Express session secret (`openssl rand -base64 32`)
+- `JWT_SECRET` — mobile API JWT signing secret (`openssl rand -base64 48`)
+
+**Important:**
+
+- `ADMIN_PASSWORD` — bootstrap password for the admin panel (min 10 chars).
+  Hashed into the DB on first successful login; change it afterwards via
+  `/api/admin/change-password`.
+- `TELEGRAM_BOT_TOKEN` — Telegram bot token
+- `ADMIN_IDS` — comma-separated Telegram IDs of admins. **The single source of
+  truth for admin rights**: `is_admin` is granted on login for IDs in this list
+  and revoked for IDs removed from it.
+- `TELEGRAM_WEBHOOK_SECRET` — webhook signature (derived from `SESSION_SECRET`
+  when unset)
+
+**Optional:** `QR_SECRET`, `DEVSMS_API_KEY`, `ALLOWED_ORIGINS`,
+`JWT_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`
+
+## Security invariants
+
+Real money (credits) flows through this app. Do not break these:
+
+- **Credits are only added after a verified payment** — receipt upload
+  (`/api/credit-payments/submit`) followed by admin approval in Telegram.
+  Think hard before adding any new endpoint that grants credits.
+- **Credit and seat arithmetic must be atomic** — use `spendUserCredits`,
+  `refundUserCredits`, `reserveTimeSlotSpot`, `releaseTimeSlotSpot`. The
+  read-modify-write pattern causes double-spend under concurrency.
+- **Gym QR codes are HMAC-signed** (`server/qrSignature.ts`) — never bypass
+  `isAuthenticGymQr()` when verifying a scan.
+- **`qrCode` and `ownerAccessCode` never leave the server** — always pass gym
+  objects through `publicGym()` before responding.
+- **Every write endpoint is authorized** — `requireAdmin`, `requireGymManager`
+  or `requireGymOwner`.
 
 ## Running the App
 
 ```bash
 npm run dev       # Development server (port 5000)
+npm run check     # TypeScript typecheck (must be 0 errors)
+npm test          # Vitest unit tests
 npm run build     # Production build
 npm start         # Run production build (runs migrations first)
 npm run db:migrate  # Run DB migrations manually
 ```
+
+CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on every push
+and pull request.
 
 ## Database
 

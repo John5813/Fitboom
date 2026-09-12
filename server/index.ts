@@ -5,6 +5,12 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { setupTelegramWebhook, setupCreditExpiryScheduler } from './telegram';
 import { storage } from './storage';
+import { rateLimit } from './security';
+
+const apiRateLimit = rateLimit('api-global', {
+  windowMs: 60 * 1000,
+  max: 300,
+});
 
 process.on('uncaughtException', (err) => {
   const msg = err.message || '';
@@ -33,41 +39,68 @@ process.on('SIGTERM', () => {
 
 const app = express();
 
+/**
+ * CORS.
+ *
+ * Ilgari `origin: '*'` edi. Web ilova serverning o'zidan beriladi, shuning uchun
+ * unga CORS umuman kerak emas; mobil ilova (Capacitor) esa aniq origin'lardan
+ * keladi. ALLOWED_ORIGINS env orqali qo'shimcha domen qo'shish mumkin.
+ */
+const defaultAllowedOrigins = [
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://localhost',
+  'http://localhost:5000',
+  'http://localhost:5173',
+];
+const allowedOrigins = new Set([
+  ...defaultAllowedOrigins,
+  // Replit deploy domenlari avtomatik qo'shiladi
+  ...(process.env.REPLIT_DOMAINS || '')
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => `https://${d}`),
+  ...(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
+]);
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin(origin, callback) {
+    // origin yo'q = same-origin yoki server-to-server so'rov (mobil native ham)
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    console.warn('[CORS] Ruxsat etilmagan origin rad etildi:', origin);
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Gym-Access-Code'],
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 registerHealthCheck(app);
+
+// Umumiy API rate limit — Telegram webhook'idan tashqari
+// (webhook o'z sirini tekshiradi va Telegram ko'p so'rov yuborishi mumkin)
+app.use('/api', (req, res, next) => {
+  if (req.path === '/telegram/webhook') return next();
+  return apiRateLimit(req, res, next);
+});
+
 setupAuth(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
+  // Eslatma: ilgari bu yerda javob tanasi ham log qilinardi — natijada
+  // JWT tokenlar, telefon raqamlar va foydalanuvchi ma'lumotlari log'ga tushardi.
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 

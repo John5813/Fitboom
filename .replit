@@ -46,10 +46,7 @@ integrations = ["javascript_stripe:1.0.0", "javascript_mem_db:1.0.0", "javascrip
 expertMode = true
 stack = "FULLSTACK_JS"
 
-[userenv]
-
-[userenv.shared]
-ADMIN_IDS = "5304482470"
-JWT_SECRET = "JtAEI8WTH4QiQcQVuy1dFMZLDP7OUG/CUAM/5997LhdMRpsF5atFPp5OlUamdguH"
-JWT_EXPIRES_IN = "30d"
-JWT_REFRESH_EXPIRES_IN = "90d"
+# DIQQAT: bu fayl git'ga commit qilinadi.
+# Sirlar (JWT_SECRET, SESSION_SECRET, TELEGRAM_BOT_TOKEN, ADMIN_PASSWORD va h.k.)
+# bu yerga EMAS, Replit Secrets panelidagi maxfiy o'zgaruvchilarga yoziladi.
+# To'liq ro'yxat uchun .env.example ga qarang.
