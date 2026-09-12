@@ -1,6 +1,6 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, gymHours, gymClosures, gymPeakWindows, slotOccupancy, type GymHours, type GymClosure, type GymPeakWindow, type InsertGymClosure, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 
 export interface IStorage {
@@ -47,10 +47,27 @@ export interface IStorage {
   getTimeSlot(id: string): Promise<TimeSlot | undefined>;
   createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
   updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined>;
-  /** Atomik: bo'sh joy bo'lsagina bittasini band qiladi */
+  /** @deprecated Sanaga bog'lanmagan — `reserveSlotOnDate` dan foydalaning */
   reserveTimeSlotSpot(id: string): Promise<TimeSlot | undefined>;
-  /** Atomik: band joyni bo'shatadi (capacity dan oshmaydi) */
+  /** @deprecated Sanaga bog'lanmagan — `releaseSlotOnDate` dan foydalaning */
   releaseTimeSlotSpot(id: string): Promise<TimeSlot | undefined>;
+
+  // --- Jadval: ish vaqti, yopiq sanalar, pik oynalar ---
+  getGymHours(gymId: string): Promise<GymHours[]>;
+  setGymHours(gymId: string, rows: Array<{ dayOfWeek: number; openTime: string; closeTime: string; isClosed: boolean }>): Promise<GymHours[]>;
+  getGymClosures(gymId: string, fromDate?: string): Promise<GymClosure[]>;
+  addGymClosure(closure: InsertGymClosure): Promise<GymClosure>;
+  deleteGymClosure(gymId: string, date: string): Promise<boolean>;
+  getGymPeakWindows(gymId: string): Promise<GymPeakWindow[]>;
+  setGymPeakWindows(gymId: string, rows: Array<{ dayOfWeek: number; startTime: string; endTime: string; maxCapacity: number }>): Promise<GymPeakWindow[]>;
+
+  // --- Slot bandligi (sana bo'yicha) ---
+  getSlotOccupancy(timeSlotIds: string[], date: string): Promise<Map<string, number>>;
+  getOccupancyForRange(gymId: string, fromDate: string, toDate: string): Promise<Array<{ timeSlotId: string; date: string; bookedCount: number }>>;
+  /** Atomik: shu SANADA bo'sh joy bo'lsagina bittasini band qiladi */
+  reserveSlotOnDate(timeSlotId: string, date: string, maxCapacity: number): Promise<boolean>;
+  /** Atomik: shu sanadagi band joyni bo'shatadi */
+  releaseSlotOnDate(timeSlotId: string, date: string): Promise<void>;
   deleteTimeSlot(id: string): Promise<boolean>;
   deleteTimeSlotsForGym(gymId: string): Promise<void>;
   getAdminSetting(key: string): Promise<AdminSetting | undefined>;
@@ -448,6 +465,129 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timeSlots.id, id))
       .returning();
     return timeSlot || undefined;
+  }
+
+  // --- Jadval ---
+
+  async getGymHours(gymId: string): Promise<GymHours[]> {
+    return db.select().from(gymHours).where(eq(gymHours.gymId, gymId)).orderBy(gymHours.dayOfWeek);
+  }
+
+  async setGymHours(
+    gymId: string,
+    rows: Array<{ dayOfWeek: number; openTime: string; closeTime: string; isClosed: boolean }>,
+  ): Promise<GymHours[]> {
+    for (const row of rows) {
+      await db
+        .insert(gymHours)
+        .values({ gymId, ...row })
+        .onConflictDoUpdate({
+          target: [gymHours.gymId, gymHours.dayOfWeek],
+          set: { openTime: row.openTime, closeTime: row.closeTime, isClosed: row.isClosed },
+        });
+    }
+    return this.getGymHours(gymId);
+  }
+
+  async getGymClosures(gymId: string, fromDate?: string): Promise<GymClosure[]> {
+    const conditions = [eq(gymClosures.gymId, gymId)];
+    if (fromDate) conditions.push(sql`${gymClosures.date} >= ${fromDate}`);
+    return db.select().from(gymClosures).where(and(...conditions)).orderBy(gymClosures.date);
+  }
+
+  async addGymClosure(closure: InsertGymClosure): Promise<GymClosure> {
+    const [row] = await db
+      .insert(gymClosures)
+      .values(closure)
+      .onConflictDoUpdate({
+        target: [gymClosures.gymId, gymClosures.date],
+        set: { reason: closure.reason ?? null },
+      })
+      .returning();
+    return row;
+  }
+
+  async deleteGymClosure(gymId: string, date: string): Promise<boolean> {
+    const result = await db
+      .delete(gymClosures)
+      .where(and(eq(gymClosures.gymId, gymId), eq(gymClosures.date, date)));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getGymPeakWindows(gymId: string): Promise<GymPeakWindow[]> {
+    return db.select().from(gymPeakWindows).where(eq(gymPeakWindows.gymId, gymId));
+  }
+
+  async setGymPeakWindows(
+    gymId: string,
+    rows: Array<{ dayOfWeek: number; startTime: string; endTime: string; maxCapacity: number }>,
+  ): Promise<GymPeakWindow[]> {
+    // Pik oynalar to'liq almashtiriladi — zal egasi panelda butun haftani
+    // bir vaqtda tahrirlaydi va saqlaydi.
+    await db.delete(gymPeakWindows).where(eq(gymPeakWindows.gymId, gymId));
+    if (rows.length > 0) {
+      await db.insert(gymPeakWindows).values(rows.map((r) => ({ gymId, ...r })));
+    }
+    return this.getGymPeakWindows(gymId);
+  }
+
+  // --- Slot bandligi (sana bo'yicha) ---
+
+  async getSlotOccupancy(timeSlotIds: string[], date: string): Promise<Map<string, number>> {
+    if (timeSlotIds.length === 0) return new Map();
+    const rows = await db
+      .select()
+      .from(slotOccupancy)
+      .where(and(inArray(slotOccupancy.timeSlotId, timeSlotIds), eq(slotOccupancy.date, date)));
+    return new Map(rows.map((r) => [r.timeSlotId, r.bookedCount]));
+  }
+
+  async getOccupancyForRange(
+    gymId: string,
+    fromDate: string,
+    toDate: string,
+  ): Promise<Array<{ timeSlotId: string; date: string; bookedCount: number }>> {
+    const rows = await db
+      .select({
+        timeSlotId: slotOccupancy.timeSlotId,
+        date: slotOccupancy.date,
+        bookedCount: slotOccupancy.bookedCount,
+      })
+      .from(slotOccupancy)
+      .innerJoin(timeSlots, eq(timeSlots.id, slotOccupancy.timeSlotId))
+      .where(and(
+        eq(timeSlots.gymId, gymId),
+        sql`${slotOccupancy.date} >= ${fromDate}`,
+        sql`${slotOccupancy.date} <= ${toDate}`,
+      ));
+    return rows;
+  }
+
+  /**
+   * Joyni atomik band qiladi — bitta SQL amalida.
+   *
+   * `ON CONFLICT ... WHERE booked_count < maxCapacity` sharti tufayli parallel
+   * so'rovlar sig'imdan oshib keta olmaydi. Qator qaytmasa — joy yo'q.
+   */
+  async reserveSlotOnDate(timeSlotId: string, date: string, maxCapacity: number): Promise<boolean> {
+    if (maxCapacity <= 0) return false;
+    const [row] = await db
+      .insert(slotOccupancy)
+      .values({ timeSlotId, date, bookedCount: 1 })
+      .onConflictDoUpdate({
+        target: [slotOccupancy.timeSlotId, slotOccupancy.date],
+        set: { bookedCount: sql`${slotOccupancy.bookedCount} + 1` },
+        setWhere: sql`${slotOccupancy.bookedCount} < ${maxCapacity}`,
+      })
+      .returning();
+    return !!row;
+  }
+
+  async releaseSlotOnDate(timeSlotId: string, date: string): Promise<void> {
+    await db
+      .update(slotOccupancy)
+      .set({ bookedCount: sql`GREATEST(0, ${slotOccupancy.bookedCount} - 1)` })
+      .where(and(eq(slotOccupancy.timeSlotId, timeSlotId), eq(slotOccupancy.date, date)));
   }
 
   async deleteTimeSlot(id: string): Promise<boolean> {

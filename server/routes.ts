@@ -16,6 +16,8 @@ import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
 import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
 import { createGymQr, isAuthenticGymQr } from "./qrSignature";
+import { registerScheduleRoutes, checkBookingAllowed, buildAvailability, loadGymSchedule } from "./scheduleRoutes";
+import { dayOfWeekFromDate, dayName, dayNumberFromName, toMinutes, toTimeString } from "@shared/schedule";
 
 let _osClientPromise: Promise<ObjectStorageClient | null> | null = null;
 function getOsClient(): Promise<ObjectStorageClient | null> {
@@ -691,9 +693,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return slot?.gymId;
   };
 
+  // Jadval endpointlari (ish vaqti, yopiq sanalar, pik oynalar, bandlik)
+  registerScheduleRoutes(app, { requireAuth, requireAdmin, requireGymManager });
+
   app.get("/api/time-slots", async (req, res) => {
     try {
       const gymId = req.query.gymId as string | undefined;
+      const date = (req.query.date as string | undefined)?.split('T')[0];
+
+      // Sana berilsa — o'sha kundagi haqiqiy bandlik qaytariladi.
+      // Sanasiz `availableSpots` ma'nosiz: slotlar haftalik shablon, bandlik esa
+      // har bir sana uchun alohida.
+      if (gymId && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const timeSlots = await buildAvailability(gymId, date);
+        return res.json({ timeSlots, date });
+      }
+
       const timeSlots = await storage.getTimeSlots(gymId);
       res.json({ timeSlots });
     } catch (error) {
@@ -802,41 +817,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Zal topilmadi" });
       }
 
-      const sHour = startHour || 9;
-      const eHour = endHour || 21;
       const cap = capacity || 15;
-      const allRequestedDays = days || ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
-      // Zal dam kunlarini avtomatik generatsiyadan chiqarish
-      const dayNameToNum: Record<string, number> = {
-        'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3,
-        'Payshanba': 4, 'Juma': 5, 'Shanba': 6,
-      };
-      const gymClosedDays = gym.closedDays || [];
-      const daysList = allRequestedDays.filter((d: string) => {
-        const num = dayNameToNum[d];
-        return num === undefined || !gymClosedDays.includes(String(num));
-      });
+
+      // Slotlar zalning O'Z ish vaqtidan kelib chiqib yaratiladi.
+      // Ilgari 09:00-21:00 qattiq yozilgan edi va `gym.hours` e'tiborga olinmasdi,
+      // ya'ni kechqurun 23:00 gacha ishlaydigan zal soat 21:00 dan keyin
+      // bron qabul qila olmasdi.
+      const { hours: gymHoursRows } = await loadGymSchedule(gymId);
+
+      const requestedDayNums: number[] | undefined = Array.isArray(days)
+        ? days.map((d: string) => dayNumberFromName(d)).filter((n): n is number => n !== undefined)
+        : undefined;
 
       await storage.deleteTimeSlotsForGym(gymId);
 
       const createdSlots = [];
-      for (const day of daysList) {
-        for (let h = sHour; h < eHour; h++) {
-          const startTime = `${h.toString().padStart(2, '0')}:00`;
-          const endTime = `${(h + 1).toString().padStart(2, '0')}:00`;
+      for (const dayRow of gymHoursRows) {
+        if (dayRow.isClosed) continue;
+        if (requestedDayNums && !requestedDayNums.includes(dayRow.dayOfWeek)) continue;
+
+        // Chaqiruvchi aniq oraliq bergan bo'lsa, u zal ish vaqti bilan kesishtiriladi
+        const fromMin = Math.max(
+          toMinutes(dayRow.openTime),
+          startHour !== undefined ? Number(startHour) * 60 : 0,
+        );
+        const toMin = Math.min(
+          toMinutes(dayRow.closeTime),
+          endHour !== undefined ? Number(endHour) * 60 : 24 * 60,
+        );
+
+        // To'liq soatlarga tekislash
+        for (let m = Math.ceil(fromMin / 60) * 60; m + 60 <= toMin; m += 60) {
           const slot = await storage.createTimeSlot({
             gymId,
-            dayOfWeek: day,
-            startTime,
-            endTime,
+            dayOfWeek: dayName(dayRow.dayOfWeek),
+            startTime: toTimeString(m),
+            endTime: toTimeString(m + 60),
             capacity: cap,
+            // Eski ustun — bandlik endi `slot_occupancy` da sana bo'yicha yuritiladi
             availableSpots: cap,
           });
           createdSlots.push(slot);
         }
       }
 
-      res.json({ 
+      res.json({
         message: `${createdSlots.length} ta vaqt sloti yaratildi`,
         timeSlots: createdSlots,
         count: createdSlots.length
@@ -1060,7 +1085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (booking.timeSlotId) {
-        await storage.releaseTimeSlotSpot(booking.timeSlotId);
+        await storage.releaseSlotOnDate(booking.timeSlotId, (booking.date || '').split('T')[0]);
       }
 
       if (noRefund) {
@@ -1120,9 +1145,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "O'tgan vaqtga bron qilib bo'lmaydi." });
       }
 
-      const bookingDayOfWeek = new Date(bookingDate + 'T12:00:00').getDay();
+      const bookingDayOfWeek = dayOfWeekFromDate(bookingDate);
       if ((gym.closedDays || []).includes(String(bookingDayOfWeek))) {
         return res.status(400).json({ message: "Bu kun bu zal uchun dam olish kuni. Bron qilib bo'lmaydi." });
+      }
+
+      // Jadval qoidalarini kreditni yechishdan OLDIN tekshiramiz — shunda
+      // rad etilgan bronda kreditni yechib-qaytarish kerak bo'lmaydi.
+      let slotCapacity = 0;
+      let bookingSlot: Awaited<ReturnType<typeof storage.getTimeSlot>> | undefined;
+
+      if (timeSlotId) {
+        bookingSlot = await storage.getTimeSlot(timeSlotId);
+        if (!bookingSlot) {
+          return res.status(400).json({ message: "Vaqt sloti topilmadi" });
+        }
+        if (bookingSlot.gymId !== gymId) {
+          return res.status(400).json({ message: "Vaqt sloti bu zalga tegishli emas" });
+        }
+
+        const rule = await checkBookingAllowed({ gymId, date: bookingDate, slot: bookingSlot });
+        if (!rule.ok) {
+          return res.status(400).json({ message: rule.message });
+        }
+        slotCapacity = rule.effectiveCapacity;
       }
 
       // Kreditni atomik yechish: `WHERE credits >= gym.credits` sharti tufayli
@@ -1150,27 +1196,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending'
       };
 
-      if (timeSlotId) {
-        const timeSlot = await storage.getTimeSlot(timeSlotId);
-        if (!timeSlot) {
-          await storage.refundUserCredits(user.id, gym.credits);
-          return res.status(400).json({ message: "Vaqt sloti topilmadi" });
-        }
-        if (timeSlot.gymId !== gymId) {
-          await storage.refundUserCredits(user.id, gym.credits);
-          return res.status(400).json({ message: "Vaqt sloti bu zalga tegishli emas" });
-        }
-
-        // Joyni atomik band qilish — bo'sh joy bo'lmasa undefined qaytadi
-        const reserved = await storage.reserveTimeSlotSpot(timeSlotId);
+      if (timeSlotId && bookingSlot) {
+        // Joyni SHU SANADA atomik band qilish.
+        // Ilgari bandlik `time_slots.available_spots` da sanaga bog'lanmagan
+        // bitta hisoblagichda edi — shu sababli slot bir marta to'lgach,
+        // barcha haftalar uchun abadiy band bo'lib qolardi.
+        const reserved = await storage.reserveSlotOnDate(timeSlotId, bookingDate, slotCapacity);
         if (!reserved) {
           await storage.refundUserCredits(user.id, gym.credits);
           return res.status(400).json({ message: "Bu vaqtda joy qolmagan" });
         }
 
         bookingToCreate.timeSlotId = timeSlotId;
-        bookingToCreate.scheduledStartTime = scheduledStartTime;
-        bookingToCreate.scheduledEndTime = scheduledEndTime;
+        bookingToCreate.scheduledStartTime = scheduledStartTime || bookingSlot.startTime;
+        bookingToCreate.scheduledEndTime = scheduledEndTime || bookingSlot.endTime;
       }
 
       let booking;
@@ -1179,7 +1218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (createErr) {
         // Bron yaratilmasa, yechilgan kredit va band qilingan joyni qaytaramiz
         await storage.refundUserCredits(user.id, gym.credits);
-        if (timeSlotId) await storage.releaseTimeSlotSpot(timeSlotId);
+        if (timeSlotId) await storage.releaseSlotOnDate(timeSlotId, bookingDate);
         throw createErr;
       }
 
@@ -2013,10 +2052,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Zal topilmadi" });
       }
       
-      const visits = await storage.getGymVisits(req.params.gymId);
-      const payments = await storage.getGymPayments(req.params.gymId);
-      
-      res.json({ 
+      const [visits, payments, schedule, closures] = await Promise.all([
+        storage.getGymVisits(req.params.gymId),
+        storage.getGymPayments(req.params.gymId),
+        loadGymSchedule(req.params.gymId),
+        storage.getGymClosures(req.params.gymId),
+      ]);
+
+      res.json({
+        hours: schedule.hours,
+        peakWindows: schedule.peakWindows,
+        closures,
         gym: {
           id: gym.id,
           name: gym.name,

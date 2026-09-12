@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -131,6 +131,77 @@ export const timeSlots = pgTable("time_slots", {
   availableSpots: integer("available_spots").notNull(),
 });
 
+/**
+ * Zalning haftalik ish vaqti.
+ *
+ * `gyms.hours` matn maydoni ("09:00 - 24:00") o'rniga keladi — u mashina
+ * o'qiy oladigan shaklda emasdi va hech qayerda tekshirilmasdi.
+ * `dayOfWeek`: 0 = Yakshanba ... 6 = Shanba (JS `Date.getDay()` bilan bir xil).
+ */
+export const gymHours = pgTable("gym_hours", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gymId: varchar("gym_id").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(),
+  openTime: text("open_time").notNull().default("09:00"),
+  closeTime: text("close_time").notNull().default("22:00"),
+  isClosed: boolean("is_closed").notNull().default(false),
+}, (table) => ({
+  gymDayUnique: uniqueIndex("gym_hours_gym_day_unique").on(table.gymId, table.dayOfWeek),
+}));
+
+/**
+ * Aniq sanadagi istisnolar — bayram, ta'mir, "bu juma yopiq".
+ * Haftalik jadvaldan ustun turadi.
+ */
+export const gymClosures = pgTable("gym_closures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gymId: varchar("gym_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  gymDateUnique: uniqueIndex("gym_closures_gym_date_unique").on(table.gymId, table.date),
+}));
+
+/**
+ * Pik oynalar — zal o'z doimiy mijozlari bilan band bo'ladigan vaqtlar.
+ *
+ * `maxCapacity`:
+ *   0  — FitBoom mijozlari bu oynada umuman bron qila olmaydi (standart)
+ *   N  — oynada ko'pi bilan N ta FitBoom mijozi bron qila oladi
+ *
+ * Yangi pik oyna faqat KELGUSI bronlarga ta'sir qiladi; mavjud bronlar
+ * bekor qilinmaydi (zal egasi bexosdan mijoz bronini buzib qo'ymasligi uchun).
+ */
+export const gymPeakWindows = pgTable("gym_peak_windows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gymId: varchar("gym_id").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  maxCapacity: integer("max_capacity").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/**
+ * Slot bandligi — SANA bo'yicha.
+ *
+ * `time_slots` haftalik shablon (dayOfWeek = "Dushanba"), lekin ilgari bandlik
+ * `time_slots.available_spots` da bitta umumiy hisoblagichda saqlanardi.
+ * Natijada "Dushanba 09:00" sloti butun tizimda bitta hisoblagichga ega edi:
+ * 15 kishi bron qilgach, u BARCHA haftalar uchun abadiy to'lgan bo'lib qolardi.
+ *
+ * Endi har bir (slot, sana) juftligi uchun alohida hisoblagich yuritiladi.
+ */
+export const slotOccupancy = pgTable("slot_occupancy", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timeSlotId: varchar("time_slot_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  bookedCount: integer("booked_count").notNull().default(0),
+}, (table) => ({
+  slotDateUnique: uniqueIndex("slot_occupancy_slot_date_unique").on(table.timeSlotId, table.date),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   credits: true,
@@ -157,6 +228,49 @@ export const insertOnlineClassSchema = createInsertSchema(onlineClasses).omit({ 
 export const insertUserPurchaseSchema = createInsertSchema(userPurchases).omit({ id: true, purchaseDate: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
 export const insertTimeSlotSchema = createInsertSchema(timeSlots).omit({ id: true });
+
+const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Vaqt HH:MM formatida bo'lishi kerak");
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Sana YYYY-MM-DD formatida bo'lishi kerak");
+
+export const insertGymHoursSchema = createInsertSchema(gymHours).omit({ id: true }).extend({
+  dayOfWeek: z.number().int().min(0).max(6),
+  openTime: timeString,
+  closeTime: timeString,
+});
+
+export const insertGymClosureSchema = createInsertSchema(gymClosures).omit({ id: true, createdAt: true }).extend({
+  date: dateString,
+  reason: z.string().max(200).optional().nullable(),
+});
+
+export const insertGymPeakWindowSchema = createInsertSchema(gymPeakWindows).omit({ id: true, createdAt: true }).extend({
+  dayOfWeek: z.number().int().min(0).max(6),
+  startTime: timeString,
+  endTime: timeString,
+  maxCapacity: z.number().int().min(0).max(1000).default(0),
+});
+
+/** Zal egasi haftalik jadvalni bitta so'rovda saqlaydi */
+export const saveGymScheduleSchema = z.object({
+  hours: z.array(z.object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    openTime: timeString,
+    closeTime: timeString,
+    isClosed: z.boolean(),
+  })).max(7),
+  peakWindows: z.array(z.object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    startTime: timeString,
+    endTime: timeString,
+    maxCapacity: z.number().int().min(0).max(1000).default(0),
+  })).max(100),
+}).refine(
+  (data) => data.hours.every((h) => h.isClosed || h.openTime < h.closeTime),
+  { message: "Ochilish vaqti yopilish vaqtidan oldin bo'lishi kerak" },
+).refine(
+  (data) => data.peakWindows.every((w) => w.startTime < w.endTime),
+  { message: "Pik oyna boshlanishi tugashidan oldin bo'lishi kerak" },
+);
 export const insertAdminSettingSchema = createInsertSchema(adminSettings).omit({ id: true, updatedAt: true });
 export const insertPartnershipMessageSchema = createInsertSchema(partnershipMessages).omit({ id: true, status: true, createdAt: true });
 export const creditPayments = pgTable("credit_payments", {
@@ -212,6 +326,14 @@ export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 export type TimeSlot = typeof timeSlots.$inferSelect;
+export type InsertGymHours = z.infer<typeof insertGymHoursSchema>;
+export type GymHours = typeof gymHours.$inferSelect;
+export type InsertGymClosure = z.infer<typeof insertGymClosureSchema>;
+export type GymClosure = typeof gymClosures.$inferSelect;
+export type InsertGymPeakWindow = z.infer<typeof insertGymPeakWindowSchema>;
+export type GymPeakWindow = typeof gymPeakWindows.$inferSelect;
+export type SlotOccupancy = typeof slotOccupancy.$inferSelect;
+export type SaveGymSchedule = z.infer<typeof saveGymScheduleSchema>;
 export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertPartnershipMessage = z.infer<typeof insertPartnershipMessageSchema>;
