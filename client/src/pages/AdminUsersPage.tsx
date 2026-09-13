@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDateShort } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +14,8 @@ import {
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
-import StatTile from "@/components/admin/StatTile";
+import AdminHeader, { AdminOverlapSection } from "@/components/shared/PageHeader";
+import StatTile from "@/components/shared/StatTile";
 import { apiRequest } from "@/lib/queryClient";
 
 interface UserData {
@@ -122,7 +123,7 @@ export default function AdminUsersPage() {
 
   const formatDate = (d: string | null | undefined) => {
     if (!d) return "—";
-    return new Date(d).toLocaleDateString('uz-UZ', { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateShort(d);
   };
 
   const handleAdjust = () => {

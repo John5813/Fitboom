@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
-import StatTile from "@/components/admin/StatTile";
+import AdminHeader, { AdminOverlapSection } from "@/components/shared/PageHeader";
+import StatTile from "@/components/shared/StatTile";
 import { formatSom } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

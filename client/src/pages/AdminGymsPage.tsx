@@ -15,10 +15,10 @@ import { Eye, Plus, ArrowLeft, Clock, Trash2, Copy, Download, MapPin, X, DollarS
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
-import StatTile from "@/components/admin/StatTile";
+import AdminHeader, { AdminOverlapSection } from "@/components/shared/PageHeader";
+import StatTile from "@/components/shared/StatTile";
 import ScheduleTab from "@/components/gym-owner/ScheduleTab";
-import { formatSom, formatCompactSom } from "@/lib/format";
+import { formatSom, formatCompactSom, formatDateShort } from "@/lib/format";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 import type { GymPayment } from "@shared/schema";
@@ -1223,7 +1223,7 @@ export default function AdminGymsPage() {
                       .slice(0, 5)
                       .map((payment) => (
                       <div key={payment.id} className="flex justify-between items-center px-3 py-2 bg-card rounded-lg border text-xs">
-                        <span className="text-muted-foreground">{new Date(payment.paymentDate).toLocaleDateString('uz-UZ')}</span>
+                        <span className="text-muted-foreground">{formatDateShort(payment.paymentDate)}</span>
                         <span className="font-semibold text-emerald-600">{formatCurrency(payment.amount)}</span>
                       </div>
                     ))}
@@ -1252,7 +1252,7 @@ export default function AdminGymsPage() {
                       .map((r) => (
                         <div key={r.id} className="flex items-center justify-between px-3 py-2 bg-card rounded-lg border text-xs" data-testid={`row-rating-${r.id}`}>
                           <span className="text-muted-foreground">
-                            {new Date(r.createdAt).toLocaleDateString('uz-UZ')}
+                            {formatDateShort(r.createdAt)}
                           </span>
                           <span className="font-semibold text-amber-500">
                             {'⭐'.repeat(r.rating)} ({r.rating}/5)

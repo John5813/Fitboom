@@ -13,7 +13,7 @@ import {
   Lock, Unlock, ChevronDown, ChevronUp, CreditCard, Image as ImageIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import AdminHeader from "@/components/admin/AdminHeader";
+import AdminHeader from "@/components/shared/PageHeader";
 import { formatNumber } from "@/lib/format";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";

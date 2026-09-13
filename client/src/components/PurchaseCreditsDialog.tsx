@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { formatSom } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -169,7 +170,7 @@ export default function PurchaseCreditsDialog({
                 <div className="flex-1">
                   <p className="text-xs font-bold text-red-600 dark:text-red-400">{t('payment.remaining_payment')}</p>
                   <p className="text-sm font-bold text-red-700 dark:text-red-300 mt-1">
-                    {t('payment.unpaid_amount')}: {activePayment.remainingAmount.toLocaleString()} {t('payment.som')}
+                    {t('payment.unpaid_amount')}: {formatSom(activePayment.remainingAmount)}
                   </p>
                   <p className="text-[10px] text-red-600/80 dark:text-red-400/80 mt-1 font-medium">
                     {t('payment.remaining_desc')}
@@ -195,7 +196,7 @@ export default function PurchaseCreditsDialog({
                     {uploading ? t('payment.uploading') : (
                       <>
                         <Upload className="w-3 h-3 mr-1" />
-                        {t('payment.pay_remaining')} ({activePayment.remainingAmount.toLocaleString()} {t('payment.som')})
+                        {t('payment.pay_remaining')} ({formatSom(activePayment.remainingAmount)})
                       </>
                     )}
                   </Button>
@@ -226,7 +227,7 @@ export default function PurchaseCreditsDialog({
                     </div>
                     <div>
                       <p className="font-bold text-sm">{pkg.credits} {t('payment.keys')}</p>
-                      <p className="text-muted-foreground text-xs">{pkg.price.toLocaleString()} {t('payment.som')}</p>
+                      <p className="text-muted-foreground text-xs">{formatSom(pkg.price)}</p>
                     </div>
                   </div>
                   <Button
@@ -269,7 +270,7 @@ export default function PurchaseCreditsDialog({
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('payment.amount_to_pay')}</p>
                 <p className="text-2xl font-bold text-primary">
-                  {selectedPackage.price.toLocaleString()} {t('payment.som')}
+                  {formatSom(selectedPackage.price)}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">
                   {selectedPackage.credits} {t('payment.keys')}

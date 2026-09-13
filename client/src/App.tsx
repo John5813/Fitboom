@@ -26,7 +26,6 @@ const AdminAnalyticsPage = lazy(() => import("@/pages/AdminAnalyticsPage"));
 const CoursesPage = lazy(() => import("@/pages/CoursesPage"));
 const MyCourseDetailPage = lazy(() => import("@/pages/MyCourseDetailPage"));
 const VideoPlayerPage = lazy(() => import("@/pages/VideoPlayerPage"));
-const CheckoutPage = lazy(() => import("@/pages/CheckoutPage"));
 const MapPage = lazy(() => import("@/pages/MapPage"));
 const GymOwnerPage = lazy(() => import("@/pages/GymOwnerPage"));
 const MobilePayPage = lazy(() => import("@/pages/MobilePayPage"));
@@ -107,11 +106,12 @@ function Router() {
             <MyCourseDetailPage />
           </ProtectedRoute>
         </Route>
-        <Route path="/checkout/:id">
-          <ProtectedRoute>
-            <CheckoutPage />
-          </ProtectedRoute>
-        </Route>
+        {/*
+          /checkout marshruti olib tashlandi: u /api/create-payment-intent va
+          /api/confirm-purchase endpointlariga tayanardi, lekin ular serverda
+          hech qachon yaratilmagan — sahifa ochilsa 404 qaytarardi.
+          Kurslar kredit bilan sotib olinadi: /api/collections/:id/purchase
+        */}
         <Route path="/watch/:id">
           <ProtectedRoute>
             <VideoPlayerPage />

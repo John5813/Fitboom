@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, ExternalLink, ChevronLeft, ChevronRight, Info, CalendarCheck, ImageIcon, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { categoryLabels } from "@/lib/categories";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface GymCardProps {
   id: string;
   name: string;
-  category: string;
+  categories: string[];
   credits: number;
   distance: string | number | undefined;
   hours: string;
@@ -28,7 +29,7 @@ interface GymCardProps {
 export default function GymCard({
   id,
   name,
-  category,
+  categories,
   credits,
   distance,
   hours,
@@ -129,7 +130,7 @@ export default function GymCard({
                 </span>
               )}
             </div>
-            <p className="text-white/70 text-sm mt-1">{category}</p>
+            <p className="mt-1 text-sm text-white/70">{categoryLabels(categories)}</p>
           </div>
         </div>
         <div className="p-3 flex gap-2 items-stretch">
@@ -147,8 +148,7 @@ export default function GymCard({
             <Info className="w-4 h-4" />
           </Button>
           <Button
-            size="sm"
-            className="flex-1 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white border-0 font-bold shadow-md shadow-orange-500/30"
+            className="h-10 flex-1"
             onClick={(e) => {
               e.stopPropagation();
               onBook(id);
@@ -165,7 +165,7 @@ export default function GymCard({
         <DialogContent className="w-[90vw] max-w-[400px] max-h-[85vh] overflow-y-auto p-0 rounded-2xl border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{name}</DialogTitle>
-            <DialogDescription>{category}</DialogDescription>
+            <DialogDescription>{categoryLabels(categories)}</DialogDescription>
           </DialogHeader>
           <div>
             <div
@@ -185,7 +185,7 @@ export default function GymCard({
                 <h3 className="text-white font-bold text-2xl leading-tight drop-shadow-lg">
                   {name}
                 </h3>
-                <p className="text-white/80 text-sm mt-1">{category}</p>
+                <p className="mt-1 text-sm text-white/80">{categoryLabels(categories)}</p>
               </div>
             </div>
 

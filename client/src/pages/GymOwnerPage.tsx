@@ -395,7 +395,10 @@ export default function GymOwnerPage() {
     );
   }
 
-  const { gym, visits, payments } = data;
+  // Kutilmagan javob shaklida ham sahifa qulamasligi uchun standart qiymatlar
+  const { gym } = data;
+  const visits = data.visits ?? [];
+  const payments = data.payments ?? [];
 
   const now = new Date();
   const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -436,10 +439,10 @@ export default function GymOwnerPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditDialog} data-testid="button-edit-gym">
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={openEditDialog} data-testid="button-edit-gym">
               <Edit className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
               <Settings className="h-4 w-4" />
             </Button>
           </div>

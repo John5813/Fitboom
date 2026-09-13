@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateShort } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,8 @@ import {
   Lock, ShieldCheck, TrendingUp, ChevronRight, Settings, LayoutDashboard, Eye, BarChart3
 } from "lucide-react";
 import { Link } from "wouter";
-import AdminHeader, { AdminOverlapSection } from "@/components/admin/AdminHeader";
-import StatTile from "@/components/admin/StatTile";
+import AdminHeader, { AdminOverlapSection } from "@/components/shared/PageHeader";
+import StatTile from "@/components/shared/StatTile";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { Gym } from "@shared/schema";
@@ -272,7 +273,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-semibold">{item.title}</h3>
-                    <p className="truncate text-sm text-muted-foreground">{item.desc}</p>
+                    <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{item.desc}</p>
                   </div>
                   {item.count !== undefined && (
                     <Badge variant="secondary" className="shrink-0 tabular-nums">{item.count}</Badge>
@@ -360,7 +361,7 @@ export default function AdminDashboard() {
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleDateString('uz-UZ')}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateShort(msg.createdAt)}</span>
                     <div className="flex items-center gap-1">
                       {msg.status === 'pending' && (
                         <>

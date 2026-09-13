@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { formatSom } from "@/lib/format";
 import { useSearch } from "wouter";
 import { KeyRound, CreditCard, Upload, Copy, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 
@@ -105,7 +106,7 @@ export default function MobilePayPage() {
           )}
           {step === "payment" && selected && (
             <p className="text-gray-400 text-xs mt-0.5">
-              {selected.credits} kredit — {selected.price.toLocaleString()} so'm
+              {selected.credits} kredit — {formatSom(selected.price)}
             </p>
           )}
         </div>
@@ -134,7 +135,7 @@ export default function MobilePayPage() {
                   </div>
                   <div className="text-left">
                     <p className="font-bold text-base">{pkg.credits} kredit</p>
-                    <p className="text-gray-400 text-sm">{pkg.price.toLocaleString()} so'm</p>
+                    <p className="text-gray-400 text-sm">{formatSom(pkg.price)}</p>
                   </div>
                 </div>
                 <span className="bg-orange-500 text-white text-sm font-semibold px-4 py-2 rounded-xl">
@@ -152,7 +153,7 @@ export default function MobilePayPage() {
             <div className="rounded-2xl bg-orange-500/10 border border-orange-500/30 p-4 text-center">
               <p className="text-gray-400 text-xs mb-1">To'lov miqdori</p>
               <p className="text-3xl font-bold text-orange-400">
-                {selected.price.toLocaleString()} so'm
+                {formatSom(selected.price)}
               </p>
               <p className="text-gray-400 text-xs mt-1">{selected.credits} kredit uchun</p>
             </div>
@@ -192,7 +193,7 @@ export default function MobilePayPage() {
             {/* Instruction */}
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
               <p className="text-gray-400 text-xs leading-relaxed">
-                Yuqoridagi karta raqamiga <span className="text-white font-semibold">{selected.price.toLocaleString()} so'm</span> o'tkazing, so'ng to'lov chekining rasmini yuboring. Admin tasdiqlangach kredit hisobingizga tushadi.
+                Yuqoridagi karta raqamiga <span className="text-white font-semibold">{formatSom(selected.price)}</span> o'tkazing, so'ng to'lov chekining rasmini yuboring. Admin tasdiqlangach kredit hisobingizga tushadi.
               </p>
             </div>
 
@@ -245,7 +246,7 @@ export default function MobilePayPage() {
             <div className="mt-8 rounded-2xl bg-white/5 border border-white/10 p-4 w-full max-w-xs">
               <p className="text-gray-400 text-xs">Tanlangan paket</p>
               <p className="font-bold text-lg mt-1">{selected?.credits} kredit</p>
-              <p className="text-gray-400 text-sm">{selected?.price.toLocaleString()} so'm</p>
+              <p className="text-gray-400 text-sm">{formatSom(selected?.price ?? 0)}</p>
             </div>
           </div>
         )}
