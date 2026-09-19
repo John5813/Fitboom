@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { CREDIT_PACKAGES } from "@shared/pricing";
+import { CREDIT_PACKAGES, perCreditPrice, discountPercent } from "@shared/pricing";
 import { formatSom } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -218,6 +218,13 @@ export default function PurchaseCreditsDialog({
                     <Badge className="text-[10px] px-2 py-0">{t('payment.popular')}</Badge>
                   </div>
                 )}
+                {discountPercent(pkg) > 0 && (
+                  <div className="absolute -top-2 right-2">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-600 text-white border-none">
+                      -{discountPercent(pkg)}%
+                    </Badge>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
@@ -226,6 +233,10 @@ export default function PurchaseCreditsDialog({
                     <div>
                       <p className="font-bold text-sm">{pkg.credits} {t('payment.keys')}</p>
                       <p className="text-muted-foreground text-xs">{formatSom(pkg.price)}</p>
+                      {/* Mijoz qaysi paket foydali ekanini o'zi hisoblamasligi uchun */}
+                      <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                        {formatSom(Math.round(perCreditPrice(pkg)))} / 1
+                      </p>
                     </div>
                   </div>
                   <Button

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { CREDIT_PACKAGES } from "@shared/pricing";
+import { CREDIT_PACKAGES, perCreditPrice, discountPercent } from "@shared/pricing";
 import { formatSom } from "@/lib/format";
 import { useSearch } from "wouter";
 import { KeyRound, CreditCard, Upload, Copy, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
@@ -128,6 +128,11 @@ export default function MobilePayPage() {
                     Mashhur
                   </span>
                 )}
+                {discountPercent(pkg) > 0 && (
+                  <span className="absolute -top-2.5 right-3 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    -{discountPercent(pkg)}%
+                  </span>
+                )}
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
                     <KeyRound className="w-5 h-5 text-white" />
@@ -135,6 +140,9 @@ export default function MobilePayPage() {
                   <div className="text-left">
                     <p className="font-bold text-base">{pkg.credits} kredit</p>
                     <p className="text-gray-400 text-sm">{formatSom(pkg.price)}</p>
+                    <p className="text-gray-500 text-[11px] mt-0.5">
+                      {formatSom(Math.round(perCreditPrice(pkg)))} / 1
+                    </p>
                   </div>
                 </div>
                 <span className="bg-orange-500 text-white text-sm font-semibold px-4 py-2 rounded-xl">

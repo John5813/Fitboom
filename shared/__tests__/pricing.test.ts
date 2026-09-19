@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CREDIT_PACKAGES, ALLOWED_CREDIT_AMOUNTS, priceForCredits,
   averageCostPerCredit, GYM_PAYOUT_PER_CREDIT_UZS, gymPayoutForVisit,
+  perCreditPrice, discountPercent,
 } from '../pricing';
 
 describe('kredit paketlari', () => {
@@ -12,26 +13,37 @@ describe('kredit paketlari', () => {
     }
   });
 
-  it('eng katta paket eng kichigidan arzonroq (kredit boshiga)', () => {
-    const perCredit = CREDIT_PACKAGES.map((p) => p.price / p.credits);
-    expect(perCredit[perCredit.length - 1]).toBeLessThan(perCredit[0]);
+  it('paketlar kredit bo\'yicha o\'sib boradi', () => {
+    for (let i = 1; i < CREDIT_PACKAGES.length; i++) {
+      expect(CREDIT_PACKAGES[i].credits).toBeGreaterThan(CREDIT_PACKAGES[i - 1].credits);
+    }
   });
 
   /*
-   * DIQQAT — hal qilinmagan narx masalasi.
+   * Narx zinapoyasining asosiy qoidasi.
    *
-   * Hozirgi narxlarda 240 lik paket 130 likdan QIMMATROQ:
-   *   130 -> 350 000  =  2 692 so'm / kredit
-   *   240 -> 650 000  =  2 708 so'm / kredit
-   *
-   * Ya'ni ko'proq sotib olgan mijoz ko'proq to'laydi. Bu test hozirgi holatni
-   * qayd etadi; narx to'g'rilangach (masalan 240 -> 630 000) uni yuqoridagi
-   * "har bir keyingi paket arzonroq" shartiga almashtirish kerak.
+   * Ilgari 240 lik paket 130 likdan qimmatroq edi (2 708 vs 2 692 so'm/kredit)
+   * — ya'ni ko'proq sotib olgan mijoz ko'proq to'lardi. 240 -> 600 000 qilib
+   * tuzatildi. Bu test shu xatoning qaytib kelishiga yo'l qo'ymaydi.
    */
-  it('hozircha 240 lik paket 130 likdan qimmat — tuzatilishi kutilmoqda', () => {
-    const p130 = CREDIT_PACKAGES.find((p) => p.credits === 130)!;
-    const p240 = CREDIT_PACKAGES.find((p) => p.credits === 240)!;
-    expect(p240.price / p240.credits).toBeGreaterThan(p130.price / p130.credits);
+  it('har bir keyingi paket kredit boshiga arzonroq', () => {
+    const perCredit = CREDIT_PACKAGES.map((p) => p.price / p.credits);
+    for (let i = 1; i < perCredit.length; i++) {
+      expect(perCredit[i]).toBeLessThan(perCredit[i - 1]);
+    }
+  });
+
+  it('chegirma eng katta paketda kamida 15%', () => {
+    const base = CREDIT_PACKAGES[0].price / CREDIT_PACKAGES[0].credits;
+    const last = CREDIT_PACKAGES[CREDIT_PACKAGES.length - 1];
+    const discount = 1 - last.price / last.credits / base;
+    expect(discount).toBeGreaterThanOrEqual(0.15);
+  });
+
+  it('narxlar 10 000 so\'mga karrali — naqd to\'lov uchun qulay', () => {
+    for (const p of CREDIT_PACKAGES) {
+      expect(p.price % 10_000).toBe(0);
+    }
   });
 
   it('ruxsat etilgan miqdorlar paketlardan olinadi', () => {
@@ -69,5 +81,22 @@ describe('marja', () => {
   it('tashrif summasi kreditga proporsional', () => {
     expect(gymPayoutForVisit(1)).toBe(GYM_PAYOUT_PER_CREDIT_UZS);
     expect(gymPayoutForVisit(3)).toBe(GYM_PAYOUT_PER_CREDIT_UZS * 3);
+  });
+});
+
+describe('mijozga ko\'rsatiladigan chegirma', () => {
+  it('eng kichik paketda chegirma yo\'q', () => {
+    expect(discountPercent(CREDIT_PACKAGES[0])).toBe(0);
+  });
+
+  it('chegirma paketdan paketga o\'sib boradi', () => {
+    const d = CREDIT_PACKAGES.map(discountPercent);
+    for (let i = 1; i < d.length; i++) {
+      expect(d[i]).toBeGreaterThan(d[i - 1]);
+    }
+  });
+
+  it('kredit boshiga narx to\'g\'ri hisoblanadi', () => {
+    expect(perCreditPrice({ credits: 60, price: 180_000 })).toBe(3_000);
   });
 });
