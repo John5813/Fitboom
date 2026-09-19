@@ -187,6 +187,21 @@ async function ensureTablesExist() {
       CREATE UNIQUE INDEX IF NOT EXISTS slot_occupancy_slot_date_unique ON slot_occupancy (time_slot_id, date)
     `);
 
+    // Yuborilgan bildirishnomalar jurnali — dublikatdan himoya
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notification_log (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL,
+        kind TEXT NOT NULL,
+        ref_date TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await tryDdl(client, 'notification_log unique index', `
+      CREATE UNIQUE INDEX IF NOT EXISTS notification_log_unique
+        ON notification_log (user_id, kind, ref_date)
+    `);
+
     await backfillSchedule(client);
 
     /**
@@ -215,6 +230,10 @@ async function ensureTablesExist() {
     for (const [label, ddl] of indexes) {
       await tryDdl(client, label, ddl);
     }
+
+    await tryDdl(client, 'eski notification_log yozuvlarini tozalash', `
+      DELETE FROM notification_log WHERE created_at < NOW() - INTERVAL '90 days'
+    `);
 
     console.log("ensureTablesExist: all checks passed.");
   } finally {

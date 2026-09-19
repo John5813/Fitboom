@@ -202,6 +202,27 @@ export const slotOccupancy = pgTable("slot_occupancy", {
   slotDateUnique: uniqueIndex("slot_occupancy_slot_date_unique").on(table.timeSlotId, table.date),
 }));
 
+/**
+ * Yuborilgan bildirishnomalar jurnali — dublikatning oldini oladi.
+ *
+ * Ilgari "kimga yuborildi" ro'yxati server xotirasida (Set) saqlanardi.
+ * Har qayta ishga tushganda (deploy, crash, autoscale) ro'yxat bo'shab,
+ * bir xil eslatma qayta yuborilardi. Ikkinchi instans qo'shilsa esa har biri
+ * o'zi yuborardi.
+ *
+ * `UNIQUE(user_id, kind, ref_date)` tufayli yuborish har bir kalit uchun
+ * bir martagina bo'ladi — necha instans ishlashidan qat'i nazar.
+ */
+export const notificationLog = pgTable("notification_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  kind: text("kind").notNull(),      // masalan: "credit_expiry_5d"
+  refDate: text("ref_date").notNull(), // YYYY-MM-DD
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueKey: uniqueIndex("notification_log_unique").on(table.userId, table.kind, table.refDate),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   credits: true,
@@ -334,6 +355,7 @@ export type InsertGymPeakWindow = z.infer<typeof insertGymPeakWindowSchema>;
 export type GymPeakWindow = typeof gymPeakWindows.$inferSelect;
 export type SlotOccupancy = typeof slotOccupancy.$inferSelect;
 export type SaveGymSchedule = z.infer<typeof saveGymScheduleSchema>;
+export type NotificationLog = typeof notificationLog.$inferSelect;
 export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertPartnershipMessage = z.infer<typeof insertPartnershipMessageSchema>;

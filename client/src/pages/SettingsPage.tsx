@@ -239,7 +239,7 @@ export default function SettingsPage() {
               onChange={(e) => setGymOwnerCode(e.target.value.toUpperCase())}
               placeholder={t('settings.enter_code')}
               onKeyDown={(e) => e.key === 'Enter' && handleGymOwnerLogin()}
-              maxLength={6}
+              maxLength={8}
               data-testid="input-gym-owner-code"
             />
             <Button

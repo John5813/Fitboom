@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, gymHours, gymClosures, gymPeakWindows, slotOccupancy, type GymHours, type GymClosure, type GymPeakWindow, type InsertGymClosure, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, gymHours, gymClosures, gymPeakWindows, slotOccupancy, notificationLog, type GymHours, type GymClosure, type GymPeakWindow, type InsertGymClosure, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
@@ -121,6 +121,13 @@ export interface IStorage {
   }>;
   getAtRiskUsers(daysInactive: number): Promise<User[]>;
   getTopActiveUsers(limit: number): Promise<{ user: User; activityScore: number }[]>;
+  /**
+   * Bildirishnoma yuborishdan oldin "band qilib qo'yadi".
+   * `true` — birinchi marta, yuborish mumkin. `false` — allaqachon yuborilgan.
+   */
+  claimNotification(userId: string, kind: string, refDate: string): Promise<boolean>;
+  /** Yuborish muvaffaqiyatsiz bo'lsa band qilishni bekor qilish */
+  releaseNotification(userId: string, kind: string, refDate: string): Promise<void>;
   saveFile(name: string, data: Buffer, contentType: string): Promise<void>;
   getFile(name: string): Promise<{ data: Buffer; contentType: string } | null>;
 }
@@ -957,6 +964,26 @@ export class DatabaseStorage implements IStorage {
       if (user) results.push({ user, activityScore: Number(row.score) });
     }
     return results;
+  }
+
+  async claimNotification(userId: string, kind: string, refDate: string): Promise<boolean> {
+    // ON CONFLICT DO NOTHING: qator qaytsa — biz birinchimiz, yuborsak bo'ladi
+    const rows = await db
+      .insert(notificationLog)
+      .values({ userId, kind, refDate })
+      .onConflictDoNothing()
+      .returning();
+    return rows.length > 0;
+  }
+
+  async releaseNotification(userId: string, kind: string, refDate: string): Promise<void> {
+    await db
+      .delete(notificationLog)
+      .where(and(
+        eq(notificationLog.userId, userId),
+        eq(notificationLog.kind, kind),
+        eq(notificationLog.refDate, refDate),
+      ));
   }
 
   async saveFile(name: string, data: Buffer, contentType: string): Promise<void> {

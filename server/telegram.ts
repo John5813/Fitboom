@@ -762,9 +762,6 @@ export async function notifyProfileCompleted(user: any) {
   }
 }
 
-// In-memory deduplication: "YYYY-MM-DD-userId-5d" or "YYYY-MM-DD-userId-1d"
-const sentExpiryReminders = new Set<string>();
-
 function getTashkentDateStrLocal(): string {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -792,8 +789,15 @@ export async function sendCreditExpiryReminders(storage: IStorage): Promise<void
 
       if (daysLeft !== 5 && daysLeft !== 1) continue;
 
-      const dedupeKey = `${todayStr}-${user.id}-${daysLeft}d`;
-      if (sentExpiryReminders.has(dedupeKey)) continue;
+      /*
+       * Dublikatdan himoya endi bazada.
+       * claimNotification() atomik: `false` qaytsa — bu eslatma allaqachon
+       * yuborilgan (boshqa instans tomonidan yoki server qayta ishga
+       * tushishidan oldin).
+       */
+      const kind = `credit_expiry_${daysLeft}d`;
+      const claimed = await storage.claimNotification(user.id, kind, todayStr);
+      if (!claimed) continue;
 
       const expiryUzDate = expiryDate.toLocaleDateString('ru-RU', {
         day: '2-digit', month: '2-digit', year: 'numeric',
@@ -818,15 +822,11 @@ export async function sendCreditExpiryReminders(storage: IStorage): Promise<void
       });
 
       if (result?.ok) {
-        sentExpiryReminders.add(dedupeKey);
-        console.log(`[CreditReminder] Sent ${daysLeft}-day reminder to ${user.name || user.id}`);
-      }
-    }
-
-    // Eski kalitlarni o'chirish (xotira tejash)
-    for (const key of sentExpiryReminders) {
-      if (!key.startsWith(todayStr)) {
-        sentExpiryReminders.delete(key);
+        console.log(`[CreditReminder] ${daysLeft} kunlik eslatma yuborildi: ${user.name || user.id}`);
+      } else {
+        // Yuborilmadi — band qilishni bekor qilamiz, keyingi urinishda qayta yuboriladi
+        await storage.releaseNotification(user.id, kind, todayStr);
+        console.warn(`[CreditReminder] Yuborilmadi, qayta urinish uchun bo'shatildi: ${user.id}`);
       }
     }
   } catch (err) {

@@ -8,12 +8,14 @@ import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import crypto from "crypto";
 import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl, syncAdminFlag } from "./telegram";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
+import { sweepMissedBookings, isMissed } from "./maintenance";
 import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
 import { createGymQr, isAuthenticGymQr } from "./qrSignature";
 import { registerScheduleRoutes, checkBookingAllowed, buildAvailability, loadGymSchedule } from "./scheduleRoutes";
@@ -44,6 +46,65 @@ export function registerHealthCheck(app: Express) {
   });
   app.post('/api/health', (_req, res) => {
     res.json({ status: 'ok', method: 'POST', timestamp: new Date().toISOString() });
+  });
+
+  /**
+   * Tashqi cron uchun endpoint.
+   *
+   * Ilgari rejalashtirilgan ishlar server jarayoni ichidagi setInterval bilan
+   * bajarilardi. Replit autoscale konteyneri uxlab qolsa, ular umuman
+   * ishlamasdi; bir nechta instans ishlaganda esa har biri alohida bajarardi.
+   *
+   * Sozlash: cron-job.org yoki Replit Scheduled Deployment har 15 daqiqada
+   *   POST https://<domen>/api/cron/run
+   *   X-Cron-Secret: <CRON_SECRET>
+   */
+  app.post('/api/cron/run', async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) {
+      return res.status(503).json({ error: 'CRON_SECRET sozlanmagan' });
+    }
+    if (req.headers['x-cron-secret'] !== secret) {
+      console.warn('[Cron] Noto\'g\'ri sir bilan urinish');
+      return res.status(401).json({ error: 'Ruxsat yo\'q' });
+    }
+
+    const started = Date.now();
+    const result: Record<string, unknown> = {};
+
+    // Har bir vazifa alohida — biri yiqilsa, qolganlari bajariladi
+    try {
+      result.missedBookings = await sweepMissedBookings(storage);
+    } catch (err: any) {
+      console.error('[Cron] sweepMissedBookings xatosi:', err);
+      result.missedBookings = { error: err.message };
+    }
+
+    try {
+      await storage.deleteExpiredLoginCodes();
+      result.expiredLoginCodes = 'ok';
+    } catch (err: any) {
+      console.error('[Cron] deleteExpiredLoginCodes xatosi:', err);
+      result.expiredLoginCodes = { error: err.message };
+    }
+
+    // Kredit eslatmalari kuniga bir marta, Toshkent vaqti bilan 09:00 dan keyin.
+    // Dublikatdan himoya bazada, shuning uchun tez-tez chaqirish xavfsiz.
+    try {
+      const hour = Number(getTashkentTimeStr().split(':')[0]);
+      if (hour >= 9) {
+        const { sendCreditExpiryReminders } = await import('./telegram');
+        await sendCreditExpiryReminders(storage);
+        result.creditReminders = 'ok';
+      } else {
+        result.creditReminders = 'skipped (09:00 dan oldin)';
+      }
+    } catch (err: any) {
+      console.error('[Cron] sendCreditExpiryReminders xatosi:', err);
+      result.creditReminders = { error: err.message };
+    }
+
+    res.json({ ok: true, durationMs: Date.now() - started, ...result });
   });
 }
 
@@ -82,17 +143,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   app.use('/uploads', express.static(uploadsDir));
 
+  /**
+   * To'lov chekini saqlaydi.
+   *
+   * Chek — to'lovning yagona isboti, shuning uchun bazaga yozishga ikki marta
+   * urinamiz. Lokal diskka yozish faqat oxirgi chora: Replit fayl tizimi
+   * efemer, ya'ni keyingi deploy'da fayl yo'qoladi. Shu sababli lokal zaxira
+   * ishlatilganda log'ga aniq ogohlantirish chiqadi.
+   *
+   * Eslatma: chek rasmi adminga Telegram orqali BUFER sifatida yuboriladi,
+   * shuning uchun bu yerdagi saqlash faqat keyinchalik ko'rish uchun arxiv.
+   */
   async function saveReceiptFile(file: Express.Multer.File, uniqueName: string): Promise<string> {
+    const key = `receipts/${uniqueName}`;
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await storage.saveFile(key, file.buffer, file.mimetype);
+        return `/api/receipts/${uniqueName}`;
+      } catch (err: any) {
+        console.error(`[Receipt] DB ga yozib bo'lmadi (urinish ${attempt}/2):`, err.message);
+        if (attempt === 1) await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+
     try {
-      await storage.saveFile(`receipts/${uniqueName}`, file.buffer, file.mimetype);
-      console.log(`[Receipt] DB ga saqlandi: receipts/${uniqueName}`);
-    } catch (err: any) {
-      console.error(`[Receipt] DB xatoligi:`, err.message);
       const localDir = path.join(uploadsDir, 'receipts');
       await fs.mkdir(localDir, { recursive: true });
       await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
-      console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
+      console.error(
+        `[Receipt] DIQQAT: ${key} faqat lokal diskka yozildi. ` +
+        `Replit fayl tizimi efemer — keyingi deploy'da bu chek yo'qoladi.`,
+      );
+    } catch (err: any) {
+      console.error(`[Receipt] Lokal diskka ham yozib bo'lmadi:`, err.message);
     }
+
     return `/api/receipts/${uniqueName}`;
   }
 
@@ -483,11 +569,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate unique 6-character access code for gym owner
+      // Kriptografik tasodifiy: Math.random() oldindan aytib bo'ladigan
+      // ketma-ketlik beradi va bu kod zal egasi panelining yagona kaliti
       const generateAccessCode = (): string => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // O/0 va I/1 chalkashmasligi uchun
         let code = '';
-        for (let i = 0; i < 6; i++) {
-          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(crypto.randomInt(chars.length));
         }
         return code;
       };
@@ -1087,28 +1175,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bookings = await storage.getBookings(req.user!.id);
       
+      /*
+       * Mijoz ro'yxatni ochganda ham vaqti o'tgan bronlarni belgilaymiz —
+       * shunda u darhol to'g'ri holatni ko'radi. Asosiy ish esa cron orqali
+       * (POST /api/cron/run) bajariladi, ya'ni mijoz ilovani ochmasa ham.
+       * Mantiq `maintenance.ts` da — ikki joyda takrorlanmasligi uchun.
+       */
       const todayStr = getTashkentDateStr();
       const currentTime = getTashkentTimeStr();
-      
+
       for (const booking of bookings) {
-        if (!booking.isCompleted && booking.status !== 'missed' && booking.status !== 'completed') {
-          if (booking.date) {
-            const bookingDateStr = typeof booking.date === 'string' 
-              ? booking.date.split('T')[0] 
-              : new Date(booking.date).toISOString().split('T')[0];
-            
-            if (bookingDateStr < todayStr) {
-              await storage.updateBookingStatus(booking.id, 'missed');
-              booking.status = 'missed';
-            } else if (bookingDateStr === todayStr && booking.scheduledEndTime) {
-              const [endH, endM] = booking.scheduledEndTime.split(':').map(Number);
-              const endWithGrace = `${String(endH + 1).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-              if (currentTime >= endWithGrace) {
-                await storage.updateBookingStatus(booking.id, 'missed');
-                booking.status = 'missed';
-              }
-            }
-          }
+        if (booking.isCompleted || booking.status === 'missed'
+            || booking.status === 'completed' || booking.status === 'cancelled') continue;
+        if (!isMissed(booking as any, todayStr, currentTime)) continue;
+
+        await storage.updateBookingStatus(booking.id, 'missed');
+        booking.status = 'missed';
+        // Joyni bo'shatish — ilgari bu qadam tushib qolgandi
+        if (booking.timeSlotId && booking.date) {
+          await storage.releaseSlotOnDate(booking.timeSlotId, booking.date.split('T')[0]);
         }
       }
       

@@ -930,7 +930,7 @@ export default function GymOwnerPage() {
                 value={switchModeCode}
                 onChange={(e) => setSwitchModeCode(e.target.value.toUpperCase())}
                 placeholder="Masalan: ABC123"
-                maxLength={6}
+                maxLength={8}
                 className="mt-1 font-mono tracking-widest text-center text-lg uppercase"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSwitchToUserMode(); }}
                 data-testid="input-switch-code"
