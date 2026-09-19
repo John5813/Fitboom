@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { CREDIT_PACKAGES } from "@shared/pricing";
 import { formatSom } from "@/lib/format";
 import { useSearch } from "wouter";
 import { KeyRound, CreditCard, Upload, Copy, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
@@ -7,11 +8,9 @@ const CARD_NUMBER = "9860160104562378";
 const CARD_HOLDER = "Javlonbek Mo'ydinov";
 const PRODUCTION_URL = "https://fitboom.replit.app";
 
-const packages = [
-  { credits: 60, price: 60000 },
-  { credits: 130, price: 130000, isPopular: true },
-  { credits: 240, price: 240000 },
-];
+// Narxlar `@shared/pricing` da. Bu sahifada ular web'dagidan uch baravar
+// arzon yozilgan edi — mobil ilovadan sotib olgan mijoz kam to'lardi.
+const packages = CREDIT_PACKAGES;
 
 type Step = "packages" | "payment" | "success";
 

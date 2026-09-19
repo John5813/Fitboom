@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { CREDIT_PACKAGES } from "@shared/pricing";
 import { formatSom } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -24,11 +25,8 @@ interface PurchaseCreditsDialogProps {
   currentCredits?: number;
 }
 
-const packages: CreditPackage[] = [
-  { credits: 60, price: 180000 },
-  { credits: 130, price: 350000, isPopular: true },
-  { credits: 240, price: 650000 },
-];
+// Paketlar `@shared/pricing` da — web va mobil bir xil narxda ishlashi uchun
+const packages: CreditPackage[] = CREDIT_PACKAGES;
 
 const CARD_NUMBER = "9860160104562378";
 const CARD_HOLDER = "Javlonbek Mo'ydinov";

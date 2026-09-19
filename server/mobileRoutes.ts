@@ -21,6 +21,7 @@ import { publicGym, rateLimit } from './security';
 import { isAuthenticGymQr } from './qrSignature';
 import { checkBookingAllowed, buildAvailability, loadGymSchedule } from './scheduleRoutes';
 import { dayOfWeekFromDate, findPeakWindow } from '@shared/schedule';
+import { ALLOWED_CREDIT_AMOUNTS, gymPayoutForVisit, priceForCredits } from '@shared/pricing';
 import {
   requireMobileAuth,
   generateTokenPair,
@@ -69,13 +70,9 @@ function fixGymImages(gym: any): any {
   };
 }
 
-const ALLOWED_CREDIT_PACKAGES = [60, 130, 240];
-
-const CREDIT_PRICES: Record<number, number> = {
-  60: 60000,
-  130: 130000,
-  240: 240000,
-};
+// Narxlar `@shared/pricing` da — ilgari bu yerda web'dagidan uch baravar
+// arzon narxlar yozilgan edi va mobil mijoz kamroq to'lardi
+const ALLOWED_CREDIT_PACKAGES = ALLOWED_CREDIT_AMOUNTS;
 
 function getTashkentNow(): Date {
   const now = new Date();
@@ -1077,7 +1074,7 @@ export function registerMobileRoutes(app: Express) {
 
       const user = await storage.getUser(mobileUser.id);
       const creditsEarned = gym.credits;
-      const pricePerVisit = Math.round(gym.credits * 1500);
+      const pricePerVisit = gymPayoutForVisit(gym.credits);
 
       await storage.createGymVisit({
         gymId,
@@ -1139,8 +1136,8 @@ export function registerMobileRoutes(app: Express) {
         isExpired: expiryDate ? new Date(expiryDate) < now : false,
         packages: ALLOWED_CREDIT_PACKAGES.map(c => ({
           credits: c,
-          price: CREDIT_PRICES[c],
-          priceFormatted: `${CREDIT_PRICES[c].toLocaleString()} so'm`,
+          price: priceForCredits(c),
+          priceFormatted: `${(priceForCredits(c) ?? 0).toLocaleString('en-US').replace(/,/g, ' ')} so'm`,
         })),
         paymentUrl: `${appUrl}/mobile-pay?token=${mobileToken}`,
         mapUrl: `${appUrl}/map`,
@@ -1178,7 +1175,7 @@ export function registerMobileRoutes(app: Express) {
       const mobileUser = (req as any).mobileUser;
       const { credits, price } = req.body;
       const creditsNum = parseInt(credits);
-      const priceNum = price ? parseInt(price) : CREDIT_PRICES[creditsNum];
+      const priceNum = price ? parseInt(price) : (priceForCredits(creditsNum) ?? 0);
 
       if (!creditsNum || !ALLOWED_CREDIT_PACKAGES.includes(creditsNum)) {
         return mobileError(res, `Noto'g'ri kredit paketi. Ruxsat etilganlar: ${ALLOWED_CREDIT_PACKAGES.join(', ')}`);
@@ -1189,21 +1186,21 @@ export function registerMobileRoutes(app: Express) {
       const payment = await storage.createCreditPayment({
         userId: mobileUser.id,
         credits: creditsNum,
-        price: priceNum || CREDIT_PRICES[creditsNum],
+        price: priceNum || (priceForCredits(creditsNum) ?? 0),
         status: 'pending',
-        remainingAmount: priceNum || CREDIT_PRICES[creditsNum],
+        remainingAmount: priceNum || (priceForCredits(creditsNum) ?? 0),
       });
 
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
       const user = await storage.getUser(mobileUser.id);
-      await sendPaymentReceiptToAdmin(storage, payment.id, req.file.buffer, user, creditsNum, priceNum || CREDIT_PRICES[creditsNum], false, receiptFilename);
+      await sendPaymentReceiptToAdmin(storage, payment.id, req.file.buffer, user, creditsNum, priceNum || (priceForCredits(creditsNum) ?? 0), false, receiptFilename);
 
       mobileSuccess(res, {
         message: "Chek yuborildi. Admin tasdiqlashini kuting.",
         paymentId: payment.id,
         credits: creditsNum,
-        price: priceNum || CREDIT_PRICES[creditsNum],
+        price: priceNum || (priceForCredits(creditsNum) ?? 0),
       }, 201);
     } catch (err: any) {
       console.error('[Mobile] Credit purchase error:', err);

@@ -16,6 +16,7 @@ import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
 import { sweepMissedBookings, isMissed } from "./maintenance";
+import { ALLOWED_CREDIT_AMOUNTS, gymPayoutForVisit, priceForCredits } from "@shared/pricing";
 import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
 import { createGymQr, isAuthenticGymQr } from "./qrSignature";
 import { registerScheduleRoutes, checkBookingAllowed, buildAvailability, loadGymSchedule } from "./scheduleRoutes";
@@ -1045,8 +1046,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Ruxsat etilgan kredit paketlari
-  const allowedCreditPackages = [60, 130, 240];
+  // Ruxsat etilgan kredit paketlari — `@shared/pricing` dan
+  const allowedCreditPackages = ALLOWED_CREDIT_AMOUNTS;
 
   // Purchase credits (simplified - with validation)
   // Eslatma: POST /api/purchase-credits endpointi olib tashlandi.
@@ -1662,9 +1663,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // QR kod tekshirish va tasdiqlash
-  // Credit value: 1 kredit = 30,000 so'm (gym earns this per credit used)
-  const CREDIT_VALUE_UZS = 30000;
+  // Zalga to'lov tarifi `@shared/pricing` da — ilgari bu yerda 30 000, mobil
+  // API da esa 1 500 so'm yozilgan edi va ikki kanal bir-biriga zid ishlardi
 
   app.post('/api/verify-qr', requireAuth, async (req, res) => {
     try {
@@ -1838,7 +1838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Record gym visit and update earnings
       if (user) {
         const creditsUsed = gym.credits;
-        const amountEarned = creditsUsed * CREDIT_VALUE_UZS;
+        const amountEarned = gymPayoutForVisit(creditsUsed);
 
         // Create gym visit record
         await storage.createGymVisit({
