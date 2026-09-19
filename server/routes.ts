@@ -2,7 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, completeProfileSchema } from "@shared/schema";
+import { clientErrorSchema, insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, completeProfileSchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
@@ -17,6 +17,7 @@ import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
 import { sweepMissedBookings, isMissed } from "./maintenance";
 import { ALLOWED_CREDIT_AMOUNTS, gymPayoutForVisit, priceForCredits } from "@shared/pricing";
+import { captureError } from "./errorTracking";
 import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
 import { createGymQr, isAuthenticGymQr } from "./qrSignature";
 import { registerScheduleRoutes, checkBookingAllowed, buildAvailability, loadGymSchedule } from "./scheduleRoutes";
@@ -2012,6 +2013,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Tasdiqlash uchun foydalanuvchi "O'CHIRISH" so'zini yozishi kerak —
    * bexosdan bosib yuborishning oldini oladi.
    */
+  /**
+   * Ilovadagi xatolarni qabul qiladi.
+   *
+   * Autentifikatsiya talab qilinmaydi: xato aynan kirish sahifasida yuz
+   * berishi mumkin. Spamdan rate limit himoya qiladi.
+   */
+  app.post('/api/client-errors', rateLimit('client-errors', {
+    windowMs: 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
+    try {
+      const parsed = clientErrorSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ ok: false });
+
+      await captureError(storage, {
+        source: 'client',
+        message: parsed.data.message,
+        stack: parsed.data.stack ?? null,
+        context: parsed.data.context ?? null,
+        userId: (req as any).user?.id ?? null,
+      });
+      res.json({ ok: true });
+    } catch {
+      res.json({ ok: true }); // xato qayd etishdagi muammo mijozga ko'rinmasin
+    }
+  });
+
+  /**
+   * Admin: foydalanuvchining bronini bekor qilish va kreditni qaytarish.
+   *
+   * Mijoz "zal yopiq edi" yoki "xato bron qildim" deb murojaat qilganda
+   * adminda hech qanday vosita yo'q edi — faqat kreditni qo'lda qo'shish
+   * mumkin edi, bronning o'zi esa osilib qolardi va joy band bo'lib turardi.
+   */
+  app.post('/api/admin/bookings/:id/cancel', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) return res.status(404).json({ message: 'Bron topilmadi' });
+
+      if (booking.status === 'cancelled') {
+        return res.status(400).json({ message: 'Bu bron allaqachon bekor qilingan' });
+      }
+
+      const refund = req.body?.refund !== false; // standart: kreditni qaytarish
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.slice(0, 200) : '';
+
+      const gym = await storage.getGym(booking.gymId);
+      if (!gym) return res.status(404).json({ message: 'Zal topilmadi' });
+
+      // Avval statusni o'zgartiramiz — takroriy so'rov kreditni ikki marta
+      // qaytarib yubormasligi uchun
+      await storage.updateBookingStatus(booking.id, 'cancelled');
+
+      if (booking.timeSlotId && booking.date) {
+        await storage.releaseSlotOnDate(booking.timeSlotId, booking.date.split('T')[0]);
+      }
+
+      let refunded = 0;
+      if (refund) {
+        await storage.refundUserCredits(booking.userId, gym.credits);
+        refunded = gym.credits;
+      }
+
+      console.log(
+        `[Admin] Bron bekor qilindi: ${booking.id}, admin=${req.user!.id}, ` +
+        `kredit=${refunded}, sabab="${reason}"`,
+      );
+
+      // Mijozga xabar beramiz
+      const user = await storage.getUser(booking.userId);
+      if (user?.chatId) {
+        const { notifyBookingCancelledByAdmin } = await import('./telegram');
+        await notifyBookingCancelledByAdmin(user.chatId, {
+          gymName: gym.name,
+          date: (booking.date || '').split('T')[0],
+          time: booking.scheduledStartTime || booking.time,
+          refunded,
+          reason,
+        });
+      }
+
+      res.json({ success: true, refunded });
+    } catch (error: any) {
+      console.error('[Admin] Bronni bekor qilishda xatolik:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // --- Admin: xatolar jurnali ---
+
+  app.get('/api/admin/errors', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const resolved = req.query.resolved === 'true' ? true
+        : req.query.resolved === 'false' ? false : undefined;
+      const errors = await storage.getErrors({ resolved, limit: 100 });
+      res.json({ errors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put('/api/admin/errors/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const ok = await storage.resolveError(req.params.id, req.body?.resolved !== false);
+      if (!ok) return res.status(404).json({ message: 'Xato topilmadi' });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/errors/resolved', requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const deleted = await storage.deleteResolvedErrors();
+      res.json({ success: true, deleted });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/account/delete", requireAuth, rateLimit('account-delete', {
     windowMs: 60 * 60 * 1000,
     max: 5,

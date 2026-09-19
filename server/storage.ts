@@ -1,4 +1,4 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, gymHours, gymClosures, gymPeakWindows, slotOccupancy, notificationLog, type GymHours, type GymClosure, type GymPeakWindow, type InsertGymClosure, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, gymHours, gymClosures, gymPeakWindows, slotOccupancy, notificationLog, errorLog, type GymHours, type GymClosure, type ErrorLogEntry, type GymPeakWindow, type InsertGymClosure, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
@@ -133,6 +133,16 @@ export interface IStorage {
   claimNotification(userId: string, kind: string, refDate: string): Promise<boolean>;
   /** Yuborish muvaffaqiyatsiz bo'lsa band qilishni bekor qilish */
   releaseNotification(userId: string, kind: string, refDate: string): Promise<void>;
+  // --- Xatolar jurnali ---
+  /** Xatoni qayd etadi. Takrorlansa yangi qator emas, `count` oshiriladi. */
+  recordError(entry: {
+    source: string; message: string; stack: string | null;
+    context: string | null; userId: string | null; fingerprint: string;
+  }): Promise<{ isNew: boolean; count: number }>;
+  getErrors(options?: { resolved?: boolean; limit?: number }): Promise<ErrorLogEntry[]>;
+  resolveError(id: string, resolved: boolean): Promise<boolean>;
+  deleteResolvedErrors(): Promise<number>;
+
   saveFile(name: string, data: Buffer, contentType: string): Promise<void>;
   getFile(name: string): Promise<{ data: Buffer; contentType: string } | null>;
 }
@@ -1025,6 +1035,63 @@ export class DatabaseStorage implements IStorage {
         eq(notificationLog.kind, kind),
         eq(notificationLog.refDate, refDate),
       ));
+  }
+
+  async recordError(entry: {
+    source: string; message: string; stack: string | null;
+    context: string | null; userId: string | null; fingerprint: string;
+  }): Promise<{ isNew: boolean; count: number }> {
+    /*
+     * Bitta atomik amal: yangi bo'lsa qo'shadi, mavjud bo'lsa hisobni oshiradi.
+     * `xmax = 0` — PostgreSQL hiylasi: qator INSERT bilan yaratilganmi yoki
+     * UPDATE bilan yangilanganmi shu orqali bilinadi.
+     */
+    const [row] = await db
+      .insert(errorLog)
+      .values({
+        source: entry.source,
+        message: entry.message,
+        stack: entry.stack,
+        context: entry.context,
+        userId: entry.userId,
+        fingerprint: entry.fingerprint,
+      })
+      .onConflictDoUpdate({
+        target: errorLog.fingerprint,
+        set: {
+          count: sql`${errorLog.count} + 1`,
+          lastSeen: new Date(),
+          // Hal qilingan xato qayta uchrasa — qayta ochiladi
+          resolved: false,
+          context: entry.context,
+        },
+      })
+      .returning();
+
+    return { isNew: row.count === 1, count: row.count };
+  }
+
+  async getErrors(options: { resolved?: boolean; limit?: number } = {}): Promise<ErrorLogEntry[]> {
+    const conditions = options.resolved !== undefined
+      ? [eq(errorLog.resolved, options.resolved)]
+      : [];
+    const query = db.select().from(errorLog);
+    const filtered = conditions.length ? query.where(and(...conditions)) : query;
+    return filtered.orderBy(sql`${errorLog.lastSeen} DESC`).limit(options.limit ?? 100);
+  }
+
+  async resolveError(id: string, resolved: boolean): Promise<boolean> {
+    const [row] = await db
+      .update(errorLog)
+      .set({ resolved })
+      .where(eq(errorLog.id, id))
+      .returning();
+    return !!row;
+  }
+
+  async deleteResolvedErrors(): Promise<number> {
+    const result = await db.delete(errorLog).where(eq(errorLog.resolved, true));
+    return result.rowCount ?? 0;
   }
 
   async saveFile(name: string, data: Buffer, contentType: string): Promise<void> {

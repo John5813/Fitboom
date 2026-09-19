@@ -227,6 +227,36 @@ export const notificationLog = pgTable("notification_log", {
   uniqueKey: uniqueIndex("notification_log_unique").on(table.userId, table.kind, table.refDate),
 }));
 
+/**
+ * Xatolar jurnali.
+ *
+ * Ilgari xatolar faqat `console.error` ga chiqardi — ya'ni production'da
+ * mijoz muammoga tushsa, uni hech kim ko'rmasdi. Endi xatolar bazaga
+ * yoziladi va admin panelida ko'rinadi.
+ *
+ * Bir xil xato takrorlansa yangi qator yaratilmaydi: `fingerprint` bo'yicha
+ * topilib, `count` oshiriladi va `last_seen` yangilanadi. Shu sababli bitta
+ * buzuq sahifa jurnalni minglab qator bilan to'ldirib yubormaydi.
+ */
+export const errorLog = pgTable("error_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  /** "server" yoki "client" */
+  source: text("source").notNull(),
+  message: text("message").notNull(),
+  stack: text("stack"),
+  /** Qaysi sahifa yoki endpoint */
+  context: text("context"),
+  userId: varchar("user_id"),
+  /** message + stack ning birinchi qatoridan hosil qilinadi */
+  fingerprint: text("fingerprint").notNull(),
+  count: integer("count").notNull().default(1),
+  resolved: boolean("resolved").notNull().default(false),
+  firstSeen: timestamp("first_seen").notNull().defaultNow(),
+  lastSeen: timestamp("last_seen").notNull().defaultNow(),
+}, (table) => ({
+  fingerprintUnique: uniqueIndex("error_log_fingerprint_unique").on(table.fingerprint),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   credits: true,
@@ -365,6 +395,15 @@ export type GymPeakWindow = typeof gymPeakWindows.$inferSelect;
 export type SlotOccupancy = typeof slotOccupancy.$inferSelect;
 export type SaveGymSchedule = z.infer<typeof saveGymScheduleSchema>;
 export type NotificationLog = typeof notificationLog.$inferSelect;
+export type ErrorLogEntry = typeof errorLog.$inferSelect;
+
+/** Client'dan keladigan xato hisoboti */
+export const clientErrorSchema = z.object({
+  message: z.string().min(1).max(500),
+  stack: z.string().max(4000).optional(),
+  context: z.string().max(300).optional(),
+});
+export type ClientError = z.infer<typeof clientErrorSchema>;
 export type InsertAdminSetting = z.infer<typeof insertAdminSettingSchema>;
 export type AdminSetting = typeof adminSettings.$inferSelect;
 export type InsertPartnershipMessage = z.infer<typeof insertPartnershipMessageSchema>;

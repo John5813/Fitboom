@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import {
   ArrowLeft, Search, CreditCard, Calendar, User, Users, TrendingUp,
   AlertTriangle, Clock, ShieldCheck, Phone, MessageCircle, Plus, Minus,
-  Edit3, Check, X, History, ShoppingBag, Dumbbell
+  Edit3, Check, X, History, ShoppingBag, Dumbbell, XCircle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +60,9 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [creditMode, setCreditMode] = useState<"add" | "remove" | "set">("add");
   const [creditAmount, setCreditAmount] = useState("");
+  const [cancelBooking, setCancelBooking] = useState<any | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelRefund, setCancelRefund] = useState(true);
   const [expiryDays, setExpiryDays] = useState("30");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -79,6 +82,28 @@ export default function AdminUsersPage() {
     queryKey: ['/api/admin/users', selectedUser?.id],
     enabled: !!selectedUser,
     queryFn: () => fetch(`/api/admin/users/${selectedUser!.id}`, { credentials: 'include' }).then(r => r.json()),
+  });
+
+  const cancelBookingMutation = useMutation({
+    mutationFn: async () => {
+      const r = await apiRequest(`/api/admin/bookings/${cancelBooking.id}/cancel`, 'POST', {
+        refund: cancelRefund,
+        reason: cancelReason,
+      });
+      return r.json();
+    },
+    onSuccess: (data: { refunded: number }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'Bron bekor qilindi',
+        description: data.refunded > 0
+          ? `${data.refunded} ta kredit qaytarildi va mijozga xabar yuborildi.`
+          : 'Kredit qaytarilmadi. Mijozga xabar yuborildi.',
+      });
+      setCancelBooking(null);
+      setCancelReason('');
+    },
+    onError: () => toast({ title: 'Xatolik', description: 'Bronni bekor qilib bo\'lmadi', variant: 'destructive' }),
   });
 
   const adjustCreditsMutation = useMutation({
@@ -249,6 +274,60 @@ export default function AdminUsersPage() {
           </div>
         )}
       </AdminOverlapSection>
+
+      {/* Bronni bekor qilish — admin uchun */}
+      <Dialog open={!!cancelBooking} onOpenChange={(open) => { if (!open) setCancelBooking(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-admin-cancel-booking">
+          <DialogHeader>
+            <DialogTitle>Bronni bekor qilish</DialogTitle>
+            <DialogDescription>
+              Bron bekor qilinadi, band qilingan joy bo'shatiladi va mijozga
+              Telegram orqali xabar yuboriladi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium" htmlFor="cancel-reason">
+                Sabab (mijozga ko'rinadi)
+              </label>
+              <Input
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Masalan: zal texnik sabablarga ko'ra yopiq"
+                data-testid="input-cancel-reason"
+              />
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border p-3">
+              <input
+                type="checkbox"
+                id="cancel-refund"
+                checked={cancelRefund}
+                onChange={(e) => setCancelRefund(e.target.checked)}
+                className="h-4 w-4"
+                data-testid="checkbox-cancel-refund"
+              />
+              <span className="text-sm">Kreditni mijozga qaytarish</span>
+            </label>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setCancelBooking(null)}>
+                Yopish
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => cancelBookingMutation.mutate()}
+                disabled={cancelBookingMutation.isPending}
+                data-testid="button-confirm-admin-cancel"
+              >
+                {cancelBookingMutation.isPending ? 'Bajarilmoqda...' : 'Bekor qilish'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* User Detail Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={(open) => { if (!open) { setSelectedUser(null); setCreditAmount(""); } }}>
@@ -455,17 +534,33 @@ export default function AdminUsersPage() {
                         {[...userDetail!.bookings]
                           .sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime())
                           .map(b => (
-                          <div key={b.id} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2.5">
-                            <div className="flex items-center gap-2.5">
-                              <Dumbbell className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <p className="text-xs font-medium">{formatDate(b.bookingDate)}</p>
+                          <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2.5">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <Dumbbell className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <p className="truncate text-xs font-medium">{formatDate(b.bookingDate)}</p>
                             </div>
-                            <Badge
-                              variant={b.status === 'confirmed' ? 'default' : b.status === 'cancelled' ? 'destructive' : 'secondary'}
-                              className="text-[10px]"
-                            >
-                              {b.status === 'confirmed' ? 'Tasdiqlangan' : b.status === 'cancelled' ? 'Bekor' : 'Kutilmoqda'}
-                            </Badge>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <Badge
+                                variant={b.status === 'confirmed' ? 'default' : b.status === 'cancelled' ? 'destructive' : 'secondary'}
+                                className="text-[10px]"
+                              >
+                                {b.status === 'confirmed' ? 'Tasdiqlangan' : b.status === 'cancelled' ? 'Bekor' : 'Kutilmoqda'}
+                              </Badge>
+                              {/* Mijoz shikoyat qilganda admin bronni bekor qilib,
+                                  kreditni qaytara oladi — ilgari bunday vosita yo'q edi */}
+                              {b.status !== 'cancelled' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  title="Bekor qilish va kreditni qaytarish"
+                                  onClick={() => setCancelBooking(b)}
+                                  data-testid={`button-admin-cancel-booking-${b.id}`}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

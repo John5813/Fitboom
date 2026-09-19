@@ -90,6 +90,17 @@ seats, clears expired login codes, and sends credit-expiry reminders after
 de-duplicated through the `notification_log` table, so running it more often
 than needed is safe.
 
+## Error tracking
+
+Server 5xx responses, unhandled rejections and client-side crashes are written
+to the `error_log` table and surfaced at **/admin/errors**. Identical errors
+collapse into one row by fingerprint (message + top stack frame, with UUIDs
+and long numbers normalised away), so a single broken page cannot flood the
+log. The first occurrence of a new fingerprint sends a Telegram alert to
+`ADMIN_IDS`, rate-limited to 10 per hour.
+
+No external service or DSN is involved — the data stays in your database.
+
 ## Legal documents
 
 `client/src/content/legal.ts` holds the public offer, privacy policy and terms.

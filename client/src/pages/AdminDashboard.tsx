@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Building2, Video, MessageSquare, Key, Trash2, Check, X, Users,
-  Lock, ShieldCheck, TrendingUp, ChevronRight, Settings, LayoutDashboard, Eye, BarChart3
+  Lock, ShieldCheck, TrendingUp, ChevronRight, Settings, LayoutDashboard, Eye, BarChart3, Bug
 } from "lucide-react";
 import { Link } from "wouter";
 import AdminHeader, { AdminOverlapSection } from "@/components/shared/PageHeader";
@@ -237,6 +237,12 @@ export default function AdminDashboard() {
       desc: "Biznes ko'rsatkichlari va moliya",
       icon: BarChart3,
       href: "/admin/analytics",
+    },
+    {
+      title: "Xatolar",
+      desc: "Serverda va ilovada yuz bergan xatolar",
+      icon: Bug,
+      href: "/admin/errors",
     },
   ];
 

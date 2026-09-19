@@ -6,6 +6,7 @@ import { setupAuth } from "./auth";
 import { setupTelegramWebhook, setupCreditExpiryScheduler } from './telegram';
 import { storage } from './storage';
 import { rateLimit } from './security';
+import { captureError } from './errorTracking';
 
 const apiRateLimit = rateLimit('api-global', {
   windowMs: 60 * 1000,
@@ -28,8 +29,14 @@ process.on('uncaughtException', (err) => {
   setTimeout(() => process.exit(1), 1000);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+process.on('unhandledRejection', (reason: any) => {
+  console.error('[FATAL] Unhandled Rejection:', reason);
+  captureError(storage, {
+    source: 'server',
+    message: `Unhandled rejection: ${reason?.message ?? String(reason)}`,
+    stack: reason?.stack,
+    context: 'process',
+  });
 });
 
 process.on('SIGTERM', () => {
@@ -110,10 +117,23 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    console.error('[EXPRESS ERROR]', err.message, err.stack);
+    console.error('[EXPRESS ERROR]', message, err.stack);
+
+    // 5xx xatolar jurnalga tushadi va yangi bo'lsa Telegram'ga xabar ketadi.
+    // 4xx — bu foydalanuvchi xatosi (noto'g'ri ma'lumot), qayd etilmaydi.
+    if (status >= 500) {
+      captureError(storage, {
+        source: 'server',
+        message,
+        stack: err.stack,
+        context: `${req.method} ${req.path}`,
+        userId: (req as any).user?.id ?? null,
+      });
+    }
+
     res.status(status).json({ message });
   });
 

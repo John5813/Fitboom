@@ -753,6 +753,63 @@ export async function setupTelegramWebhook() {
   return result;
 }
 
+/**
+ * Yangi xato haqida adminlarga xabar beradi.
+ *
+ * Faqat birinchi marta uchragan xato uchun chaqiriladi va soatlik chegara
+ * bilan cheklangan — shunda buzuq sahifa telefonni xabarga ko'mib yubormaydi.
+ */
+export async function notifyAdminsOfError(params: {
+  message: string;
+  context?: string;
+  source: 'server' | 'client';
+  count: number;
+}): Promise<void> {
+  const adminIds = getAdminChatIds();
+  if (adminIds.length === 0) return;
+
+  const where = params.source === 'client' ? 'Ilovada' : 'Serverda';
+  const text =
+    `🐞 <b>Yangi xato</b>\n\n` +
+    `${where}: <code>${escapeHtml(params.message)}</code>\n` +
+    (params.context ? `Joyi: <code>${escapeHtml(params.context)}</code>\n` : '') +
+    `\nBatafsil: admin panel → Xatolar`;
+
+  for (const adminId of adminIds) {
+    try {
+      await sendMessage(adminId, text);
+    } catch (err: any) {
+      console.error('[Telegram] Xato haqida xabar yuborilmadi:', err?.message);
+    }
+  }
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Admin bronni bekor qilganda mijozga xabar */
+export async function notifyBookingCancelledByAdmin(
+  chatId: string,
+  info: { gymName: string; date: string; time: string; refunded: number; reason?: string },
+): Promise<void> {
+  const text =
+    `<b>Broningiz bekor qilindi</b>\n\n` +
+    `Zal: ${escapeHtml(info.gymName)}\n` +
+    `Sana: ${escapeHtml(info.date)} ${escapeHtml(info.time)}\n` +
+    (info.reason ? `Sabab: ${escapeHtml(info.reason)}\n` : '') +
+    `\n` +
+    (info.refunded > 0
+      ? `${info.refunded} ta kalit hisobingizga qaytarildi.`
+      : `Kredit qaytarilmadi.`);
+
+  try {
+    await sendMessage(chatId, text);
+  } catch (err: any) {
+    console.error('[Telegram] Bekor qilish xabari yuborilmadi:', err?.message);
+  }
+}
+
 export async function notifyProfileCompleted(user: any) {
   if (!user?.chatId) return;
   try {

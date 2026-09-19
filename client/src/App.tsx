@@ -23,6 +23,7 @@ const AdminGymsPage = lazy(() => import("@/pages/AdminGymsPage"));
 const AdminCollectionsPage = lazy(() => import("@/pages/AdminCollectionsPage"));
 const AdminUsersPage = lazy(() => import("@/pages/AdminUsersPage"));
 const AdminAnalyticsPage = lazy(() => import("@/pages/AdminAnalyticsPage"));
+const AdminErrorsPage = lazy(() => import("@/pages/AdminErrorsPage"));
 const CoursesPage = lazy(() => import("@/pages/CoursesPage"));
 const MyCourseDetailPage = lazy(() => import("@/pages/MyCourseDetailPage"));
 const VideoPlayerPage = lazy(() => import("@/pages/VideoPlayerPage"));
@@ -93,6 +94,11 @@ function Router() {
         <Route path="/admin/analytics">
           <AdminRoute>
             <AdminAnalyticsPage />
+          </AdminRoute>
+        </Route>
+        <Route path="/admin/errors">
+          <AdminRoute>
+            <AdminErrorsPage />
           </AdminRoute>
         </Route>
 

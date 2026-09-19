@@ -195,6 +195,29 @@ async function ensureTablesExist() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version TEXT
     `);
 
+    // Xatolar jurnali
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS error_log (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        source TEXT NOT NULL,
+        message TEXT NOT NULL,
+        stack TEXT,
+        context TEXT,
+        user_id VARCHAR,
+        fingerprint TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 1,
+        resolved BOOLEAN NOT NULL DEFAULT false,
+        first_seen TIMESTAMP NOT NULL DEFAULT NOW(),
+        last_seen TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await tryDdl(client, 'error_log fingerprint unique', `
+      CREATE UNIQUE INDEX IF NOT EXISTS error_log_fingerprint_unique ON error_log (fingerprint)
+    `);
+    await tryDdl(client, 'error_log last_seen index', `
+      CREATE INDEX IF NOT EXISTS idx_error_log_last_seen ON error_log (last_seen DESC)
+    `);
+
     // Yuborilgan bildirishnomalar jurnali — dublikatdan himoya
     await client.query(`
       CREATE TABLE IF NOT EXISTS notification_log (
@@ -238,6 +261,10 @@ async function ensureTablesExist() {
     for (const [label, ddl] of indexes) {
       await tryDdl(client, label, ddl);
     }
+
+    await tryDdl(client, 'eski hal qilingan xatolarni tozalash', `
+      DELETE FROM error_log WHERE resolved = true AND last_seen < NOW() - INTERVAL '30 days'
+    `);
 
     await tryDdl(client, 'eski notification_log yozuvlarini tozalash', `
       DELETE FROM notification_log WHERE created_at < NOW() - INTERVAL '90 days'
