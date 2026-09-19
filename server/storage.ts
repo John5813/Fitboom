@@ -16,7 +16,12 @@ export interface IStorage {
   updateUserCreditsWithExpiry(id: string, credits: number, expiryDate: Date): Promise<User | undefined>;
   checkAndResetExpiredCredits(id: string): Promise<User | undefined>;
   updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined>;
-  completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined>;
+  /**
+   * Hisobni o'chiradi: shaxsiy ma'lumotlar anonimlashtiriladi, bron va to'lov
+   * yozuvlari buxgalteriya uchun saqlanib qoladi.
+   */
+  anonymizeUser(id: string): Promise<boolean>;
+  completeUserProfile(id: string, profileData: { name: string; age: number; gender: string; termsVersion?: string }): Promise<User | undefined>;
   getGyms(): Promise<Gym[]>;
   getGym(id: string): Promise<Gym | undefined>;
   createGym(gym: InsertGym): Promise<Gym>;
@@ -224,12 +229,48 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined> {
+  async anonymizeUser(id: string): Promise<boolean> {
+    /*
+     * Qatorni butunlay o'chirmaymiz: bronlar, tashriflar va to'lovlar
+     * `user_id` orqali bog'langan va ular moliyaviy hisobot uchun kerak.
+     * O'rniga barcha shaxsiy maydonlarni tozalaymiz va hisobni bloklaymiz.
+     *
+     * telegram_id va phone UNIQUE bo'lgani uchun ularni NULL qilamiz —
+     * shunda o'sha raqam bilan keyinchalik yangi hisob ochish mumkin.
+     */
     const [user] = await db
       .update(users)
-      .set({ 
-        ...profileData, 
-        profileCompleted: true 
+      .set({
+        telegramId: null,
+        phone: null,
+        chatId: null,
+        name: null,
+        age: null,
+        gender: null,
+        profileImageUrl: null,
+        credits: 0,
+        creditExpiryDate: null,
+        isAdmin: false,
+        profileCompleted: false,
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return !!user;
+  }
+
+  async completeUserProfile(
+    id: string,
+    profileData: { name: string; age: number; gender: string; termsVersion?: string },
+  ): Promise<User | undefined> {
+    const { termsVersion, ...profile } = profileData;
+    const [user] = await db
+      .update(users)
+      .set({
+        ...profile,
+        profileCompleted: true,
+        // Rozilik vaqti va versiyasi qayd etiladi — keyinchalik shartlar
+        // o'zgarsa, kim qaysi versiyaga rozilik berganini bilish uchun
+        ...(termsVersion ? { termsAcceptedAt: new Date(), termsVersion } : {}),
       })
       .where(eq(users.id, id))
       .returning();

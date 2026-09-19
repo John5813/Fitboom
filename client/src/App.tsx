@@ -29,6 +29,7 @@ const VideoPlayerPage = lazy(() => import("@/pages/VideoPlayerPage"));
 const MapPage = lazy(() => import("@/pages/MapPage"));
 const GymOwnerPage = lazy(() => import("@/pages/GymOwnerPage"));
 const MobilePayPage = lazy(() => import("@/pages/MobilePayPage"));
+const LegalPage = lazy(() => import("@/pages/LegalPage"));
 
 function PageLoader() {
   return (
@@ -128,6 +129,9 @@ function Router() {
           </ProtectedRoute>
         </Route>
         <Route path="/mobile-pay" component={MobilePayPage} />
+        {/* Huquqiy hujjatlar — ro'yxatdan o'tmagan foydalanuvchi ham ko'ra olishi kerak */}
+        <Route path="/legal/:slug" component={LegalPage} />
+        <Route path="/legal" component={LegalPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

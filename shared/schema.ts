@@ -16,6 +16,10 @@ export const users = pgTable("users", {
   creditExpiryDate: timestamp("credit_expiry_date"),
   isAdmin: boolean("is_admin").notNull().default(false),
   profileCompleted: boolean("profile_completed").notNull().default(false),
+  /** Foydalanuvchi oferta va maxfiylik siyosatiga rozilik bergan vaqt */
+  termsAcceptedAt: timestamp("terms_accepted_at"),
+  /** Rozilik berilgan hujjat versiyasi (LEGAL_LAST_UPDATED) */
+  termsVersion: text("terms_version"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -242,6 +246,11 @@ export const completeProfileSchema = z.object({
   name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
   age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(100, "Yosh 100 dan oshmasligi kerak"),
   gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
+  // Rozilik majburiy: server tomonda ham tekshiriladi, faqat UI da emas
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: "Davom etish uchun shartlarga rozilik bildiring" }),
+  }),
+  termsVersion: z.string().min(1),
 });
 export const insertGymSchema = createInsertSchema(gyms).omit({ id: true, createdAt: true, totalEarnings: true, currentDebt: true });
 export const insertVideoCollectionSchema = createInsertSchema(videoCollections).omit({ id: true, createdAt: true });

@@ -187,6 +187,14 @@ async function ensureTablesExist() {
       CREATE UNIQUE INDEX IF NOT EXISTS slot_occupancy_slot_date_unique ON slot_occupancy (time_slot_id, date)
     `);
 
+    // Rozilik ustunlari — mavjud foydalanuvchilar uchun NULL bo'lib qoladi
+    await tryDdl(client, 'users.terms_accepted_at', `
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP
+    `);
+    await tryDdl(client, 'users.terms_version', `
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version TEXT
+    `);
+
     // Yuborilgan bildirishnomalar jurnali — dublikatdan himoya
     await client.query(`
       CREATE TABLE IF NOT EXISTS notification_log (

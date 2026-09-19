@@ -2005,11 +2005,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
+  /**
+   * Hisobni o'chirish.
+   *
+   * Shaxsiy ma'lumotlar tozalanadi, moliyaviy yozuvlar saqlanadi.
+   * Tasdiqlash uchun foydalanuvchi "O'CHIRISH" so'zini yozishi kerak —
+   * bexosdan bosib yuborishning oldini oladi.
+   */
+  app.post("/api/account/delete", requireAuth, rateLimit('account-delete', {
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  }), async (req, res) => {
+    try {
+      if (req.body?.confirm !== "O'CHIRISH") {
+        return res.status(400).json({ message: "Tasdiqlash so'zi noto'g'ri" });
+      }
+
+      const userId = req.user!.id;
+
+      // Kelgusi bronlarni bekor qilib, joylarni bo'shatamiz
+      const bookings = await storage.getBookings(userId);
+      const todayStr = getTashkentDateStr();
+      for (const b of bookings) {
+        const isFuture = (b.date || '').split('T')[0] >= todayStr;
+        const isOpen = !b.isCompleted && b.status !== 'cancelled' && b.status !== 'missed';
+        if (isFuture && isOpen) {
+          await storage.updateBookingStatus(b.id, 'cancelled');
+          if (b.timeSlotId && b.date) {
+            await storage.releaseSlotOnDate(b.timeSlotId, b.date.split('T')[0]);
+          }
+        }
+      }
+
+      const ok = await storage.anonymizeUser(userId);
+      if (!ok) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+
+      console.log(`[Account] Hisob o'chirildi: ${userId}`);
+
+      req.logout((err) => {
+        if (err) console.error("[Account] Logout xatosi:", err);
+        req.session.destroy(() => {
+          res.json({ success: true, message: "Hisobingiz o'chirildi" });
+        });
+      });
+    } catch (error: any) {
+      console.error("[Account] O'chirish xatosi:", error);
+      res.status(500).json({ message: "Hisobni o'chirishda xatolik" });
+    }
+  });
+
   app.post("/api/complete-profile", requireAuth, async (req, res) => {
     try {
       const profileData = completeProfileSchema.parse(req.body);
 
-      const updatedUser = await storage.completeUserProfile(req.user!.id, profileData);
+      // `acceptedTerms` faqat tekshiruv uchun; bazaga versiya va vaqt yoziladi
+      const { acceptedTerms, ...profile } = profileData;
+      const updatedUser = await storage.completeUserProfile(req.user!.id, profile);
 
       if (!updatedUser) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
