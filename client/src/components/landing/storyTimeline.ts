@@ -13,9 +13,9 @@
 /** Sahnaning 5 holati */
 export const SCENE_STATES = {
   assembled: 0, // yig'ilgan shtanga
-  boom: 1, // disklar portlab tarqaladi
-  ring: 2, // disklar halqa bo'lib aylanadi — "ko'p zal"
-  stack: 3, // disklar ustun bo'lib taxlanadi — "kredit"
+  boom: 1, // disklar portlab, sport buyumlariga aylanadi
+  ring: 2, // buyumlar va disklar halqa bo'lib aylanadi — "bitta xarita"
+  stack: 3, // hammasi yana diskka aylanib ustun bo'ladi — "bitta valyuta"
   finale: 4, // shtanga qayta yig'iladi
 } as const;
 
@@ -27,8 +27,8 @@ export const SCENE_STATES = {
 const KEYS: ReadonlyArray<readonly [number, number]> = [
   [0.0, 0],
   [0.06, 0],
-  [0.22, 1],
-  [0.3, 1],
+  [0.2, 1],
+  [0.32, 1], // sport buyumlari — eng uzoq to'xtash, ularni ko'rib olish kerak
   [0.47, 2],
   [0.55, 2],
   [0.72, 3],
@@ -92,7 +92,7 @@ export function stateWeight(blend: SceneBlend, state: number): number {
  */
 export const BEAT_WINDOWS: ReadonlyArray<readonly [number, number, number, number]> = [
   [-1, 0, 0.04, 0.1], // 0 — bosh ekran: darhol ko'rinadi
-  [0.15, 0.21, 0.3, 0.36], // 1 — portlash
+  [0.14, 0.2, 0.32, 0.38], // 1 — sport turlari
   [0.4, 0.46, 0.55, 0.61], // 2 — halqa
   [0.65, 0.71, 0.8, 0.86], // 3 — ustun
   [0.89, 0.95, 2, 2], // 4 — yakun: oxirigacha qoladi

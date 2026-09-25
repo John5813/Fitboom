@@ -6,6 +6,11 @@
  * sahna internet sekin bo'lsa ham darhol chiqadi va Spline kabi xizmatga
  * bog'liq emas.
  *
+ * Hikoya: bitta shtanga (bitta zal) portlaydi va katta disklar sport
+ * buyumlariga aylanadi (ko'p sport turi) -> ular halqa bo'lib aylanadi
+ * (bitta xarita) -> yana disklarga aylanib bitta ustunga yig'iladi (bitta
+ * valyuta — kredit) -> shtanga qayta yig'iladi.
+ *
  * Bu modul React'ni bilmaydi: `frame(progress)` chaqirilganda sahnani
  * chizadi. Scroll, matnlar va hayot sikli — HeroStory.tsx da.
  */
@@ -17,6 +22,7 @@ import {
   CanvasTexture,
   CylinderGeometry,
   DirectionalLight,
+  DoubleSide,
   Group,
   LatheGeometry,
   Material,
@@ -40,7 +46,8 @@ import {
   WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { sceneBlend, stateWeight, type SceneBlend } from "./storyTimeline";
+import { sceneBlend, smoothstep, stateWeight, type SceneBlend } from "./storyTimeline";
+import { buildSportModels, type SportModel } from "./sportObjects";
 
 export interface BarbellScene {
   /** progress: 0..1, time: soniya, dt: oldingi kadrdan beri soniya */
@@ -162,19 +169,59 @@ const Q_UPRIGHT = qEuler(0, 0, Math.PI / 2);
 /** Har holatda butun modelning burchagi (x, y, z) */
 const ROOT_ROT: Array<[number, number, number]> = [
   [0.22, -0.5, 0.06], // yig'ilgan
-  [0.3, 0.3, 0.1], // portlash
+  [0.12, 0, 0.04], // portlash — buyumlar tomoshabinga qaraydi
   [0.42, 0, 0], // halqa
   [0.28, 0.6, 0], // ustun
   [0.12, 0.35, -0.18], // yakun
 ];
 
 /** Har holatda kadrga sig'ishi kerak bo'lgan radius */
-const FIT_RADIUS = [3.0, 5.2, 4.2, 2.3, 2.45];
+const FIT_RADIUS = [3.0, 3.05, 4.2, 2.3, 2.45];
 
 /** Tebranish kuchi — tinch holatlarda model "nafas oladi" */
-const SWAY = [0.28, 0.12, 0.05, 0.2, 0.3];
+const SWAY = [0.28, 0.16, 0.05, 0.2, 0.3];
 
 const RING_RADIUS = 3.3;
+
+/** Disklar qaysi buyumga aylanadi: disk indeksi -> buyum tartibi */
+const MORPH_OF: Record<number, number> = { 0: 0, 1: 1, 2: 2, 6: 3, 7: 4, 8: 5 };
+
+/**
+ * Portlashdagi buyumlar joylashuvi — 2 ustun x 3 qator. Telefonda ham,
+ * kompyuterda ham (model o'ngga surilgan) matnga tegmaydi.
+ */
+const CONSTELLATION: Array<[number, number, number]> = [
+  [-1.35, 1.95, 0.2],
+  [1.4, 1.6, -0.3],
+  [-1.5, -0.05, -0.2],
+  [1.45, -0.2, 0.3],
+  [-1.3, -2.05, 0.0],
+  [1.35, -1.95, -0.25],
+];
+
+const SPORT_SCALE = 1.02;
+
+function easeOutBack(t: number): number {
+  const c1 = 1.5;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+/**
+ * Disk -> buyum aylanish darajasi (0 — disk, 1 — buyum).
+ * Buyumlar portlashda paydo bo'ladi, halqada qoladi, ustunda yana disk
+ * bo'ladi. `k` — kichik kechikish, hammasi bir vaqtda "otilmasin".
+ */
+function morphAmount(blend: SceneBlend, k: number): number {
+  const M = [0, 1, 1, 0, 0];
+  const a = M[blend.from];
+  const b = M[blend.to];
+  if (a === b) return a;
+  const d = k * 0.06;
+  return b > a
+    ? smoothstep(0.15 + d, 0.6 + d, blend.t)
+    : 1 - smoothstep(0.0 + d * 0.5, 0.45 + d * 0.5, blend.t);
+}
 
 /* ───────────────────────── Sahna ───────────────────────── */
 
@@ -215,6 +262,7 @@ export function createBarbellScene(
   const gold = new MeshStandardMaterial({ color: 0xdcae62, metalness: 1, roughness: 0.27 });
   const steel = new MeshStandardMaterial({ color: 0xcfd4dc, metalness: 1, roughness: 0.2 });
   const darkSteel = new MeshStandardMaterial({ color: 0x5b616b, metalness: 1, roughness: 0.34 });
+  const dial = new MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.4, roughness: 0.35 });
 
   const root = new Group();
   scene.add(root);
@@ -239,8 +287,19 @@ export function createBarbellScene(
   /* Disklar */
   const geoCache = new Map<string, BufferGeometry>();
   const plateSegs = lowPower ? 48 : 72;
+  const steelDouble = new MeshStandardMaterial({
+    color: 0xcfd4dc,
+    metalness: 1,
+    roughness: 0.2,
+    side: DoubleSide,
+  });
+  const sports = buildSportModels({ gold, steel, dark: dial, steelDouble });
   interface Plate {
-    mesh: Mesh;
+    /** Harakatlanadigan guruh: ichida disk va (bo'lsa) sport buyumi */
+    mesh: Group;
+    plate: Mesh;
+    sport?: SportModel;
+    morphIndex: number; // buyum tartibi, buyumi yo'q disklarda -1
     side: number;
     spec: (typeof PLATE_SPECS)[number];
     index: number; // 0..11
@@ -250,9 +309,19 @@ export function createBarbellScene(
     PLATE_SPECS.forEach((spec) => {
       const k = `${spec.r}:${spec.t}`;
       if (!geoCache.has(k)) geoCache.set(k, plateGeometry(spec.r, spec.t, plateSegs));
-      const mesh = new Mesh(geoCache.get(k)!, spec.gold ? gold : steel);
-      root.add(mesh);
-      plates.push({ mesh, side, spec, index: plates.length });
+      const group = new Group();
+      const plate = new Mesh(geoCache.get(k)!, spec.gold ? gold : steel);
+      group.add(plate);
+      const index = plates.length;
+      const morphIndex = MORPH_OF[index] ?? -1;
+      const sport = morphIndex >= 0 ? sports[morphIndex] : undefined;
+      if (sport) {
+        sport.object.visible = false;
+        sport.object.scale.setScalar(0);
+        group.add(sport.object);
+      }
+      root.add(group);
+      plates.push({ mesh: group, plate, sport, morphIndex, side, spec, index });
     });
   }
 
@@ -279,13 +348,29 @@ export function createBarbellScene(
     ).normalize();
     const dist = 2.2 + rand() * 1.7;
     const q = qEuler(rand() * Math.PI * 2, rand() * Math.PI * 2, rand() * Math.PI);
-    boom.push(pose(assembled[i].p.clone().multiplyScalar(1.1).addScaledVector(dir, dist), q));
-    const wide = assembled[i].p.clone().multiplyScalar(pl.side < 0 ? 0.6 : 1.1).addScaledVector(dir, dist);
+    const jx = (rand() - 0.5) * 0.5;
+    const jy = (rand() - 0.5) * 0.7;
+    const jz = (rand() - 0.5) * 0.3;
+
+    if (pl.morphIndex >= 0) {
+      // Buyum: belgilangan joyda, old tomoni kameraga qaragan, tik turadi
+      const [cx, cy, cz] = CONSTELLATION[pl.morphIndex];
+      const front = pose(new Vector3(cx, cy, cz), qEuler(jx * 0.5, -Math.PI / 2 + jy, jz));
+      boom.push(front);
+      boomWide.push(pose(front.p.clone(), front.q.clone()));
+      return;
+    }
+
+    // Kichik disklar — orqa fonda uchib yuradigan parchalar
+    const debris = assembled[i].p.clone().multiplyScalar(0.7).addScaledVector(dir, dist * 0.6);
+    debris.z -= 2;
+    boom.push(pose(debris, q, 0.85));
+    const wide = debris.clone();
     if (pl.side < 0) {
       wide.x *= 0.45;
-      wide.z -= 1.4;
+      wide.z -= 1;
     }
-    boomWide.push(pose(wide, q.clone()));
+    boomWide.push(pose(wide, q.clone(), 0.85));
   });
 
   // Ustun: katta disk pastda, hammasi grifning yalang'och qismiga kiygiziladi
@@ -303,10 +388,25 @@ export function createBarbellScene(
   // Halqa pozasi har kadrda hisoblanadi (aylanadi)
   const ring: Pose[] = plates.map(() => pose(new Vector3(), new Quaternion()));
   const yAxis = new Vector3(0, 1, 0);
+  // Halqada buyumlar va kichik disklar navbatma-navbat turadi
+  const ringSlot: number[] = [];
+  {
+    let obj = 0;
+    let small = 1;
+    plates.forEach((pl) => {
+      if (pl.morphIndex >= 0) {
+        ringSlot.push(obj);
+        obj += 2;
+      } else {
+        ringSlot.push(small);
+        small += 2;
+      }
+    });
+  }
   function updateRing(time: number, progress: number) {
     const spin = reducedMotion ? 0 : time * 0.22 + progress * 2.5;
     plates.forEach((pl, i) => {
-      const a = spin + (i / plates.length) * Math.PI * 2;
+      const a = spin + (ringSlot[i] / plates.length) * Math.PI * 2;
       ring[i].p.set(
         Math.cos(a) * RING_RADIUS,
         Math.sin(a * 2 + time * 0.8) * (reducedMotion ? 0 : 0.14),
@@ -319,7 +419,8 @@ export function createBarbellScene(
 
   const barPoses: Pose[] = [
     pose(new Vector3()),
-    pose(new Vector3(0, 0.25, 0), qEuler(0.35, 0.9, 0.55), 0.9),
+    // Portlashda grif ikki ustun buyum orasida tik turadi — ularni kesib o'tmaydi
+    pose(new Vector3(0, -0.05, -0.9), Q_UPRIGHT.clone(), 0.82),
     pose(new Vector3(), Q_UPRIGHT.clone(), 0.72),
     pose(new Vector3(), Q_UPRIGHT.clone(), 1),
     pose(new Vector3()),
@@ -425,6 +526,20 @@ export function createBarbellScene(
 
       plates.forEach((pl, i) => {
         applyPose(pl.mesh, platePose(blend.from, i), platePose(blend.to, i), blend.t);
+        if (!pl.sport) return;
+        const m = morphAmount(blend, pl.morphIndex);
+        // Avval disk kichrayadi, keyin buyum "otilib" chiqadi va aylanib joyiga tushadi
+        const plateScale = 1 - smoothstep(0, 0.5, m);
+        pl.plate.scale.setScalar(Math.max(plateScale, 0.0001));
+        pl.plate.visible = plateScale > 0.001;
+        const grow = smoothstep(0.3, 1, m);
+        const objScale = grow > 0 ? SPORT_SCALE * easeOutBack(grow) : 0;
+        pl.sport.object.visible = objScale > 0.001;
+        if (pl.sport.object.visible) {
+          pl.sport.object.scale.setScalar(objScale);
+          pl.sport.object.rotation.y = (1 - grow) * 2.4;
+          pl.sport.update?.(time);
+        }
       });
       applyPose(bar, barPoses[blend.from], barPoses[blend.to], blend.t);
 

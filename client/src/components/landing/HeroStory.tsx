@@ -32,7 +32,7 @@ const BEATS: Beat[] = [
   {
     num: "01",
     title: "Bitta zalga bog'lanib qolmang",
-    body: "Bugun — gym, ertaga — basseyn, dam olish kuni — yoga. Hisob bitta, tanlov sizda.",
+    body: "Gym, boks, suzish, yoga, velosiped, yugurish — bugun biri, ertaga boshqasi. Hisob bitta, tanlov sizda.",
   },
   {
     num: "02",
