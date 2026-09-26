@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { categoryLabels } from "@/lib/categories";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Video, MapPin, Clock, Settings, User, QrCode, Check, Info, CalendarCheck, ImageIcon, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2 } from "lucide-react";
@@ -34,6 +35,15 @@ interface TimeSlot {
   dayOfWeek: string;
   availableSpots: number;
   capacity: number;
+}
+
+/** /api/time-slots?date= qaytaradigan, sanaga bog'langan slot */
+interface BookingSlot extends TimeSlot {
+  bookedCount: number;
+  effectiveCapacity: number;
+  state: 'open' | 'peak-limited' | 'peak-blocked' | 'closed';
+  isAvailable: boolean;
+  reason?: string;
 }
 
 // Function to calculate distance between two lat/lng points
@@ -236,32 +246,52 @@ export default function HomePage() {
     }
   };
 
-  // Fetch video collections from API
-  const { data: gymTimeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
-    queryKey: ['/api/time-slots', selectedGymForBooking?.id],
+  /*
+   * Bo'sh joylar SANAGA bog'liq, shuning uchun so'rovga sana qo'shiladi.
+   *
+   * Ilgari bu yerda butun haftalik shablon olinardi va `availableSpots`
+   * sanaga bog'lanmagan umumiy hisoblagichdan kelardi — foydalanuvchi
+   * noto'g'ri (ko'pincha "to'liq") joy sonini ko'rardi.
+   * Server endi shu kun uchun haqiqiy bandlikni, pik vaqt va ish vaqtini
+   * hisobga olgan holda qaytaradi.
+   */
+  const { data: gymTimeSlotsData } = useQuery<{ timeSlots: BookingSlot[] }>({
+    queryKey: ['/api/time-slots', selectedGymForBooking?.id, selectedBookingDate],
     refetchInterval: 15000,
-    enabled: !!selectedGymForBooking?.id,
-    queryFn: () => fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}`, { credentials: 'include' }).then(res => res.json()),
+    enabled: !!selectedGymForBooking?.id && !!selectedBookingDate,
+    queryFn: () =>
+      fetch(`/api/time-slots?gymId=${selectedGymForBooking?.id}&date=${selectedBookingDate}`, {
+        credentials: 'include',
+      }).then(res => res.json()),
   });
 
-  const gymTimeSlots = gymTimeSlotsData?.timeSlots || [];
+  // Zal jadvali — sana tasmasida yopiq kunlarni o'tkazib yuborish uchun
+  const { data: gymScheduleData } = useQuery<{
+    hours: Array<{ dayOfWeek: number; isClosed: boolean }>;
+    closures: Array<{ date: string }>;
+  }>({
+    queryKey: ['/api/gyms', selectedGymForBooking?.id, 'schedule'],
+    enabled: !!selectedGymForBooking?.id,
+    queryFn: () =>
+      fetch(`/api/gyms/${selectedGymForBooking?.id}/schedule`, { credentials: 'include' })
+        .then(res => res.json()),
+  });
 
-  const getDayOfWeekFromDateStr = (dateStr: string): string => {
-    const date = new Date(dateStr + 'T12:00:00');
-    return DAY_NAMES[date.getDay()];
-  };
+  const closureDates = new Set((gymScheduleData?.closures ?? []).map(c => c.date));
+  const closedWeekdays = new Set(
+    (gymScheduleData?.hours ?? []).filter(h => h.isClosed).map(h => h.dayOfWeek),
+  );
 
-  const slotsForSelectedDate = selectedBookingDate
-    ? gymTimeSlots
-        .filter(slot => {
-          if (slot.dayOfWeek !== getDayOfWeekFromDateStr(selectedBookingDate)) return false;
-          if (tashkentTime && selectedBookingDate === tashkentTime.date) {
-            return slot.endTime > tashkentTime.time;
-          }
-          return true;
-        })
-        .sort((a, b) => a.startTime.localeCompare(b.startTime))
-    : [];
+  const slotsForSelectedDate = (gymTimeSlotsData?.timeSlots ?? [])
+    // Server ish vaqti va yopiq kunlarni allaqachon hisobga olgan; bu yerda
+    // faqat bugungi o'tib ketgan vaqtlarni olib tashlaymiz
+    .filter(slot => {
+      if (slot.state === 'closed') return false;
+      if (tashkentTime && selectedBookingDate === tashkentTime.date) {
+        return slot.endTime > tashkentTime.time;
+      }
+      return true;
+    });
 
 
   // Fetch bookings from API
@@ -478,7 +508,11 @@ export default function HomePage() {
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-display font-bold text-xl">{t('home.near_gyms')}</h2>
               <Link href="/map">
-                <span className="text-primary text-sm font-medium flex items-center gap-0.5 cursor-pointer hover:underline" data-testid="link-view-all-gyms">
+                {/* Bosish sohasi barmoq uchun yetarli bo'lishi kerak (ilgari 20px edi) */}
+                <span
+                  className="-mr-2 flex cursor-pointer items-center gap-0.5 rounded-lg px-2 py-2 text-sm font-medium text-primary hover:underline"
+                  data-testid="link-view-all-gyms"
+                >
                   {t('home.view_all')} ›
                 </span>
               </Link>
@@ -489,81 +523,34 @@ export default function HomePage() {
             {gymsLoading ? (
               <p className="text-muted-foreground">{t('home.loading')}</p>
             ) : gymsWithDistance.length > 0 ? (
+              /*
+                Bosh sahifa kartalari ilgari bu yerda qo'lda takrorlangan edi va
+                GymCard komponentidan mustaqil ravishda o'zgarib ketgandi
+                (tugma o'lchamlari, kategoriya ko'rsatilishi boshqacha edi).
+                Endi ikkala joyda ham bitta komponent ishlatiladi.
+              */
               <div className="flex flex-col gap-5">
-                {gymsWithDistance.slice(0, 8).map((gym) => {
-                  const gymImages = gym.images && gym.images.length > 0 ? gym.images : [gym.imageUrl || getGymImage(gym.categories?.[0] || '')];
-                  return (
-                    <Card
-                      key={gym.id}
-                      className="overflow-hidden w-full"
-                    >
-                      <div
-                        className="relative cursor-pointer"
-                        onClick={() => {
-                          setHomeGalleryGym(gym);
-                          setHomeGalleryIndex(0);
-                        }}
-                      >
-                        <div className="aspect-[4/3] w-full overflow-hidden">
-                          <img
-                            src={gymImages[0]}
-                            alt={gym.name}
-                            className="w-full h-full object-cover transition-transform duration-500"
-                          />
-                        </div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                        {gymImages.length > 1 && (
-                          <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-lg text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
-                            <ImageIcon className="w-3.5 h-3.5" />
-                            {gymImages.length} ta rasm
-                          </div>
-                        )}
-                        <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground border-primary-border font-display font-bold text-sm px-3 py-1">
-                          {gym.credits} kredit
-                        </Badge>
-                        <div className="absolute bottom-0 left-0 right-0 p-5">
-                          <h3 className="text-white font-bold text-xl leading-tight drop-shadow-lg">
-                            {gym.name}
-                          </h3>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="text-white/90 text-sm flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5" />
-                              {gym.distance && gym.distance !== '0 km'
-                                ? (language === 'uz' 
-                                    ? `Sizdan ${gym.distance} uzoqlikda` 
-                                    : `${gym.distance} от вас`)
-                                : (language === 'uz' ? 'Masofa nomaʼlum' : 'Расстояние неизвестно')}
-                            </span>
-                          </div>
-                          <p className="text-white/70 text-sm mt-1">
-                            {gym.categories?.join(', ') || ''}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="p-3 flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setHomeDetailGym(gym)}
-                          data-testid={`button-home-gym-details-${gym.id}`}
-                        >
-                          <Info className="w-3.5 h-3.5 mr-1.5" />
-                          Batafsil
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleBookGym(gym.id)}
-                          data-testid={`button-home-gym-book-${gym.id}`}
-                        >
-                          <CalendarCheck className="w-3.5 h-3.5 mr-1.5" />
-                          Band qilish
-                        </Button>
-                      </div>
-                    </Card>
-                  );
-                })}
+                {gymsWithDistance.slice(0, 8).map((gym) => (
+                  <GymCard
+                    key={gym.id}
+                    id={gym.id}
+                    name={gym.name}
+                    categories={gym.categories || []}
+                    credits={gym.credits}
+                    distance={gym.distance}
+                    hours={gym.hours}
+                    imageUrl={gym.imageUrl || getGymImage(gym.categories?.[0] || '')}
+                    images={gym.images}
+                    address={gym.address}
+                    latitude={gym.latitude ?? undefined}
+                    longitude={gym.longitude ?? undefined}
+                    description={gym.description ?? undefined}
+                    facilities={gym.facilities ?? undefined}
+                    avgRating={gym.avgRating ?? null}
+                    ratingCount={gym.ratingCount ?? 0}
+                    onBook={handleBookGym}
+                  />
+                ))}
               </div>
             ) : (
               <div className="rounded-2xl border bg-card p-8 flex flex-col items-center gap-4">
@@ -609,7 +596,7 @@ export default function HomePage() {
                   key={gym.id}
                   id={gym.id}
                   name={gym.name}
-                  category={gym.categories?.[0] || ''}
+                  categories={gym.categories || []}
                   credits={gym.credits}
                   distance={gym.distance}
                   hours={gym.hours}
@@ -821,7 +808,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         <div className="absolute bottom-3 left-3 right-3">
           <h2 className="text-white text-lg font-display font-bold truncate">{selectedGymForBooking.name}</h2>
-          <p className="text-white/80 text-xs">{selectedGymForBooking.categories?.join(', ')}</p>
+          <p className="text-white/80 text-xs">{categoryLabels(selectedGymForBooking.categories)}</p>
         </div>
       </div>
 
@@ -841,7 +828,13 @@ export default function HomePage() {
                     while (dates.length < 7) {
                       const d = new Date(startDate);
                       d.setDate(startDate.getDate() + dayOffset);
-                      if (!gymClosedDays.includes(String(d.getDay()))) {
+                      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      // Uch manba: eski closedDays, haftalik ish vaqti va
+                      // aniq sanadagi istisnolar (bayram, ta'mir)
+                      const isClosed = gymClosedDays.includes(String(d.getDay()))
+                        || closedWeekdays.has(d.getDay())
+                        || closureDates.has(iso);
+                      if (!isClosed) {
                         dates.push(d);
                       }
                       dayOffset++;
@@ -881,26 +874,35 @@ export default function HomePage() {
                   <h3 className="text-xs font-semibold mb-2">Vaqtni tanlang</h3>
                   {slotsForSelectedDate.length === 0 ? (
                     <div className="text-center py-3 bg-muted/30 rounded-md">
-                      <p className="text-xs text-muted-foreground">Vaqtlar mavjud emas</p>
+                      <p className="text-xs text-muted-foreground">
+                        {gymTimeSlotsData ? 'Bu kunga bo\'sh vaqt yo\'q' : 'Yuklanmoqda...'}
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-4 gap-1">
                       {slotsForSelectedDate.map((slot) => {
                         const isSelected = selectedTimeSlot?.id === slot.id;
+                        const isPeakBlocked = slot.state === 'peak-blocked';
                         const isFull = slot.availableSpots <= 0;
+                        const disabled = isPeakBlocked || isFull;
                         return (
                           <Button
                             key={slot.id}
                             variant={isSelected ? "default" : "outline"}
                             size="sm"
-                            className={`text-[10px] px-1 flex flex-col h-auto py-1 ${isSelected ? 'border-primary' : ''} ${isFull ? 'opacity-40' : ''}`}
-                            disabled={isFull}
+                            className={`text-[10px] px-1 flex flex-col h-auto py-1 ${isSelected ? 'border-primary' : ''} ${disabled ? 'opacity-40' : ''}`}
+                            disabled={disabled}
+                            title={slot.reason}
                             onClick={() => setSelectedTimeSlot(slot)}
                             data-testid={`button-slot-${slot.startTime}`}
                           >
                             <span className="font-bold">{slot.startTime}</span>
-                            <span className={`text-[8px] leading-tight ${isFull ? 'text-destructive' : 'opacity-70'}`}>
-                              {isFull ? 'To\'liq' : `${slot.availableSpots} ta`}
+                            <span className={`text-[8px] leading-tight ${disabled ? 'text-destructive' : 'opacity-70'}`}>
+                              {isPeakBlocked
+                                ? 'Band vaqt'
+                                : isFull
+                                  ? 'To\'liq'
+                                  : `${slot.availableSpots} ta`}
                             </span>
                           </Button>
                         );
@@ -961,7 +963,7 @@ export default function HomePage() {
         <DialogContent className="w-[90vw] max-w-[360px] max-h-[80vh] overflow-y-auto p-0 rounded-2xl border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{homeDetailGym?.name}</DialogTitle>
-            <DialogDescription>{homeDetailGym?.categories?.join(', ') || ''}</DialogDescription>
+            <DialogDescription>{categoryLabels(homeDetailGym?.categories)}</DialogDescription>
           </DialogHeader>
           {homeDetailGym && (() => {
             const detailImages = homeDetailGym.images && homeDetailGym.images.length > 0 ? homeDetailGym.images : [homeDetailGym.imageUrl];
@@ -1000,7 +1002,7 @@ export default function HomePage() {
                     <h3 className="text-white font-bold text-lg leading-tight drop-shadow-md truncate">
                       {homeDetailGym.name}
                     </h3>
-                    <p className="text-white/80 text-[10px] truncate">{homeDetailGym.categories?.join(', ') || ''}</p>
+                    <p className="text-white/80 text-[10px] truncate">{categoryLabels(homeDetailGym.categories)}</p>
                   </div>
                 </div>
 

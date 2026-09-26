@@ -23,13 +23,14 @@ const AdminGymsPage = lazy(() => import("@/pages/AdminGymsPage"));
 const AdminCollectionsPage = lazy(() => import("@/pages/AdminCollectionsPage"));
 const AdminUsersPage = lazy(() => import("@/pages/AdminUsersPage"));
 const AdminAnalyticsPage = lazy(() => import("@/pages/AdminAnalyticsPage"));
+const AdminErrorsPage = lazy(() => import("@/pages/AdminErrorsPage"));
 const CoursesPage = lazy(() => import("@/pages/CoursesPage"));
 const MyCourseDetailPage = lazy(() => import("@/pages/MyCourseDetailPage"));
 const VideoPlayerPage = lazy(() => import("@/pages/VideoPlayerPage"));
-const CheckoutPage = lazy(() => import("@/pages/CheckoutPage"));
 const MapPage = lazy(() => import("@/pages/MapPage"));
 const GymOwnerPage = lazy(() => import("@/pages/GymOwnerPage"));
 const MobilePayPage = lazy(() => import("@/pages/MobilePayPage"));
+const LegalPage = lazy(() => import("@/pages/LegalPage"));
 
 function PageLoader() {
   return (
@@ -95,6 +96,11 @@ function Router() {
             <AdminAnalyticsPage />
           </AdminRoute>
         </Route>
+        <Route path="/admin/errors">
+          <AdminRoute>
+            <AdminErrorsPage />
+          </AdminRoute>
+        </Route>
 
         <Route path="/courses">
           <ProtectedRoute>
@@ -107,11 +113,12 @@ function Router() {
             <MyCourseDetailPage />
           </ProtectedRoute>
         </Route>
-        <Route path="/checkout/:id">
-          <ProtectedRoute>
-            <CheckoutPage />
-          </ProtectedRoute>
-        </Route>
+        {/*
+          /checkout marshruti olib tashlandi: u /api/create-payment-intent va
+          /api/confirm-purchase endpointlariga tayanardi, lekin ular serverda
+          hech qachon yaratilmagan — sahifa ochilsa 404 qaytarardi.
+          Kurslar kredit bilan sotib olinadi: /api/collections/:id/purchase
+        */}
         <Route path="/watch/:id">
           <ProtectedRoute>
             <VideoPlayerPage />
@@ -128,6 +135,9 @@ function Router() {
           </ProtectedRoute>
         </Route>
         <Route path="/mobile-pay" component={MobilePayPage} />
+        {/* Huquqiy hujjatlar — ro'yxatdan o'tmagan foydalanuvchi ham ko'ra olishi kerak */}
+        <Route path="/legal/:slug" component={LegalPage} />
+        <Route path="/legal" component={LegalPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

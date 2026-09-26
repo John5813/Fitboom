@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import AdminHeader, { AdminOverlapSection } from "@/components/shared/PageHeader";
+import StatTile from "@/components/shared/StatTile";
+import { formatSom } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +26,9 @@ const MONTHS = [
   "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"
 ];
 
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString('uz-UZ') + " so'm";
-}
+// Formatlash `@/lib/format` da: `toLocaleString('uz-UZ')` ba'zi brauzerlarda
+// en-US ga tushib "47,200,000" kabi vergulli yozuv chiqarardi.
+const formatCurrency = formatSom;
 
 export default function AdminAnalyticsPage() {
   const { toast } = useToast();
@@ -109,79 +112,69 @@ export default function AdminAnalyticsPage() {
 
   if (!isVerified) return null;
 
+  /*
+   * Asosiy ko'rsatkichlar.
+   *
+   * Ilgari har bir karta o'z gradient sarlavhasiga ega edi (ko'k/binafsha/
+   * yashil/to'q sariq/pushti) — beshta rang hech qanday ma'no tashimasdi.
+   * Katta summalar esa kartaga sig'may ikki qatorga o'tib ketardi, natijada
+   * qator ichidagi kartalar turli balandlikda bo'lardi.
+   */
   const mainMetrics = [
-    { label: "DAU", desc: "Kunlik aktiv", value: metrics?.dau || 0, icon: Activity, color: "from-blue-500 to-cyan-500" },
-    { label: "MAU", desc: "Oylik aktiv", value: metrics?.mau || 0, icon: Users, color: "from-violet-500 to-purple-500" },
-    { label: "MRR", desc: "Oylik daromad", value: formatCurrency(metrics?.mrr || 0), icon: TrendingUp, color: "from-emerald-500 to-green-500" },
-    { label: "ARPU", desc: "Aktiv foydalanuvchi/oy", value: formatCurrency(metrics?.arpu || 0), icon: DollarSign, color: "from-amber-500 to-orange-500" },
-    { label: "LTV", desc: "Mijoz umrlik qiymati", value: formatCurrency(metrics?.ltv || 0), icon: Target, color: "from-rose-500 to-pink-500" },
+    { label: "DAU", desc: "Kunlik aktiv", value: metrics?.dau || 0, icon: Activity, money: false },
+    { label: "MAU", desc: "Oylik aktiv", value: metrics?.mau || 0, icon: Users, money: false },
+    { label: "MRR", desc: "Oylik daromad", value: metrics?.mrr || 0, icon: TrendingUp, money: true },
+    { label: "ARPU", desc: "Har bir mijoz/oy", value: metrics?.arpu || 0, icon: DollarSign, money: true },
+    { label: "LTV", desc: "Mijoz umrlik qiymati", value: metrics?.ltv || 0, icon: Target, money: true },
   ];
 
   const secondaryMetrics = [
-    { label: "Jami foydalanuvchilar", value: metrics?.totalUsers || 0, icon: Users },
-    { label: "Bu oydagi yangi", value: metrics?.newUsersThisMonth || 0, icon: UserCheck },
-    { label: "Jami daromad", value: formatCurrency(metrics?.totalRevenue || 0), icon: Wallet },
-    { label: "Xavfli foydalanuvchilar", value: atRiskUsers.length, icon: AlertTriangle },
+    { label: "Jami foydalanuvchilar", value: metrics?.totalUsers || 0, icon: Users, money: false },
+    { label: "Bu oydagi yangi", value: metrics?.newUsersThisMonth || 0, icon: UserCheck, money: false },
+    { label: "Jami daromad", value: metrics?.totalRevenue || 0, icon: Wallet, money: true },
+    { label: "Xavf ostidagilar", value: atRiskUsers.length, icon: AlertTriangle, money: false,
+      tone: atRiskUsers.length > 0 ? "warning" as const : undefined },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <Button variant="ghost" size="icon" className="text-blue-200/70 hover:text-white hover:bg-white/10 h-9 w-9" data-testid="button-back">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Analitika
-                </h1>
-                <p className="text-blue-200/60 text-sm">Biznes ko'rsatkichlari va moliya</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminHeader title="Analitika" subtitle="Biznes ko'rsatkichlari va moliya" backHref="/admin" />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-3 space-y-5 pb-8">
+      <AdminOverlapSection className="-mt-3 space-y-5 pb-8">
         {metricsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[1,2,3,4].map(i => <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse" />)}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {/* 5 ta karta 2 ustunli mobil to'rda oxirgisini yolg'iz qoldirardi;
+                endi mobil'da 2, planshetda 3, desktopda 5 ustun */}
+            {/* 5-karta mobil'da yolg'iz qolmasligi uchun butun kenglikni egallaydi */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 [&>*:last-child]:col-span-2 md:[&>*:last-child]:col-span-1">
               {mainMetrics.map((m) => (
-                <Card key={m.label} className="overflow-hidden border shadow-sm">
-                  <CardContent className="p-0">
-                    <div className={`bg-gradient-to-br ${m.color} p-3`}>
-                      <div className="flex items-center gap-2">
-                        <m.icon className="h-4 w-4 text-white/80" />
-                        <span className="text-xs font-medium text-white/80">{m.label}</span>
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <p className="text-xl font-bold" data-testid={`metric-${m.label}`}>{m.value}</p>
-                      <p className="text-[10px] text-muted-foreground">{m.desc}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatTile
+                  key={m.label}
+                  label={m.label}
+                  value={m.value}
+                  icon={m.icon}
+                  money={m.money}
+                  hint={m.desc}
+                  tone={m.money ? "money" : "neutral"}
+                />
               ))}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {secondaryMetrics.map((m) => (
-                <div key={m.label} className="rounded-xl bg-card border shadow-sm p-3.5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <m.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-[11px] text-muted-foreground">{m.label}</span>
-                  </div>
-                  <p className="text-lg font-bold">{m.value}</p>
-                </div>
+                <StatTile
+                  key={m.label}
+                  label={m.label}
+                  value={m.value}
+                  icon={m.icon}
+                  money={m.money}
+                  hint={m.money ? "so'm" : undefined}
+                  tone={(m as any).tone ?? (m.money ? "money" : "neutral")}
+                />
               ))}
             </div>
           </>
@@ -198,7 +191,7 @@ export default function AdminAnalyticsPage() {
                   </h3>
                   <div className="flex gap-1.5">
                     <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
-                      <SelectTrigger className="h-7 w-24 text-xs">
+                      <SelectTrigger className="h-9 w-28 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -208,7 +201,7 @@ export default function AdminAnalyticsPage() {
                       </SelectContent>
                     </Select>
                     <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-                      <SelectTrigger className="h-7 w-20 text-xs">
+                      <SelectTrigger className="h-9 w-24 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -252,7 +245,7 @@ export default function AdminAnalyticsPage() {
                     <Wallet className="h-4 w-4 text-blue-600" />
                     Xarajatlar
                   </h3>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
+                  <Button size="sm" variant="outline" className="h-9 text-xs" onClick={() => {
                     setExpenseForm({
                       month: new Date().getMonth() + 1,
                       year: new Date().getFullYear(),
@@ -272,7 +265,7 @@ export default function AdminAnalyticsPage() {
                     <p className="text-sm text-muted-foreground">Xarajatlar kiritilmagan</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2">
                     {[...expenses]
                       .sort((a, b) => (b.year * 12 + b.month) - (a.year * 12 + a.month))
                       .map((exp) => (
@@ -288,7 +281,7 @@ export default function AdminAnalyticsPage() {
                             </span>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600"
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-red-500 hover:text-red-600"
                           onClick={() => deleteExpenseMutation.mutate(exp.id)}
                           data-testid={`button-delete-expense-${exp.id}`}
                         >
@@ -319,7 +312,7 @@ export default function AdminAnalyticsPage() {
                 {topUsers.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">Ma'lumot yo'q</p>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-2">
                     {topUsers.map((item, idx) => (
                       <div key={item.user.id} className="flex items-center justify-between px-3 py-2 bg-muted/30 rounded-lg border" data-testid={`top-user-${item.user.id}`}>
                         <div className="flex items-center gap-2.5">
@@ -364,7 +357,7 @@ export default function AdminAnalyticsPage() {
                     <p className="text-sm text-muted-foreground">Barcha foydalanuvchilar faol</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-2">
                     {atRiskUsers.slice(0, 20).map((user) => (
                       <div key={user.id} className="flex items-center justify-between px-3 py-2 bg-muted/30 rounded-lg border" data-testid={`at-risk-user-${user.id}`}>
                         <div className="flex items-center gap-2.5">
@@ -387,7 +380,7 @@ export default function AdminAnalyticsPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AdminOverlapSection>
 
       <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
         <DialogContent className="max-w-sm" data-testid="dialog-expense">

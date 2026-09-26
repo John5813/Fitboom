@@ -2,20 +2,26 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, completeProfileSchema } from "@shared/schema";
+import { clientErrorSchema, insertGymSchema, insertUserSchema, insertOnlineClassSchema, insertBookingSchema, insertVideoCollectionSchema, insertUserPurchaseSchema, insertTimeSlotSchema, completeProfileSchema } from "@shared/schema";
 import passport from "passport";
 import { requireAuth, requireAdmin } from "./auth";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import crypto from "crypto";
 import fs from "fs/promises";
 import Stripe from "stripe";
 import { setupTelegramBot, sendPaymentReceiptToAdmin, getAppUrl, syncAdminFlag } from "./telegram";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { sendSmsCode, verifySmsCode, normalizePhone } from "./sms";
 import { registerMobileRoutes } from "./mobileRoutes";
+import { sweepMissedBookings, isMissed } from "./maintenance";
+import { ALLOWED_CREDIT_AMOUNTS, gymPayoutForVisit, priceForCredits } from "@shared/pricing";
+import { captureError } from "./errorTracking";
 import { rateLimit, publicGym, pickFields, GYM_ADMIN_EDITABLE_FIELDS, GYM_OWNER_EDITABLE_FIELDS } from "./security";
 import { createGymQr, isAuthenticGymQr } from "./qrSignature";
+import { registerScheduleRoutes, checkBookingAllowed, buildAvailability, loadGymSchedule } from "./scheduleRoutes";
+import { dayOfWeekFromDate, dayName, dayNumberFromName, toMinutes, toTimeString, parseLegacyHours } from "@shared/schedule";
 
 let _osClientPromise: Promise<ObjectStorageClient | null> | null = null;
 function getOsClient(): Promise<ObjectStorageClient | null> {
@@ -42,6 +48,65 @@ export function registerHealthCheck(app: Express) {
   });
   app.post('/api/health', (_req, res) => {
     res.json({ status: 'ok', method: 'POST', timestamp: new Date().toISOString() });
+  });
+
+  /**
+   * Tashqi cron uchun endpoint.
+   *
+   * Ilgari rejalashtirilgan ishlar server jarayoni ichidagi setInterval bilan
+   * bajarilardi. Replit autoscale konteyneri uxlab qolsa, ular umuman
+   * ishlamasdi; bir nechta instans ishlaganda esa har biri alohida bajarardi.
+   *
+   * Sozlash: cron-job.org yoki Replit Scheduled Deployment har 15 daqiqada
+   *   POST https://<domen>/api/cron/run
+   *   X-Cron-Secret: <CRON_SECRET>
+   */
+  app.post('/api/cron/run', async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) {
+      return res.status(503).json({ error: 'CRON_SECRET sozlanmagan' });
+    }
+    if (req.headers['x-cron-secret'] !== secret) {
+      console.warn('[Cron] Noto\'g\'ri sir bilan urinish');
+      return res.status(401).json({ error: 'Ruxsat yo\'q' });
+    }
+
+    const started = Date.now();
+    const result: Record<string, unknown> = {};
+
+    // Har bir vazifa alohida — biri yiqilsa, qolganlari bajariladi
+    try {
+      result.missedBookings = await sweepMissedBookings(storage);
+    } catch (err: any) {
+      console.error('[Cron] sweepMissedBookings xatosi:', err);
+      result.missedBookings = { error: err.message };
+    }
+
+    try {
+      await storage.deleteExpiredLoginCodes();
+      result.expiredLoginCodes = 'ok';
+    } catch (err: any) {
+      console.error('[Cron] deleteExpiredLoginCodes xatosi:', err);
+      result.expiredLoginCodes = { error: err.message };
+    }
+
+    // Kredit eslatmalari kuniga bir marta, Toshkent vaqti bilan 09:00 dan keyin.
+    // Dublikatdan himoya bazada, shuning uchun tez-tez chaqirish xavfsiz.
+    try {
+      const hour = Number(getTashkentTimeStr().split(':')[0]);
+      if (hour >= 9) {
+        const { sendCreditExpiryReminders } = await import('./telegram');
+        await sendCreditExpiryReminders(storage);
+        result.creditReminders = 'ok';
+      } else {
+        result.creditReminders = 'skipped (09:00 dan oldin)';
+      }
+    } catch (err: any) {
+      console.error('[Cron] sendCreditExpiryReminders xatosi:', err);
+      result.creditReminders = { error: err.message };
+    }
+
+    res.json({ ok: true, durationMs: Date.now() - started, ...result });
   });
 }
 
@@ -80,17 +145,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   app.use('/uploads', express.static(uploadsDir));
 
+  /**
+   * To'lov chekini saqlaydi.
+   *
+   * Chek — to'lovning yagona isboti, shuning uchun bazaga yozishga ikki marta
+   * urinamiz. Lokal diskka yozish faqat oxirgi chora: Replit fayl tizimi
+   * efemer, ya'ni keyingi deploy'da fayl yo'qoladi. Shu sababli lokal zaxira
+   * ishlatilganda log'ga aniq ogohlantirish chiqadi.
+   *
+   * Eslatma: chek rasmi adminga Telegram orqali BUFER sifatida yuboriladi,
+   * shuning uchun bu yerdagi saqlash faqat keyinchalik ko'rish uchun arxiv.
+   */
   async function saveReceiptFile(file: Express.Multer.File, uniqueName: string): Promise<string> {
+    const key = `receipts/${uniqueName}`;
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await storage.saveFile(key, file.buffer, file.mimetype);
+        return `/api/receipts/${uniqueName}`;
+      } catch (err: any) {
+        console.error(`[Receipt] DB ga yozib bo'lmadi (urinish ${attempt}/2):`, err.message);
+        if (attempt === 1) await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+
     try {
-      await storage.saveFile(`receipts/${uniqueName}`, file.buffer, file.mimetype);
-      console.log(`[Receipt] DB ga saqlandi: receipts/${uniqueName}`);
-    } catch (err: any) {
-      console.error(`[Receipt] DB xatoligi:`, err.message);
       const localDir = path.join(uploadsDir, 'receipts');
       await fs.mkdir(localDir, { recursive: true });
       await fs.writeFile(path.join(localDir, uniqueName), file.buffer);
-      console.log(`[Receipt] Lokal diskka saqlandi: receipts/${uniqueName}`);
+      console.error(
+        `[Receipt] DIQQAT: ${key} faqat lokal diskka yozildi. ` +
+        `Replit fayl tizimi efemer — keyingi deploy'da bu chek yo'qoladi.`,
+      );
+    } catch (err: any) {
+      console.error(`[Receipt] Lokal diskka ham yozib bo'lmadi:`, err.message);
     }
+
     return `/api/receipts/${uniqueName}`;
   }
 
@@ -481,11 +571,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate unique 6-character access code for gym owner
+      // Kriptografik tasodifiy: Math.random() oldindan aytib bo'ladigan
+      // ketma-ketlik beradi va bu kod zal egasi panelining yagona kaliti
       const generateAccessCode = (): string => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // O/0 va I/1 chalkashmasligi uchun
         let code = '';
-        for (let i = 0; i < 6; i++) {
-          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(crypto.randomInt(chars.length));
         }
         return code;
       };
@@ -516,6 +608,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actualQR = createGymQr(gym.id, gym.name);
 
       await storage.updateGym(gym.id, { qrCode: actualQR });
+
+      /*
+       * Zal yaratilganda tarkibiy ish vaqtini ham yozamiz.
+       *
+       * Aks holda `gyms.hours` matni saqlanardi-yu, `gym_hours` bo'sh qolardi
+       * va jadval standart qiymatga (09:00-22:00) tushib, admin kiritgan
+       * vaqt e'tiborga olinmasdi.
+       */
+      const { openTime, closeTime } = parseLegacyHours(gym.hours);
+      const closed = new Set(gym.closedDays || []);
+      await storage.setGymHours(
+        gym.id,
+        [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+          dayOfWeek,
+          openTime,
+          closeTime,
+          isClosed: closed.has(String(dayOfWeek)),
+        })),
+      );
 
       // qrCode va ownerAccessCode faqat zal yaratilgan paytda, adminga bir marta
       // qaytariladi — boshqa hech qanday endpoint ularni oshkor qilmaydi.
@@ -691,9 +802,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return slot?.gymId;
   };
 
+  // Jadval endpointlari (ish vaqti, yopiq sanalar, pik oynalar, bandlik)
+  registerScheduleRoutes(app, { requireAuth, requireAdmin, requireGymManager });
+
   app.get("/api/time-slots", async (req, res) => {
     try {
       const gymId = req.query.gymId as string | undefined;
+      const date = (req.query.date as string | undefined)?.split('T')[0];
+
+      // Sana berilsa — o'sha kundagi haqiqiy bandlik qaytariladi.
+      // Sanasiz `availableSpots` ma'nosiz: slotlar haftalik shablon, bandlik esa
+      // har bir sana uchun alohida.
+      if (gymId && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const timeSlots = await buildAvailability(gymId, date);
+        return res.json({ timeSlots, date });
+      }
+
       const timeSlots = await storage.getTimeSlots(gymId);
       res.json({ timeSlots });
     } catch (error) {
@@ -802,44 +926,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Zal topilmadi" });
       }
 
-      const sHour = startHour || 9;
-      const eHour = endHour || 21;
       const cap = capacity || 15;
-      const allRequestedDays = days || ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
-      // Zal dam kunlarini avtomatik generatsiyadan chiqarish
-      const dayNameToNum: Record<string, number> = {
-        'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3,
-        'Payshanba': 4, 'Juma': 5, 'Shanba': 6,
-      };
-      const gymClosedDays = gym.closedDays || [];
-      const daysList = allRequestedDays.filter((d: string) => {
-        const num = dayNameToNum[d];
-        return num === undefined || !gymClosedDays.includes(String(num));
-      });
 
-      await storage.deleteTimeSlotsForGym(gymId);
+      // Slotlar zalning O'Z ish vaqtidan kelib chiqib yaratiladi.
+      // Ilgari 09:00-21:00 qattiq yozilgan edi va `gym.hours` e'tiborga olinmasdi,
+      // ya'ni kechqurun 23:00 gacha ishlaydigan zal soat 21:00 dan keyin
+      // bron qabul qila olmasdi.
+      const { hours: gymHoursRows } = await loadGymSchedule(gymId);
 
-      const createdSlots = [];
-      for (const day of daysList) {
-        for (let h = sHour; h < eHour; h++) {
-          const startTime = `${h.toString().padStart(2, '0')}:00`;
-          const endTime = `${(h + 1).toString().padStart(2, '0')}:00`;
-          const slot = await storage.createTimeSlot({
-            gymId,
-            dayOfWeek: day,
-            startTime,
-            endTime,
-            capacity: cap,
-            availableSpots: cap,
+      const requestedDayNums: number[] | undefined = Array.isArray(days)
+        ? days.map((d: string) => dayNumberFromName(d)).filter((n): n is number => n !== undefined)
+        : undefined;
+
+      // Kerakli slotlar to'plamini hisoblaymiz
+      const desired: Array<{ dayOfWeek: string; startTime: string; endTime: string }> = [];
+      for (const dayRow of gymHoursRows) {
+        if (dayRow.isClosed) continue;
+        if (requestedDayNums && !requestedDayNums.includes(dayRow.dayOfWeek)) continue;
+
+        // Chaqiruvchi aniq oraliq bergan bo'lsa, u zal ish vaqti bilan kesishtiriladi
+        const fromMin = Math.max(
+          toMinutes(dayRow.openTime),
+          startHour !== undefined ? Number(startHour) * 60 : 0,
+        );
+        const toMin = Math.min(
+          toMinutes(dayRow.closeTime),
+          endHour !== undefined ? Number(endHour) * 60 : 24 * 60,
+        );
+
+        // To'liq soatlarga tekislash
+        for (let m = Math.ceil(fromMin / 60) * 60; m + 60 <= toMin; m += 60) {
+          desired.push({
+            dayOfWeek: dayName(dayRow.dayOfWeek),
+            startTime: toTimeString(m),
+            endTime: toTimeString(m + 60),
           });
-          createdSlots.push(slot);
         }
       }
 
-      res.json({ 
-        message: `${createdSlots.length} ta vaqt sloti yaratildi`,
-        timeSlots: createdSlots,
-        count: createdSlots.length
+      /*
+       * Slotlarni o'chirib qayta yaratish o'rniga FARQNI qo'llaymiz.
+       *
+       * Ilgari bu yerda `deleteTimeSlotsForGym()` bor edi. Yangi model bilan bu
+       * xavfli bo'lib qoldi: bandlik `slot_occupancy` da slot ID ga bog'langan,
+       * shuning uchun slotlarni qayta yaratish kelgusi bronlarning bandligini
+       * yo'q qilib, o'sha sanalarda sig'imdan oshib ketishga yo'l ochardi.
+       */
+      const existing = await storage.getTimeSlots(gymId);
+      const keyOf = (x: { dayOfWeek: string; startTime: string }) => `${x.dayOfWeek}|${x.startTime}`;
+      const desiredKeys = new Set(desired.map(keyOf));
+      const existingByKey = new Map(existing.map((x) => [keyOf(x), x]));
+
+      let created = 0;
+      let updated = 0;
+      let removed = 0;
+
+      for (const want of desired) {
+        const current = existingByKey.get(keyOf(want));
+        if (current) {
+          if (current.capacity !== cap || current.endTime !== want.endTime) {
+            await storage.updateTimeSlot(current.id, { capacity: cap, endTime: want.endTime });
+            updated++;
+          }
+        } else {
+          await storage.createTimeSlot({
+            gymId,
+            dayOfWeek: want.dayOfWeek,
+            startTime: want.startTime,
+            endTime: want.endTime,
+            capacity: cap,
+            // Eski ustun — bandlik endi `slot_occupancy` da sana bo'yicha yuritiladi
+            availableSpots: cap,
+          });
+          created++;
+        }
+      }
+
+      // Endi kerak bo'lmagan slotlarni olib tashlaymiz (kelgusi broni bo'lmasa)
+      const allBookings = await storage.getBookings();
+      const todayStr = getTashkentDateStr();
+      const slotsWithFutureBookings = new Set(
+        allBookings
+          .filter((b) =>
+            b.timeSlotId
+            && b.gymId === gymId
+            && b.status !== 'cancelled'
+            && b.status !== 'missed'
+            && !b.isCompleted
+            && (b.date || '').split('T')[0] >= todayStr)
+          .map((b) => b.timeSlotId as string),
+      );
+
+      let keptForBookings = 0;
+      for (const slot of existing) {
+        if (desiredKeys.has(keyOf(slot))) continue;
+        if (slotsWithFutureBookings.has(slot.id)) {
+          keptForBookings++;
+          continue;
+        }
+        await storage.deleteTimeSlot(slot.id);
+        removed++;
+      }
+
+      const timeSlots = await storage.getTimeSlots(gymId);
+
+      res.json({
+        message: keptForBookings > 0
+          ? `${timeSlots.length} ta slot. ${keptForBookings} ta eski slot kelgusi bronlari borligi uchun saqlab qolindi.`
+          : `${timeSlots.length} ta vaqt sloti tayyor`,
+        timeSlots,
+        count: timeSlots.length,
+        created,
+        updated,
+        removed,
+        keptForBookings,
       });
     } catch (error: any) {
       console.error("Error auto-generating time slots:", error);
@@ -847,8 +1047,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Ruxsat etilgan kredit paketlari
-  const allowedCreditPackages = [60, 130, 240];
+  // Ruxsat etilgan kredit paketlari — `@shared/pricing` dan
+  const allowedCreditPackages = ALLOWED_CREDIT_AMOUNTS;
 
   // Purchase credits (simplified - with validation)
   // Eslatma: POST /api/purchase-credits endpointi olib tashlandi.
@@ -977,28 +1177,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bookings = await storage.getBookings(req.user!.id);
       
+      /*
+       * Mijoz ro'yxatni ochganda ham vaqti o'tgan bronlarni belgilaymiz —
+       * shunda u darhol to'g'ri holatni ko'radi. Asosiy ish esa cron orqali
+       * (POST /api/cron/run) bajariladi, ya'ni mijoz ilovani ochmasa ham.
+       * Mantiq `maintenance.ts` da — ikki joyda takrorlanmasligi uchun.
+       */
       const todayStr = getTashkentDateStr();
       const currentTime = getTashkentTimeStr();
-      
+
       for (const booking of bookings) {
-        if (!booking.isCompleted && booking.status !== 'missed' && booking.status !== 'completed') {
-          if (booking.date) {
-            const bookingDateStr = typeof booking.date === 'string' 
-              ? booking.date.split('T')[0] 
-              : new Date(booking.date).toISOString().split('T')[0];
-            
-            if (bookingDateStr < todayStr) {
-              await storage.updateBookingStatus(booking.id, 'missed');
-              booking.status = 'missed';
-            } else if (bookingDateStr === todayStr && booking.scheduledEndTime) {
-              const [endH, endM] = booking.scheduledEndTime.split(':').map(Number);
-              const endWithGrace = `${String(endH + 1).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-              if (currentTime >= endWithGrace) {
-                await storage.updateBookingStatus(booking.id, 'missed');
-                booking.status = 'missed';
-              }
-            }
-          }
+        if (booking.isCompleted || booking.status === 'missed'
+            || booking.status === 'completed' || booking.status === 'cancelled') continue;
+        if (!isMissed(booking as any, todayStr, currentTime)) continue;
+
+        await storage.updateBookingStatus(booking.id, 'missed');
+        booking.status = 'missed';
+        // Joyni bo'shatish — ilgari bu qadam tushib qolgandi
+        if (booking.timeSlotId && booking.date) {
+          await storage.releaseSlotOnDate(booking.timeSlotId, booking.date.split('T')[0]);
         }
       }
       
@@ -1060,7 +1257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (booking.timeSlotId) {
-        await storage.releaseTimeSlotSpot(booking.timeSlotId);
+        await storage.releaseSlotOnDate(booking.timeSlotId, (booking.date || '').split('T')[0]);
       }
 
       if (noRefund) {
@@ -1120,9 +1317,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "O'tgan vaqtga bron qilib bo'lmaydi." });
       }
 
-      const bookingDayOfWeek = new Date(bookingDate + 'T12:00:00').getDay();
+      const bookingDayOfWeek = dayOfWeekFromDate(bookingDate);
       if ((gym.closedDays || []).includes(String(bookingDayOfWeek))) {
         return res.status(400).json({ message: "Bu kun bu zal uchun dam olish kuni. Bron qilib bo'lmaydi." });
+      }
+
+      // Jadval qoidalarini kreditni yechishdan OLDIN tekshiramiz — shunda
+      // rad etilgan bronda kreditni yechib-qaytarish kerak bo'lmaydi.
+      let slotCapacity = 0;
+      let bookingSlot: Awaited<ReturnType<typeof storage.getTimeSlot>> | undefined;
+
+      if (timeSlotId) {
+        bookingSlot = await storage.getTimeSlot(timeSlotId);
+        if (!bookingSlot) {
+          return res.status(400).json({ message: "Vaqt sloti topilmadi" });
+        }
+        if (bookingSlot.gymId !== gymId) {
+          return res.status(400).json({ message: "Vaqt sloti bu zalga tegishli emas" });
+        }
+
+        const rule = await checkBookingAllowed({ gymId, date: bookingDate, slot: bookingSlot });
+        if (!rule.ok) {
+          return res.status(400).json({ message: rule.message });
+        }
+        slotCapacity = rule.effectiveCapacity;
       }
 
       // Kreditni atomik yechish: `WHERE credits >= gym.credits` sharti tufayli
@@ -1150,27 +1368,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending'
       };
 
-      if (timeSlotId) {
-        const timeSlot = await storage.getTimeSlot(timeSlotId);
-        if (!timeSlot) {
-          await storage.refundUserCredits(user.id, gym.credits);
-          return res.status(400).json({ message: "Vaqt sloti topilmadi" });
-        }
-        if (timeSlot.gymId !== gymId) {
-          await storage.refundUserCredits(user.id, gym.credits);
-          return res.status(400).json({ message: "Vaqt sloti bu zalga tegishli emas" });
-        }
-
-        // Joyni atomik band qilish — bo'sh joy bo'lmasa undefined qaytadi
-        const reserved = await storage.reserveTimeSlotSpot(timeSlotId);
+      if (timeSlotId && bookingSlot) {
+        // Joyni SHU SANADA atomik band qilish.
+        // Ilgari bandlik `time_slots.available_spots` da sanaga bog'lanmagan
+        // bitta hisoblagichda edi — shu sababli slot bir marta to'lgach,
+        // barcha haftalar uchun abadiy band bo'lib qolardi.
+        const reserved = await storage.reserveSlotOnDate(timeSlotId, bookingDate, slotCapacity);
         if (!reserved) {
           await storage.refundUserCredits(user.id, gym.credits);
           return res.status(400).json({ message: "Bu vaqtda joy qolmagan" });
         }
 
         bookingToCreate.timeSlotId = timeSlotId;
-        bookingToCreate.scheduledStartTime = scheduledStartTime;
-        bookingToCreate.scheduledEndTime = scheduledEndTime;
+        bookingToCreate.scheduledStartTime = scheduledStartTime || bookingSlot.startTime;
+        bookingToCreate.scheduledEndTime = scheduledEndTime || bookingSlot.endTime;
       }
 
       let booking;
@@ -1179,7 +1390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (createErr) {
         // Bron yaratilmasa, yechilgan kredit va band qilingan joyni qaytaramiz
         await storage.refundUserCredits(user.id, gym.credits);
-        if (timeSlotId) await storage.releaseTimeSlotSpot(timeSlotId);
+        if (timeSlotId) await storage.releaseSlotOnDate(timeSlotId, bookingDate);
         throw createErr;
       }
 
@@ -1453,9 +1664,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // QR kod tekshirish va tasdiqlash
-  // Credit value: 1 kredit = 30,000 so'm (gym earns this per credit used)
-  const CREDIT_VALUE_UZS = 30000;
+  // Zalga to'lov tarifi `@shared/pricing` da — ilgari bu yerda 30 000, mobil
+  // API da esa 1 500 so'm yozilgan edi va ikki kanal bir-biriga zid ishlardi
 
   app.post('/api/verify-qr', requireAuth, async (req, res) => {
     try {
@@ -1629,7 +1839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Record gym visit and update earnings
       if (user) {
         const creditsUsed = gym.credits;
-        const amountEarned = creditsUsed * CREDIT_VALUE_UZS;
+        const amountEarned = gymPayoutForVisit(creditsUsed);
 
         // Create gym visit record
         await storage.createGymVisit({
@@ -1796,11 +2006,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
+  /**
+   * Hisobni o'chirish.
+   *
+   * Shaxsiy ma'lumotlar tozalanadi, moliyaviy yozuvlar saqlanadi.
+   * Tasdiqlash uchun foydalanuvchi "O'CHIRISH" so'zini yozishi kerak —
+   * bexosdan bosib yuborishning oldini oladi.
+   */
+  /**
+   * Ilovadagi xatolarni qabul qiladi.
+   *
+   * Autentifikatsiya talab qilinmaydi: xato aynan kirish sahifasida yuz
+   * berishi mumkin. Spamdan rate limit himoya qiladi.
+   */
+  app.post('/api/client-errors', rateLimit('client-errors', {
+    windowMs: 60 * 1000,
+    max: 20,
+  }), async (req, res) => {
+    try {
+      const parsed = clientErrorSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ ok: false });
+
+      await captureError(storage, {
+        source: 'client',
+        message: parsed.data.message,
+        stack: parsed.data.stack ?? null,
+        context: parsed.data.context ?? null,
+        userId: (req as any).user?.id ?? null,
+      });
+      res.json({ ok: true });
+    } catch {
+      res.json({ ok: true }); // xato qayd etishdagi muammo mijozga ko'rinmasin
+    }
+  });
+
+  /**
+   * Admin: foydalanuvchining bronini bekor qilish va kreditni qaytarish.
+   *
+   * Mijoz "zal yopiq edi" yoki "xato bron qildim" deb murojaat qilganda
+   * adminda hech qanday vosita yo'q edi — faqat kreditni qo'lda qo'shish
+   * mumkin edi, bronning o'zi esa osilib qolardi va joy band bo'lib turardi.
+   */
+  app.post('/api/admin/bookings/:id/cancel', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) return res.status(404).json({ message: 'Bron topilmadi' });
+
+      if (booking.status === 'cancelled') {
+        return res.status(400).json({ message: 'Bu bron allaqachon bekor qilingan' });
+      }
+
+      const refund = req.body?.refund !== false; // standart: kreditni qaytarish
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.slice(0, 200) : '';
+
+      const gym = await storage.getGym(booking.gymId);
+      if (!gym) return res.status(404).json({ message: 'Zal topilmadi' });
+
+      // Avval statusni o'zgartiramiz — takroriy so'rov kreditni ikki marta
+      // qaytarib yubormasligi uchun
+      await storage.updateBookingStatus(booking.id, 'cancelled');
+
+      if (booking.timeSlotId && booking.date) {
+        await storage.releaseSlotOnDate(booking.timeSlotId, booking.date.split('T')[0]);
+      }
+
+      let refunded = 0;
+      if (refund) {
+        await storage.refundUserCredits(booking.userId, gym.credits);
+        refunded = gym.credits;
+      }
+
+      console.log(
+        `[Admin] Bron bekor qilindi: ${booking.id}, admin=${req.user!.id}, ` +
+        `kredit=${refunded}, sabab="${reason}"`,
+      );
+
+      // Mijozga xabar beramiz
+      const user = await storage.getUser(booking.userId);
+      if (user?.chatId) {
+        const { notifyBookingCancelledByAdmin } = await import('./telegram');
+        await notifyBookingCancelledByAdmin(user.chatId, {
+          gymName: gym.name,
+          date: (booking.date || '').split('T')[0],
+          time: booking.scheduledStartTime || booking.time,
+          refunded,
+          reason,
+        });
+      }
+
+      res.json({ success: true, refunded });
+    } catch (error: any) {
+      console.error('[Admin] Bronni bekor qilishda xatolik:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // --- Admin: xatolar jurnali ---
+
+  app.get('/api/admin/errors', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const resolved = req.query.resolved === 'true' ? true
+        : req.query.resolved === 'false' ? false : undefined;
+      const errors = await storage.getErrors({ resolved, limit: 100 });
+      res.json({ errors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put('/api/admin/errors/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const ok = await storage.resolveError(req.params.id, req.body?.resolved !== false);
+      if (!ok) return res.status(404).json({ message: 'Xato topilmadi' });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/errors/resolved', requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const deleted = await storage.deleteResolvedErrors();
+      res.json({ success: true, deleted });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/account/delete", requireAuth, rateLimit('account-delete', {
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  }), async (req, res) => {
+    try {
+      if (req.body?.confirm !== "O'CHIRISH") {
+        return res.status(400).json({ message: "Tasdiqlash so'zi noto'g'ri" });
+      }
+
+      const userId = req.user!.id;
+
+      // Kelgusi bronlarni bekor qilib, joylarni bo'shatamiz
+      const bookings = await storage.getBookings(userId);
+      const todayStr = getTashkentDateStr();
+      for (const b of bookings) {
+        const isFuture = (b.date || '').split('T')[0] >= todayStr;
+        const isOpen = !b.isCompleted && b.status !== 'cancelled' && b.status !== 'missed';
+        if (isFuture && isOpen) {
+          await storage.updateBookingStatus(b.id, 'cancelled');
+          if (b.timeSlotId && b.date) {
+            await storage.releaseSlotOnDate(b.timeSlotId, b.date.split('T')[0]);
+          }
+        }
+      }
+
+      const ok = await storage.anonymizeUser(userId);
+      if (!ok) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+
+      console.log(`[Account] Hisob o'chirildi: ${userId}`);
+
+      req.logout((err) => {
+        if (err) console.error("[Account] Logout xatosi:", err);
+        req.session.destroy(() => {
+          res.json({ success: true, message: "Hisobingiz o'chirildi" });
+        });
+      });
+    } catch (error: any) {
+      console.error("[Account] O'chirish xatosi:", error);
+      res.status(500).json({ message: "Hisobni o'chirishda xatolik" });
+    }
+  });
+
   app.post("/api/complete-profile", requireAuth, async (req, res) => {
     try {
       const profileData = completeProfileSchema.parse(req.body);
 
-      const updatedUser = await storage.completeUserProfile(req.user!.id, profileData);
+      // `acceptedTerms` faqat tekshiruv uchun; bazaga versiya va vaqt yoziladi
+      const { acceptedTerms, ...profile } = profileData;
+      const updatedUser = await storage.completeUserProfile(req.user!.id, profile);
 
       if (!updatedUser) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
@@ -2013,10 +2394,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Zal topilmadi" });
       }
       
-      const visits = await storage.getGymVisits(req.params.gymId);
-      const payments = await storage.getGymPayments(req.params.gymId);
-      
-      res.json({ 
+      const [visits, payments, schedule, closures] = await Promise.all([
+        storage.getGymVisits(req.params.gymId),
+        storage.getGymPayments(req.params.gymId),
+        loadGymSchedule(req.params.gymId),
+        storage.getGymClosures(req.params.gymId),
+      ]);
+
+      res.json({
+        hours: schedule.hours,
+        peakWindows: schedule.peakWindows,
+        closures,
         gym: {
           id: gym.id,
           name: gym.name,

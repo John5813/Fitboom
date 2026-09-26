@@ -4,6 +4,15 @@ export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
+    screens: {
+      // Juda tor telefonlar uchun qo'shimcha nuqta (standart `sm` = 640px)
+      xs: "400px",
+      sm: "640px",
+      md: "768px",
+      lg: "1024px",
+      xl: "1280px",
+      "2xl": "1536px",
+    },
     extend: {
       borderRadius: {
         lg: ".5625rem", /* 9px */

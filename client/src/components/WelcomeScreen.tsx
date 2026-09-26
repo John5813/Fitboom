@@ -1,245 +1,135 @@
-import { Button } from "@/components/ui/button";
-import { Dumbbell, KeyRound, QrCode, Video, MapPin, ArrowRight, Zap, Users, Trophy } from "lucide-react";
-import fitboomLogo from "@/assets/fitboom-logo-transparent.png";
+import { lazy, Suspense } from "react";
+import { Link } from "wouter";
+import { ArrowRight, Dumbbell, KeyRound, Video } from "lucide-react";
+import Wordmark from "@/components/brand/Wordmark";
+import { CREDIT_PACKAGES } from "@shared/pricing";
+import { LEGAL_DOCS } from "@/content/legal";
+
+// 3D hikoya alohida bo'lakda — sahifaning qolgan qismi uni kutmaydi
+const HeroStory = lazy(() => import("@/components/landing/HeroStory"));
 
 interface WelcomeScreenProps {
   onStart: () => void;
 }
 
+const packageList = (() => {
+  const n = CREDIT_PACKAGES.map((p) => p.credits);
+  return n.length > 1 ? `${n.slice(0, -1).join(", ")} yoki ${n[n.length - 1]}` : String(n[0]);
+})();
+
+/*
+ * Matnlar koddagi haqiqiy xatti-harakatga mos yozilgan. Ilgari bu sahifada
+ * "1000+ faol a'zo", "5★ reyting", "birinchi bron bepul konsultatsiya" kabi
+ * tasdiqlanmagan da'volar turardi — ular olib tashlandi.
+ */
+const FEATURES = [
+  {
+    icon: KeyRound,
+    title: "Kredit tizimi",
+    desc: `${packageList} kredit. Har zal kirish narxini kreditda belgilaydi — turli zallarni sinab ko'ring, bittasiga bog'lanmang.`,
+  },
+  {
+    icon: Dumbbell,
+    title: "Turli yo'nalishlar",
+    desc: "Gym, yoga, boks, pilates, suzish va boshqalar. Haritadan eng yaqinini toping.",
+  },
+  {
+    icon: Video,
+    title: "Online darslar",
+    desc: "Kredit bilan ustozlarning video kurslarini ham oling. Uyda ham, zalda ham mashq qiling.",
+  },
+];
+
+const STEPS = [
+  { title: "Ro'yxatdan o'ting", desc: "Telegram yoki telefon raqam orqali." },
+  {
+    title: "Kredit oling",
+    desc: "Paketni tanlang, kartaga o'tkazing va chek rasmini yuboring. Tasdiqlangach kredit tushadi.",
+  },
+  { title: "Bron qiling", desc: "Zal va qulay vaqtni tanlang — bir bosishda." },
+  { title: "QR bilan kiring", desc: "Zaldagi QR kodni ilova bilan skanerlang." },
+];
+
 export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
   return (
-    <div className="min-h-screen overflow-y-auto bg-background">
+    <div className="min-h-screen bg-[#07080d] text-white">
+      <Suspense fallback={<div className="story-sticky story-bg" />}>
+        <HeroStory onStart={onStart} />
+      </Suspense>
 
-      {/* ═══ HERO ═══ */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 py-20">
-
-        {/* Background layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950" />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "radial-gradient(ellipse 80% 60% at 50% -10%, #f97316 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 100%, #fbbf24 0%, transparent 60%)",
-            animation: "hero-glow 6s ease-in-out infinite",
-          }}
-        />
-        {/* Subtle grid */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
-
-        {/* Content */}
-        <div className="relative z-10 w-full max-w-lg text-center space-y-8">
-
-          {/* Logo */}
-          <div className="flex items-center justify-center">
-            <img
-              src={fitboomLogo}
-              alt="FitBoom"
-              className="h-32 w-auto drop-shadow-2xl"
-              data-testid="img-logo"
-            />
-          </div>
-
-          {/* Headline */}
-          <div className="space-y-4">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight tracking-tight">
-              Sport zallariga<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
-                bir kredit bilan
-              </span>
-            </h1>
-            <p className="text-gray-400 text-lg leading-relaxed max-w-sm mx-auto">
-              Toshkent bo'ylab eng yaxshi fitness zallarini bir joyda toping, bron qiling va kiring.
-            </p>
-          </div>
-
-          {/* Stat pills */}
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            {[
-              { icon: <MapPin className="w-3.5 h-3.5" />, label: "Toshkent bo'ylab" },
-              { icon: <Zap className="w-3.5 h-3.5" />, label: "Tezkor bron" },
-              { icon: <QrCode className="w-3.5 h-3.5" />, label: "QR kirish" },
-            ].map((s) => (
-              <span
-                key={s.label}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/80 text-xs font-medium backdrop-blur-sm"
-              >
-                {s.icon}
-                {s.label}
-              </span>
-            ))}
-          </div>
-
-          {/* CTA */}
-          <Button
-            onClick={onStart}
-            size="lg"
-            data-testid="button-start"
-            className="w-full max-w-xs mx-auto h-14 rounded-2xl text-base font-bold bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white border-0 shadow-lg shadow-orange-500/40 gap-2 transition-all duration-200"
-          >
-            Boshlash
-            <ArrowRight className="w-5 h-5" />
-          </Button>
-
-          <p className="text-gray-400 text-sm">
-            Ro'yxatdan o'tish bepul · 30 soniyada tayyor
-          </p>
-        </div>
-      </section>
-
-      {/* ═══ 3 ASOSIY AFZALLIK ═══ */}
-      <section className="py-16 px-6 bg-background">
-        <div className="max-w-2xl mx-auto space-y-10">
-
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-extrabold text-foreground">Nima beradi?</h2>
-            <p className="text-muted-foreground">Bir platformada hamma narsa</p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              {
-                icon: <KeyRound className="w-6 h-6 text-orange-500" />,
-                bg: "bg-orange-50 dark:bg-orange-950/40",
-                title: "Kredit tizimi",
-                desc: "60, 130 yoki 240 ta kredit sotib oling — har kredit bitta zalga kirish. Turli zallarni sinab ko'ring, bitta obunaga bog'lanmang.",
-              },
-              {
-                icon: <Dumbbell className="w-6 h-6 text-amber-500" />,
-                bg: "bg-amber-50 dark:bg-amber-950/40",
-                title: "Ko'plab sport zallari",
-                desc: "Gym, yoga, boks, pilates, suzish havzalari va boshqa zallar. Haritadan eng yaqinini toping va bron qiling.",
-              },
-              {
-                icon: <Video className="w-6 h-6 text-rose-500" />,
-                bg: "bg-rose-50 dark:bg-rose-950/40",
-                title: "Online darslar",
-                desc: "Kredit bilan professional ustozlarning video kurslarini ham oling. Uyda ham, zalda ham mashq qiling.",
-              },
-            ].map((f) => (
+      {/* ═══ Qo'shimcha imkoniyatlar ═══ */}
+      <section className="relative px-5 py-20 sm:px-10">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Bir ilovada <span className="text-gold-gradient">hammasi</span>
+          </h2>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div
-                key={f.title}
-                className="flex items-start gap-4 p-5 rounded-2xl border border-border bg-card shadow-sm"
+                key={title}
+                className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-[#d9a751]/40"
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${f.bg}`}>
-                  {f.icon}
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#d9a751]/10">
+                  <Icon className="h-5 w-5 text-[#e2b86a]" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-foreground mb-1">{f.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
-                </div>
+                <h3 className="font-bold">{title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-white/55">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ═══ QANDAY ISHLAYDI ═══ */}
-      <section className="py-16 px-6 bg-muted/40 dark:bg-muted/10">
-        <div className="max-w-2xl mx-auto space-y-10">
-
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-extrabold text-foreground">Qanday ishlaydi?</h2>
-            <p className="text-muted-foreground">4 qadam — hammasi shu</p>
-          </div>
-
-          <div className="space-y-3">
-            {[
-              {
-                num: "01",
-                title: "Ro'yxatdan o'ting",
-                desc: "Telegram yoki telefon raqam orqali — 30 soniyada tayyor.",
-                color: "text-orange-500",
-                border: "border-orange-500/30 bg-orange-500/5",
-              },
-              {
-                num: "02",
-                title: "Kredit sotib oling",
-                desc: "O'zingizga mos paketni tanlang va to'liq raqamga o'tkazing.",
-                color: "text-amber-500",
-                border: "border-amber-500/30 bg-amber-500/5",
-              },
-              {
-                num: "03",
-                title: "Zalni bron qiling",
-                desc: "Haritadan yaqin zalni toping, qulay vaqtni tanlang va bir bosim bilan band qiling.",
-                color: "text-rose-500",
-                border: "border-rose-500/30 bg-rose-500/5",
-              },
-              {
-                num: "04",
-                title: "QR bilan kiring",
-                desc: "Zalga borib telefoningizni ko'rsating — QR kod skanerlangan va kirish ochiq.",
-                color: "text-emerald-500",
-                border: "border-emerald-500/30 bg-emerald-500/5",
-              },
-            ].map((step) => (
-              <div
-                key={step.num}
-                className={`flex items-start gap-4 p-4 rounded-2xl border ${step.border}`}
-              >
-                <span className={`text-2xl font-extrabold tracking-tighter flex-shrink-0 ${step.color}`}>
-                  {step.num}
+      {/* ═══ Qanday ishlaydi ═══ */}
+      <section className="px-5 pb-20 sm:px-10">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Qanday ishlaydi?
+          </h2>
+          <ol className="mt-10 grid gap-3 sm:grid-cols-4">
+            {STEPS.map((s, i) => (
+              <li key={s.title} className="rounded-3xl border border-white/10 p-5">
+                <span className="font-display text-2xl font-extrabold text-gold-gradient">
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <div>
-                  <h4 className="font-bold text-foreground">{step.title}</h4>
-                  <p className="text-muted-foreground text-sm mt-0.5">{step.desc}</p>
-                </div>
-              </div>
+                <h3 className="mt-2 font-bold">{s.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-white/55">{s.desc}</p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      {/* ═══ STATS ═══ */}
-      <section className="py-16 px-6 bg-background">
-        <div className="max-w-2xl mx-auto">
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { icon: <MapPin className="w-5 h-5 text-orange-500" />, value: "20+", label: "Sport zallari" },
-              { icon: <Users className="w-5 h-5 text-amber-500" />, value: "1000+", label: "Faol a'zolar" },
-              { icon: <Trophy className="w-5 h-5 text-rose-500" />, value: "5★", label: "Reyting" },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="text-center p-4 rounded-2xl border border-border bg-card shadow-sm"
-              >
-                <div className="flex justify-center mb-2">{s.icon}</div>
-                <div className="text-2xl font-extrabold text-foreground">{s.value}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ BOTTOM CTA ═══ */}
-      <section className="py-16 px-6 bg-gradient-to-b from-background to-muted/30 dark:to-muted/10">
-        <div className="max-w-sm mx-auto text-center space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-extrabold text-foreground">Tayyormisiz?</h2>
-            <p className="text-muted-foreground text-sm">
-              Bugun boshlang — birinchi bron bepul konsultatsiya bilan!
-            </p>
-          </div>
-          <Button
+      {/* ═══ Yakuniy chaqiruv ═══ */}
+      <section className="relative overflow-hidden px-5 py-24 text-center sm:px-10">
+        <div className="absolute inset-0 story-bg opacity-70" aria-hidden />
+        <div className="relative mx-auto max-w-md">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">Tayyormisiz?</h2>
+          <p className="mt-3 text-white/55">Ro'yxatdan o'tish bepul — 30 soniyada tayyor.</p>
+          <button
+            type="button"
             onClick={onStart}
-            size="lg"
             data-testid="button-start-bottom"
-            className="w-full h-14 rounded-2xl text-base font-bold bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white border-0 shadow-lg shadow-orange-500/30 gap-2 transition-all duration-200"
+            className="mt-8 inline-flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#f3d9a4] via-[#d9a751] to-[#b98537] text-base font-bold text-[#1a1206] shadow-[0_10px_40px_-10px_rgba(217,167,81,0.7)] transition-transform hover:scale-[1.03] active:scale-[0.98]"
           >
-            Hozir Boshlash
-            <ArrowRight className="w-5 h-5" />
-          </Button>
+            Hozir boshlash
+            <ArrowRight className="h-5 w-5" />
+          </button>
         </div>
       </section>
 
+      <footer className="border-t border-white/10 px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 sm:px-10">
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Wordmark className="text-xl" />
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/45">
+            {LEGAL_DOCS.map((d) => (
+              <Link key={d.slug} href={`/legal/${d.slug}`} className="hover:text-white">
+                {d.title}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }

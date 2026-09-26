@@ -256,10 +256,18 @@ body {
   }
 
   /* Does not work on elements with overflow:hidden! */
-  .hover-elevate:not(.no-default-hover-elevate),
-  .active-elevate:not(.no-default-active-elevate),
-  .hover-elevate-2:not(.no-default-hover-elevate),
-  .active-elevate-2:not(.no-default-active-elevate) {
+  /*
+   * `position: relative` faqat ::after qoplamasi uchun kerak — ya'ni element
+   * hali joylashtirilmagan bo'lsa. Ilgari bu qoida Tailwind'ning `absolute`
+   * sinfini ham bosib ketardi (`.hover-elevate:not(...)` aniqligi `.absolute`
+   * dan yuqori), natijada `absolute` qo'yilgan Badge/Button lar jim turib
+   * noto'g'ri joyda chiqardi — masalan zal kartasidagi kredit nishoni.
+   * Shuning uchun aniq joylashuv sinfi bor elementlar bu qoidadan chiqariladi.
+   */
+  .hover-elevate:not(.no-default-hover-elevate):not(.absolute):not(.fixed):not(.sticky):not(.relative),
+  .active-elevate:not(.no-default-active-elevate):not(.absolute):not(.fixed):not(.sticky):not(.relative),
+  .hover-elevate-2:not(.no-default-hover-elevate):not(.absolute):not(.fixed):not(.sticky):not(.relative),
+  .active-elevate-2:not(.no-default-active-elevate):not(.absolute):not(.fixed):not(.sticky):not(.relative) {
     position: relative;
     z-index: 0;
   }
@@ -329,5 +337,97 @@ body {
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+}
+/* ═══════════ Kirish sahifasi: 3D scroll hikoyasi ═══════════ */
+
+.text-gold-gradient {
+  background: linear-gradient(100deg, #f6e2b3 0%, #d9a751 45%, #b07a2f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* svh — telefon brauzeri paneli chiqib-yashirinsa ham sakramaydi */
+.story-track {
+  height: 520vh;
+  height: 520svh;
+}
+.story-sticky {
+  height: 100vh;
+  height: 100svh;
+}
+
+.story-bg {
+  background:
+    radial-gradient(ellipse 75% 55% at 50% -8%, rgba(217, 167, 81, 0.26), transparent 65%),
+    radial-gradient(ellipse 60% 45% at 50% 112%, rgba(169, 116, 42, 0.16), transparent 60%),
+    #07080d;
+}
+
+.story-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 80%);
+}
+
+/* 3D yuklanguncha yoki WebGL yo'q bo'lsa — model turadigan joyda nur */
+.story-fallback {
+  background: radial-gradient(circle at 50% 36%, rgba(230, 180, 95, 0.22), transparent 38%);
+  animation: hero-glow 6s ease-in-out infinite;
+}
+
+/* Matnlar bir-birining ustida (grid) — absolute emas, shunda siljish
+   transformi joylashuvni buzmaydi */
+.story-copy {
+  display: grid;
+  padding: 88px 20px calc(64px + env(safe-area-inset-bottom));
+  /* Telefonda matn 3D ustida o'qilsin */
+  background: linear-gradient(to top, rgba(7, 8, 13, 0.92) 0%, rgba(7, 8, 13, 0.6) 32%, transparent 55%);
+}
+.story-beat {
+  grid-area: 1 / 1;
+  align-self: end;
+  max-width: 36rem;
+  will-change: opacity, transform;
+}
+.story-hint {
+  bottom: calc(18px + env(safe-area-inset-bottom));
+}
+
+/* Kompyuter: matn chapda, model o'ngda */
+@media (min-width: 768px) and (min-aspect-ratio: 1/1) {
+  .story-copy {
+    padding: 96px 8vw;
+    background: linear-gradient(to right, rgba(7, 8, 13, 0.82) 0%, rgba(7, 8, 13, 0.45) 40%, transparent 62%);
+  }
+  .story-beat {
+    align-self: center;
+    /* Kichik yotiq ekranda ustun modelga kirib ketmasin */
+    max-width: min(30rem, 42vw);
+  }
+}
+
+/* Planshet (tik) */
+@media (min-width: 768px) and (max-aspect-ratio: 1/1) {
+  .story-copy {
+    padding: 96px 48px calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Past ekranlar (yotiq telefon) — sarlavhalar sig'sin */
+@media (max-height: 620px) {
+  .story-beat :is(h1, h2) {
+    font-size: 1.75rem;
+  }
+  .story-beat p {
+    margin-top: 0.5rem;
+  }
+  .story-copy {
+    padding-top: 72px;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
   }
 }

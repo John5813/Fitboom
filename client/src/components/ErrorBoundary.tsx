@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Render xatosi:", error, errorInfo.componentStack);
+    // Serverga ham yuboramiz — aks holda oq ekran haqida hech kim bilmaydi
+    reportError(error.message, error.stack, `render: ${location.pathname}`);
   }
 
   handleReload = () => {

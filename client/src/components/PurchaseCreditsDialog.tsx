@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { CREDIT_PACKAGES, perCreditPrice, discountPercent } from "@shared/pricing";
+import { formatSom } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,11 +25,8 @@ interface PurchaseCreditsDialogProps {
   currentCredits?: number;
 }
 
-const packages: CreditPackage[] = [
-  { credits: 60, price: 180000 },
-  { credits: 130, price: 350000, isPopular: true },
-  { credits: 240, price: 650000 },
-];
+// Paketlar `@shared/pricing` da — web va mobil bir xil narxda ishlashi uchun
+const packages: CreditPackage[] = CREDIT_PACKAGES;
 
 const CARD_NUMBER = "9860160104562378";
 const CARD_HOLDER = "Javlonbek Mo'ydinov";
@@ -169,7 +168,7 @@ export default function PurchaseCreditsDialog({
                 <div className="flex-1">
                   <p className="text-xs font-bold text-red-600 dark:text-red-400">{t('payment.remaining_payment')}</p>
                   <p className="text-sm font-bold text-red-700 dark:text-red-300 mt-1">
-                    {t('payment.unpaid_amount')}: {activePayment.remainingAmount.toLocaleString()} {t('payment.som')}
+                    {t('payment.unpaid_amount')}: {formatSom(activePayment.remainingAmount)}
                   </p>
                   <p className="text-[10px] text-red-600/80 dark:text-red-400/80 mt-1 font-medium">
                     {t('payment.remaining_desc')}
@@ -195,7 +194,7 @@ export default function PurchaseCreditsDialog({
                     {uploading ? t('payment.uploading') : (
                       <>
                         <Upload className="w-3 h-3 mr-1" />
-                        {t('payment.pay_remaining')} ({activePayment.remainingAmount.toLocaleString()} {t('payment.som')})
+                        {t('payment.pay_remaining')} ({formatSom(activePayment.remainingAmount)})
                       </>
                     )}
                   </Button>
@@ -219,6 +218,13 @@ export default function PurchaseCreditsDialog({
                     <Badge className="text-[10px] px-2 py-0">{t('payment.popular')}</Badge>
                   </div>
                 )}
+                {discountPercent(pkg) > 0 && (
+                  <div className="absolute -top-2 right-2">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-600 text-white border-none">
+                      -{discountPercent(pkg)}%
+                    </Badge>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
@@ -226,7 +232,11 @@ export default function PurchaseCreditsDialog({
                     </div>
                     <div>
                       <p className="font-bold text-sm">{pkg.credits} {t('payment.keys')}</p>
-                      <p className="text-muted-foreground text-xs">{pkg.price.toLocaleString()} {t('payment.som')}</p>
+                      <p className="text-muted-foreground text-xs">{formatSom(pkg.price)}</p>
+                      {/* Mijoz qaysi paket foydali ekanini o'zi hisoblamasligi uchun */}
+                      <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                        {formatSom(Math.round(perCreditPrice(pkg)))} / 1
+                      </p>
                     </div>
                   </div>
                   <Button
@@ -269,7 +279,7 @@ export default function PurchaseCreditsDialog({
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('payment.amount_to_pay')}</p>
                 <p className="text-2xl font-bold text-primary">
-                  {selectedPackage.price.toLocaleString()} {t('payment.som')}
+                  {formatSom(selectedPackage.price)}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">
                   {selectedPackage.credits} {t('payment.keys')}

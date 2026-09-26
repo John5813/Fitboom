@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDateShort } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import type { Booking, Gym } from "@shared/schema";
@@ -94,12 +95,13 @@ export default function ProfilePage() {
     if (editName.trim()) updateProfileMutation.mutate({ name: editName.trim() });
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(
-      language === 'en' ? 'en-US' : language === 'ru' ? 'ru-RU' : 'uz-UZ',
-      { day: 'numeric', month: 'short' }
-    );
-  };
+  /*
+   * Sana formatlash `@/lib/format` da.
+   *
+   * Ilgari `toLocaleDateString('uz-UZ', { month: 'short' })` ishlatilardi va
+   * uz-UZ ma'lumoti yo'q brauzerlarda "M09 13" kabi tushunarsiz natija chiqardi.
+   */
+  const formatDate = (dateStr: string) => formatDateShort(dateStr);
 
   const expiryText = () => {
     if (!user?.creditExpiryDate || !user?.credits) return null;

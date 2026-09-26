@@ -63,8 +63,55 @@ live in the Replit Secrets panel.
 - `TELEGRAM_WEBHOOK_SECRET` — webhook signature (derived from `SESSION_SECRET`
   when unset)
 
+- `CRON_SECRET` — shared secret for the external scheduler. Without it,
+  `POST /api/cron/run` returns 503 and background jobs only run while the
+  container happens to be awake.
+- `GYM_PAYOUT_PER_CREDIT_UZS` — so'm credited to a gym per credit spent
+  (default 1500). **Must stay below what a user pays per credit** (~3000),
+  otherwise every visit loses money. A test enforces a minimum 20% margin.
+
 **Optional:** `QR_SECRET`, `DEVSMS_API_KEY`, `ALLOWED_ORIGINS`,
 `JWT_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`
+
+## Scheduled jobs
+
+Background work runs through one endpoint so it does not depend on the
+container staying awake:
+
+```
+POST /api/cron/run
+X-Cron-Secret: <CRON_SECRET>
+```
+
+Point an external scheduler (cron-job.org, Replit Scheduled Deployment) at it
+every 15 minutes. It marks past-due bookings as missed and releases their
+seats, clears expired login codes, and sends credit-expiry reminders after
+09:00 Tashkent. Every job is independently guarded, and reminder delivery is
+de-duplicated through the `notification_log` table, so running it more often
+than needed is safe.
+
+## Error tracking
+
+Server 5xx responses, unhandled rejections and client-side crashes are written
+to the `error_log` table and surfaced at **/admin/errors**. Identical errors
+collapse into one row by fingerprint (message + top stack frame, with UUIDs
+and long numbers normalised away), so a single broken page cannot flood the
+log. The first occurrence of a new fingerprint sends a Telegram alert to
+`ADMIN_IDS`, rate-limited to 10 per hour.
+
+No external service or DSN is involved — the data stays in your database.
+
+## Legal documents
+
+`client/src/content/legal.ts` holds the public offer, privacy policy and terms.
+Factual clauses (what data is collected, how credits expire, the 2-hour
+cancellation window) are derived from actual behaviour and are accurate.
+Clauses marked `TODO_YURIST` are **placeholders awaiting a lawyer** — the page
+shows a visible draft banner while any remain. Do not publish as-is.
+
+Users accept the offer and privacy policy during profile completion; the
+timestamp and document version land in `users.terms_accepted_at` /
+`users.terms_version`.
 
 ## Security invariants
 

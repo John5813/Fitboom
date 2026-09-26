@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Shield, Handshake, Send, Building2 } from "lucide-react";
+import { ArrowLeft, Shield, Handshake, Send, Building2, FileText, ChevronRight, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { LEGAL_DOCS } from "@/content/legal";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
@@ -17,10 +19,35 @@ export default function SettingsPage() {
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isGymOwnerLoginOpen, setIsGymOwnerLoginOpen] = useState(false);
   const [isPartnerDialogOpen, setIsPartnerDialogOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [gymOwnerCode, setGymOwnerCode] = useState("");
   const [hallName, setHallName] = useState("");
   const [phone, setPhone] = useState("");
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('/api/account/delete', 'POST', { confirm: deleteConfirm });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      localStorage.removeItem("gymOwnerId");
+      localStorage.removeItem("gymOwnerCode");
+      localStorage.removeItem("lastUserRole");
+      sessionStorage.clear();
+      toast({ title: "Hisob o'chirildi", description: "Ma'lumotlaringiz o'chirildi." });
+      setLocation("/");
+    },
+    onError: () => {
+      toast({
+        title: "Xatolik",
+        description: "Hisobni o'chirib bo'lmadi. Keyinroq urinib ko'ring.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const verifyAdminMutation = useMutation({
     mutationFn: async (password: string) => {
@@ -194,6 +221,46 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Huquqiy hujjatlar */}
+        <Card>
+          <CardContent className="p-2">
+            {LEGAL_DOCS.map((doc) => (
+              <Link key={doc.slug} href={`/legal/${doc.slug}`}>
+                <div
+                  className="flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted/60"
+                  data-testid={`card-legal-${doc.slug}`}
+                >
+                  <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{doc.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{doc.summary}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Hisobni o'chirish — qaytarib bo'lmaydigan amal, eng oxirida */}
+        <Card className="border-destructive/30">
+          <CardContent
+            className="flex cursor-pointer items-center gap-4 p-4"
+            onClick={() => { setDeleteConfirm(""); setIsDeleteOpen(true); }}
+            data-testid="card-delete-account"
+          >
+            <div className="rounded-full bg-destructive/10 p-3">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-destructive">Hisobni o'chirish</h3>
+              <p className="text-sm text-muted-foreground">
+                Ma'lumotlaringiz o'chiriladi. Qaytarib bo'lmaydi.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={isAdminLoginOpen} onOpenChange={setIsAdminLoginOpen}>
@@ -239,7 +306,7 @@ export default function SettingsPage() {
               onChange={(e) => setGymOwnerCode(e.target.value.toUpperCase())}
               placeholder={t('settings.enter_code')}
               onKeyDown={(e) => e.key === 'Enter' && handleGymOwnerLogin()}
-              maxLength={6}
+              maxLength={8}
               data-testid="input-gym-owner-code"
             />
             <Button
@@ -250,6 +317,50 @@ export default function SettingsPage() {
             >
               {verifyGymOwnerMutation.isPending ? t('settings.checking') : t('settings.login')}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Hisobni o'chirish</DialogTitle>
+            <DialogDescription>
+              Ismingiz, telefon raqamingiz va Telegram ulanishingiz o'chiriladi.
+              Qolgan kreditlaringiz kuyadi va qaytarilmaydi. Kelgusi bronlaringiz
+              bekor qilinadi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm">
+              Tasdiqlash uchun <span className="font-mono font-bold">O'CHIRISH</span> deb yozing:
+            </p>
+            <Input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="O'CHIRISH"
+              autoComplete="off"
+              data-testid="input-delete-confirm"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsDeleteOpen(false)}
+                data-testid="button-cancel-delete"
+              >
+                Bekor qilish
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                disabled={deleteConfirm !== "O'CHIRISH" || deleteAccountMutation.isPending}
+                onClick={() => deleteAccountMutation.mutate()}
+                data-testid="button-confirm-delete"
+              >
+                {deleteAccountMutation.isPending ? "O'chirilmoqda..." : "O'chirish"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

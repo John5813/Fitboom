@@ -1,6 +1,6 @@
-import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
+import { users, gyms, onlineClasses, bookings, videoCollections, userPurchases, timeSlots, adminSettings, partnershipMessages, gymVisits, gymPayments, creditPayments, loginCodes, gymRatings, adminExpenses, storedFiles, gymHours, gymClosures, gymPeakWindows, slotOccupancy, notificationLog, errorLog, type GymHours, type GymClosure, type ErrorLogEntry, type GymPeakWindow, type InsertGymClosure, type User, type InsertUser, type Gym, type InsertGym, type OnlineClass, type InsertOnlineClass, type Booking, type InsertBooking, type VideoCollection, type InsertVideoCollection, type UserPurchase, type InsertUserPurchase, type TimeSlot, type InsertTimeSlot, type AdminSetting, type InsertAdminSetting, type PartnershipMessage, type InsertPartnershipMessage, type GymVisit, type InsertGymVisit, type GymPayment, type InsertGymPayment, type CreditPayment, type InsertCreditPayment, type LoginCode, type InsertLoginCode, type GymRating, type InsertGymRating, type AdminExpense, type InsertAdminExpense } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 
 export interface IStorage {
@@ -16,7 +16,12 @@ export interface IStorage {
   updateUserCreditsWithExpiry(id: string, credits: number, expiryDate: Date): Promise<User | undefined>;
   checkAndResetExpiredCredits(id: string): Promise<User | undefined>;
   updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined>;
-  completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined>;
+  /**
+   * Hisobni o'chiradi: shaxsiy ma'lumotlar anonimlashtiriladi, bron va to'lov
+   * yozuvlari buxgalteriya uchun saqlanib qoladi.
+   */
+  anonymizeUser(id: string): Promise<boolean>;
+  completeUserProfile(id: string, profileData: { name: string; age: number; gender: string; termsVersion?: string }): Promise<User | undefined>;
   getGyms(): Promise<Gym[]>;
   getGym(id: string): Promise<Gym | undefined>;
   createGym(gym: InsertGym): Promise<Gym>;
@@ -47,10 +52,27 @@ export interface IStorage {
   getTimeSlot(id: string): Promise<TimeSlot | undefined>;
   createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
   updateTimeSlot(id: string, updateData: Partial<InsertTimeSlot>): Promise<TimeSlot | undefined>;
-  /** Atomik: bo'sh joy bo'lsagina bittasini band qiladi */
+  /** @deprecated Sanaga bog'lanmagan — `reserveSlotOnDate` dan foydalaning */
   reserveTimeSlotSpot(id: string): Promise<TimeSlot | undefined>;
-  /** Atomik: band joyni bo'shatadi (capacity dan oshmaydi) */
+  /** @deprecated Sanaga bog'lanmagan — `releaseSlotOnDate` dan foydalaning */
   releaseTimeSlotSpot(id: string): Promise<TimeSlot | undefined>;
+
+  // --- Jadval: ish vaqti, yopiq sanalar, pik oynalar ---
+  getGymHours(gymId: string): Promise<GymHours[]>;
+  setGymHours(gymId: string, rows: Array<{ dayOfWeek: number; openTime: string; closeTime: string; isClosed: boolean }>): Promise<GymHours[]>;
+  getGymClosures(gymId: string, fromDate?: string): Promise<GymClosure[]>;
+  addGymClosure(closure: InsertGymClosure): Promise<GymClosure>;
+  deleteGymClosure(gymId: string, date: string): Promise<boolean>;
+  getGymPeakWindows(gymId: string): Promise<GymPeakWindow[]>;
+  setGymPeakWindows(gymId: string, rows: Array<{ dayOfWeek: number; startTime: string; endTime: string; maxCapacity: number }>): Promise<GymPeakWindow[]>;
+
+  // --- Slot bandligi (sana bo'yicha) ---
+  getSlotOccupancy(timeSlotIds: string[], date: string): Promise<Map<string, number>>;
+  getOccupancyForRange(gymId: string, fromDate: string, toDate: string): Promise<Array<{ timeSlotId: string; date: string; bookedCount: number }>>;
+  /** Atomik: shu SANADA bo'sh joy bo'lsagina bittasini band qiladi */
+  reserveSlotOnDate(timeSlotId: string, date: string, maxCapacity: number): Promise<boolean>;
+  /** Atomik: shu sanadagi band joyni bo'shatadi */
+  releaseSlotOnDate(timeSlotId: string, date: string): Promise<void>;
   deleteTimeSlot(id: string): Promise<boolean>;
   deleteTimeSlotsForGym(gymId: string): Promise<void>;
   getAdminSetting(key: string): Promise<AdminSetting | undefined>;
@@ -104,6 +126,23 @@ export interface IStorage {
   }>;
   getAtRiskUsers(daysInactive: number): Promise<User[]>;
   getTopActiveUsers(limit: number): Promise<{ user: User; activityScore: number }[]>;
+  /**
+   * Bildirishnoma yuborishdan oldin "band qilib qo'yadi".
+   * `true` — birinchi marta, yuborish mumkin. `false` — allaqachon yuborilgan.
+   */
+  claimNotification(userId: string, kind: string, refDate: string): Promise<boolean>;
+  /** Yuborish muvaffaqiyatsiz bo'lsa band qilishni bekor qilish */
+  releaseNotification(userId: string, kind: string, refDate: string): Promise<void>;
+  // --- Xatolar jurnali ---
+  /** Xatoni qayd etadi. Takrorlansa yangi qator emas, `count` oshiriladi. */
+  recordError(entry: {
+    source: string; message: string; stack: string | null;
+    context: string | null; userId: string | null; fingerprint: string;
+  }): Promise<{ isNew: boolean; count: number }>;
+  getErrors(options?: { resolved?: boolean; limit?: number }): Promise<ErrorLogEntry[]>;
+  resolveError(id: string, resolved: boolean): Promise<boolean>;
+  deleteResolvedErrors(): Promise<number>;
+
   saveFile(name: string, data: Buffer, contentType: string): Promise<void>;
   getFile(name: string): Promise<{ data: Buffer; contentType: string } | null>;
 }
@@ -200,12 +239,48 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async completeUserProfile(id: string, profileData: { name: string; age: number; gender: string }): Promise<User | undefined> {
+  async anonymizeUser(id: string): Promise<boolean> {
+    /*
+     * Qatorni butunlay o'chirmaymiz: bronlar, tashriflar va to'lovlar
+     * `user_id` orqali bog'langan va ular moliyaviy hisobot uchun kerak.
+     * O'rniga barcha shaxsiy maydonlarni tozalaymiz va hisobni bloklaymiz.
+     *
+     * telegram_id va phone UNIQUE bo'lgani uchun ularni NULL qilamiz —
+     * shunda o'sha raqam bilan keyinchalik yangi hisob ochish mumkin.
+     */
     const [user] = await db
       .update(users)
-      .set({ 
-        ...profileData, 
-        profileCompleted: true 
+      .set({
+        telegramId: null,
+        phone: null,
+        chatId: null,
+        name: null,
+        age: null,
+        gender: null,
+        profileImageUrl: null,
+        credits: 0,
+        creditExpiryDate: null,
+        isAdmin: false,
+        profileCompleted: false,
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return !!user;
+  }
+
+  async completeUserProfile(
+    id: string,
+    profileData: { name: string; age: number; gender: string; termsVersion?: string },
+  ): Promise<User | undefined> {
+    const { termsVersion, ...profile } = profileData;
+    const [user] = await db
+      .update(users)
+      .set({
+        ...profile,
+        profileCompleted: true,
+        // Rozilik vaqti va versiyasi qayd etiladi — keyinchalik shartlar
+        // o'zgarsa, kim qaysi versiyaga rozilik berganini bilish uchun
+        ...(termsVersion ? { termsAcceptedAt: new Date(), termsVersion } : {}),
       })
       .where(eq(users.id, id))
       .returning();
@@ -448,6 +523,129 @@ export class DatabaseStorage implements IStorage {
       .where(eq(timeSlots.id, id))
       .returning();
     return timeSlot || undefined;
+  }
+
+  // --- Jadval ---
+
+  async getGymHours(gymId: string): Promise<GymHours[]> {
+    return db.select().from(gymHours).where(eq(gymHours.gymId, gymId)).orderBy(gymHours.dayOfWeek);
+  }
+
+  async setGymHours(
+    gymId: string,
+    rows: Array<{ dayOfWeek: number; openTime: string; closeTime: string; isClosed: boolean }>,
+  ): Promise<GymHours[]> {
+    for (const row of rows) {
+      await db
+        .insert(gymHours)
+        .values({ gymId, ...row })
+        .onConflictDoUpdate({
+          target: [gymHours.gymId, gymHours.dayOfWeek],
+          set: { openTime: row.openTime, closeTime: row.closeTime, isClosed: row.isClosed },
+        });
+    }
+    return this.getGymHours(gymId);
+  }
+
+  async getGymClosures(gymId: string, fromDate?: string): Promise<GymClosure[]> {
+    const conditions = [eq(gymClosures.gymId, gymId)];
+    if (fromDate) conditions.push(sql`${gymClosures.date} >= ${fromDate}`);
+    return db.select().from(gymClosures).where(and(...conditions)).orderBy(gymClosures.date);
+  }
+
+  async addGymClosure(closure: InsertGymClosure): Promise<GymClosure> {
+    const [row] = await db
+      .insert(gymClosures)
+      .values(closure)
+      .onConflictDoUpdate({
+        target: [gymClosures.gymId, gymClosures.date],
+        set: { reason: closure.reason ?? null },
+      })
+      .returning();
+    return row;
+  }
+
+  async deleteGymClosure(gymId: string, date: string): Promise<boolean> {
+    const result = await db
+      .delete(gymClosures)
+      .where(and(eq(gymClosures.gymId, gymId), eq(gymClosures.date, date)));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getGymPeakWindows(gymId: string): Promise<GymPeakWindow[]> {
+    return db.select().from(gymPeakWindows).where(eq(gymPeakWindows.gymId, gymId));
+  }
+
+  async setGymPeakWindows(
+    gymId: string,
+    rows: Array<{ dayOfWeek: number; startTime: string; endTime: string; maxCapacity: number }>,
+  ): Promise<GymPeakWindow[]> {
+    // Pik oynalar to'liq almashtiriladi — zal egasi panelda butun haftani
+    // bir vaqtda tahrirlaydi va saqlaydi.
+    await db.delete(gymPeakWindows).where(eq(gymPeakWindows.gymId, gymId));
+    if (rows.length > 0) {
+      await db.insert(gymPeakWindows).values(rows.map((r) => ({ gymId, ...r })));
+    }
+    return this.getGymPeakWindows(gymId);
+  }
+
+  // --- Slot bandligi (sana bo'yicha) ---
+
+  async getSlotOccupancy(timeSlotIds: string[], date: string): Promise<Map<string, number>> {
+    if (timeSlotIds.length === 0) return new Map();
+    const rows = await db
+      .select()
+      .from(slotOccupancy)
+      .where(and(inArray(slotOccupancy.timeSlotId, timeSlotIds), eq(slotOccupancy.date, date)));
+    return new Map(rows.map((r) => [r.timeSlotId, r.bookedCount]));
+  }
+
+  async getOccupancyForRange(
+    gymId: string,
+    fromDate: string,
+    toDate: string,
+  ): Promise<Array<{ timeSlotId: string; date: string; bookedCount: number }>> {
+    const rows = await db
+      .select({
+        timeSlotId: slotOccupancy.timeSlotId,
+        date: slotOccupancy.date,
+        bookedCount: slotOccupancy.bookedCount,
+      })
+      .from(slotOccupancy)
+      .innerJoin(timeSlots, eq(timeSlots.id, slotOccupancy.timeSlotId))
+      .where(and(
+        eq(timeSlots.gymId, gymId),
+        sql`${slotOccupancy.date} >= ${fromDate}`,
+        sql`${slotOccupancy.date} <= ${toDate}`,
+      ));
+    return rows;
+  }
+
+  /**
+   * Joyni atomik band qiladi — bitta SQL amalida.
+   *
+   * `ON CONFLICT ... WHERE booked_count < maxCapacity` sharti tufayli parallel
+   * so'rovlar sig'imdan oshib keta olmaydi. Qator qaytmasa — joy yo'q.
+   */
+  async reserveSlotOnDate(timeSlotId: string, date: string, maxCapacity: number): Promise<boolean> {
+    if (maxCapacity <= 0) return false;
+    const [row] = await db
+      .insert(slotOccupancy)
+      .values({ timeSlotId, date, bookedCount: 1 })
+      .onConflictDoUpdate({
+        target: [slotOccupancy.timeSlotId, slotOccupancy.date],
+        set: { bookedCount: sql`${slotOccupancy.bookedCount} + 1` },
+        setWhere: sql`${slotOccupancy.bookedCount} < ${maxCapacity}`,
+      })
+      .returning();
+    return !!row;
+  }
+
+  async releaseSlotOnDate(timeSlotId: string, date: string): Promise<void> {
+    await db
+      .update(slotOccupancy)
+      .set({ bookedCount: sql`GREATEST(0, ${slotOccupancy.bookedCount} - 1)` })
+      .where(and(eq(slotOccupancy.timeSlotId, timeSlotId), eq(slotOccupancy.date, date)));
   }
 
   async deleteTimeSlot(id: string): Promise<boolean> {
@@ -817,6 +1015,83 @@ export class DatabaseStorage implements IStorage {
       if (user) results.push({ user, activityScore: Number(row.score) });
     }
     return results;
+  }
+
+  async claimNotification(userId: string, kind: string, refDate: string): Promise<boolean> {
+    // ON CONFLICT DO NOTHING: qator qaytsa — biz birinchimiz, yuborsak bo'ladi
+    const rows = await db
+      .insert(notificationLog)
+      .values({ userId, kind, refDate })
+      .onConflictDoNothing()
+      .returning();
+    return rows.length > 0;
+  }
+
+  async releaseNotification(userId: string, kind: string, refDate: string): Promise<void> {
+    await db
+      .delete(notificationLog)
+      .where(and(
+        eq(notificationLog.userId, userId),
+        eq(notificationLog.kind, kind),
+        eq(notificationLog.refDate, refDate),
+      ));
+  }
+
+  async recordError(entry: {
+    source: string; message: string; stack: string | null;
+    context: string | null; userId: string | null; fingerprint: string;
+  }): Promise<{ isNew: boolean; count: number }> {
+    /*
+     * Bitta atomik amal: yangi bo'lsa qo'shadi, mavjud bo'lsa hisobni oshiradi.
+     * `xmax = 0` — PostgreSQL hiylasi: qator INSERT bilan yaratilganmi yoki
+     * UPDATE bilan yangilanganmi shu orqali bilinadi.
+     */
+    const [row] = await db
+      .insert(errorLog)
+      .values({
+        source: entry.source,
+        message: entry.message,
+        stack: entry.stack,
+        context: entry.context,
+        userId: entry.userId,
+        fingerprint: entry.fingerprint,
+      })
+      .onConflictDoUpdate({
+        target: errorLog.fingerprint,
+        set: {
+          count: sql`${errorLog.count} + 1`,
+          lastSeen: new Date(),
+          // Hal qilingan xato qayta uchrasa — qayta ochiladi
+          resolved: false,
+          context: entry.context,
+        },
+      })
+      .returning();
+
+    return { isNew: row.count === 1, count: row.count };
+  }
+
+  async getErrors(options: { resolved?: boolean; limit?: number } = {}): Promise<ErrorLogEntry[]> {
+    const conditions = options.resolved !== undefined
+      ? [eq(errorLog.resolved, options.resolved)]
+      : [];
+    const query = db.select().from(errorLog);
+    const filtered = conditions.length ? query.where(and(...conditions)) : query;
+    return filtered.orderBy(sql`${errorLog.lastSeen} DESC`).limit(options.limit ?? 100);
+  }
+
+  async resolveError(id: string, resolved: boolean): Promise<boolean> {
+    const [row] = await db
+      .update(errorLog)
+      .set({ resolved })
+      .where(eq(errorLog.id, id))
+      .returning();
+    return !!row;
+  }
+
+  async deleteResolvedErrors(): Promise<number> {
+    const result = await db.delete(errorLog).where(eq(errorLog.resolved, true));
+    return result.rowCount ?? 0;
   }
 
   async saveFile(name: string, data: Buffer, contentType: string): Promise<void> {

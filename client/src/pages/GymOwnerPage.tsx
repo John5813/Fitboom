@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { Building2, Users, DollarSign, CreditCard, Edit, LogOut, ArrowLeft, Load
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ScheduleTab from "@/components/gym-owner/ScheduleTab";
 import type { GymVisit, GymPayment, TimeSlot } from "@shared/schema";
 
 interface GymOwnerData {
@@ -30,6 +32,36 @@ interface GymOwnerData {
   };
   visits: GymVisit[];
   payments: GymPayment[];
+}
+
+/** Bitta statistika katakchasi — raqam sig'masa kesilmasligi uchun ixcham yozuv */
+function StatCard({ label, icon, value, hint, accent, title, testId }: {
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  hint?: string;
+  accent?: boolean;
+  title?: string;
+  testId?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">{icon}</div>
+        </div>
+        <p
+          className={`truncate text-2xl font-bold tabular-nums ${accent ? "text-green-600" : ""}`}
+          title={title}
+          data-testid={testId}
+        >
+          {value}
+        </p>
+        {hint && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function GymOwnerPage() {
@@ -90,12 +122,8 @@ export default function GymOwnerPage() {
   };
   const [showVisitors, setShowVisitors] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<GymVisit | null>(null);
-  const [showTimeSlots, setShowTimeSlots] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
-  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
-  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
-  const [editingCapacity, setEditingCapacity] = useState('');
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isSwitchModeDialogOpen, setIsSwitchModeDialogOpen] = useState(false);
   const [switchModeCode, setSwitchModeCode] = useState('');
@@ -110,27 +138,6 @@ export default function GymOwnerPage() {
   const ownerHeaders = (extra: Record<string, string> = {}) => ({
     ...extra,
     ...(accessCode ? { "X-Gym-Access-Code": accessCode } : {}),
-  });
-
-  const updateCapacityMutation = useMutation({
-    mutationFn: async ({ slotId, capacity }: { slotId: string; capacity: number }) => {
-      const response = await fetch(`/api/time-slots/${slotId}`, {
-        method: 'PUT',
-        headers: ownerHeaders({ 'Content-Type': 'application/json' }),
-        credentials: 'include',
-        body: JSON.stringify({ capacity }),
-      });
-      if (!response.ok) throw new Error("Failed to update capacity");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
-      toast({ title: "Muvaffaqiyatli", description: "Sig'im yangilandi" });
-      setEditingSlotId(null);
-    },
-    onError: () => {
-      toast({ title: "Xatolik", description: "Sig'imni yangilashda xatolik yuz berdi", variant: "destructive" });
-    }
   });
 
   const generateAndShowQR = async (qrCodeData: string) => {
@@ -218,60 +225,22 @@ export default function GymOwnerPage() {
     enabled: !!gymId,
   });
 
-  const { data: timeSlotsData } = useQuery<{ timeSlots: TimeSlot[] }>({
-    queryKey: ['/api/time-slots', gymId],
+  // Bugungi sana — bandlik SANAGA bog'liq, shuning uchun so'rovga qo'shiladi.
+  // Sanasiz `availableSpots` ma'nosiz: slotlar haftalik shablon.
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const { data: timeSlotsData } = useQuery<{ timeSlots: Array<TimeSlot & { bookedCount?: number; state?: string }> }>({
+    queryKey: ['/api/time-slots', gymId, todayIso],
     refetchInterval: 15000,
     enabled: !!gymId,
-    queryFn: () => fetch(`/api/time-slots?gymId=${gymId}`, { credentials: 'include' }).then(res => res.json()),
+    queryFn: () =>
+      fetch(`/api/time-slots?gymId=${gymId}&date=${todayIso}`, { credentials: 'include' }).then(res => res.json()),
   });
 
   const timeSlots = timeSlotsData?.timeSlots || [];
-
-  const DAY_ORDER = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
-  const groupedSlots = DAY_ORDER.map(day => ({
-    day,
-    slots: timeSlots.filter(s => s.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime)),
-  }));
-
-  const handleOwnerAutoGenerate = async () => {
-    if (!gymId) return;
-    setIsAutoGenerating(true);
-    try {
-      const response = await fetch('/api/time-slots/auto-generate', {
-        method: 'POST',
-        headers: ownerHeaders({ 'Content-Type': 'application/json' }),
-        credentials: 'include',
-        body: JSON.stringify({ gymId }),
-      });
-      const resData = await response.json();
-      if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
-        toast({ title: "Muvaffaqiyatli", description: resData.message });
-      } else {
-        toast({ title: "Xatolik", description: resData.error, variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Xatolik", description: "Server bilan bog'lanishda xatolik", variant: "destructive" });
-    } finally {
-      setIsAutoGenerating(false);
-    }
-  };
-
-  const handleDeleteSlot = async (slotId: string) => {
-    try {
-      const response = await fetch(`/api/time-slots/${slotId}`, {
-        method: 'DELETE',
-        headers: ownerHeaders(),
-        credentials: 'include',
-      });
-      if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/time-slots', gymId] });
-        toast({ title: "O'chirildi", description: "Vaqt sloti o'chirildi" });
-      }
-    } catch {
-      toast({ title: "Xatolik", description: "O'chirishda xatolik", variant: "destructive" });
-    }
-  };
 
   const updateGymMutation = useMutation({
     mutationFn: async (updateData: { name?: string; imageUrl?: string; images?: string[] }) => {
@@ -387,6 +356,21 @@ export default function GymOwnerPage() {
     return new Intl.NumberFormat("uz-UZ").format(amount) + " so'm";
   };
 
+  /**
+   * Statistika kartalari uchun ixcham yozuv: 1 500 000 -> "1,5 mln".
+   * Ilgari to'liq summa `text-2xl` bilan yarim kenglikdagi kartaga sig'masdi.
+   */
+  const formatCompactSom = (amount: number) => {
+    if (amount >= 1_000_000) {
+      const mln = amount / 1_000_000;
+      return `${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 1 }).format(mln)} mln`;
+    }
+    if (amount >= 10_000) {
+      return `${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(amount / 1000)} ming`;
+    }
+    return new Intl.NumberFormat("uz-UZ").format(amount);
+  };
+
   if (!gymId || !accessCode) {
     return null;
   }
@@ -411,7 +395,10 @@ export default function GymOwnerPage() {
     );
   }
 
-  const { gym, visits, payments } = data;
+  // Kutilmagan javob shaklida ham sahifa qulamasligi uchun standart qiymatlar
+  const { gym } = data;
+  const visits = data.visits ?? [];
+  const payments = data.payments ?? [];
 
   const now = new Date();
   const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -452,17 +439,31 @@ export default function GymOwnerPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditDialog} data-testid="button-edit-gym">
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={openEditDialog} data-testid="button-edit-gym">
               <Edit className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setIsSettingsDialogOpen(true)} data-testid="button-settings">
               <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-4 max-w-lg mx-auto">
+      <div className="p-4 space-y-4 max-w-6xl mx-auto">
+        <Tabs defaultValue="today" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="today" data-testid="tab-today">Bugun</TabsTrigger>
+            <TabsTrigger value="schedule" data-testid="tab-schedule">Jadval</TabsTrigger>
+            <TabsTrigger value="finance" data-testid="tab-finance">Hisob-kitob</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="schedule" className="mt-4">
+            <ScheduleTab gymId={gymId} ownerHeaders={ownerHeaders} />
+          </TabsContent>
+
+          <TabsContent value="today" className="mt-4 space-y-4">
+        {/* Desktop'da QR va zal kartochkasi yonma-yon turadi */}
+        <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-start">
         {/* Gym QR Code — Primary Action */}
         <button
           onClick={() => gym.qrCode ? generateAndShowQR(gym.qrCode) : toast({ title: "QR kod yo'q", description: "Bu zal uchun QR kod hali yaratilmagan", variant: "destructive" })}
@@ -527,99 +528,45 @@ export default function GymOwnerPage() {
             )}
           </div>
         </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Bugun</span>
-                <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-blue-500" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold" data-testid="text-today-visitors">{todayVisits.length}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">tashrif</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Bugungi daromad</span>
-                <div className="h-7 w-7 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-green-500" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-green-600" data-testid="text-today-revenue">{formatCurrency(todayRevenue)}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">so'm</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Shu oy</span>
-                <div className="h-7 w-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <CalendarDays className="h-4 w-4 text-violet-500" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold" data-testid="text-month-visitors">{thisMonthVisits.length}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{formatCurrency(thisMonthRevenue)} daromad</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Band slotlar</span>
-                <div className="h-7 w-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Activity className="h-4 w-4 text-orange-500" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold" data-testid="text-occupancy">{occupancyPercent}%</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{totalOccupied}/{totalCapacity} joy</p>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Balance Card */}
-        <Card className="border-0 shadow-sm overflow-hidden" data-testid="card-your-earnings">
-          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium mb-1">Joriy balans</p>
-                <p className="text-3xl font-bold text-green-600" data-testid="text-your-earnings">{formatCurrency(currentBalance)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Jami: {formatCurrency(gym.totalEarnings)} • To'langan: {formatCurrency(totalPaid)}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-500/15 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setShowTimeSlots(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border bg-background hover:bg-muted/50 transition-colors shadow-sm"
-            data-testid="button-manage-time-slots"
-          >
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <span className="text-sm font-medium">Vaqt slotlari</span>
-            <Badge variant="secondary" className="text-xs">{timeSlots.length} ta</Badge>
-          </button>
-          <button
-            onClick={() => setShowVisitors(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border bg-background hover:bg-muted/50 transition-colors shadow-sm"
-            data-testid="button-view-visitors"
-          >
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <span className="text-sm font-medium">Barcha tashriflar</span>
-            <Badge variant="secondary" className="text-xs">{visits.length} ta</Badge>
-          </button>
+        {/*
+          Statistika kartalari.
+          Rang endi ma'no tashiydi: faqat pul yashil, qolgani neytral.
+          Ilgari 4 ta karta 4 xil rangda edi va ranglar hech narsani anglatmasdi.
+        */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            label="Bugun"
+            icon={<Users className="h-4 w-4 text-muted-foreground" />}
+            value={String(todayVisits.length)}
+            hint="tashrif"
+            testId="text-today-visitors"
+          />
+          <StatCard
+            label="Bugungi daromad"
+            icon={<DollarSign className="h-4 w-4 text-green-600" />}
+            value={formatCompactSom(todayRevenue)}
+            hint="so'm"
+            accent
+            title={formatCurrency(todayRevenue)}
+            testId="text-today-revenue"
+          />
+          <StatCard
+            label="Shu oy"
+            icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
+            value={String(thisMonthVisits.length)}
+            hint={`${formatCompactSom(thisMonthRevenue)} so'm`}
+            title={formatCurrency(thisMonthRevenue)}
+            testId="text-month-visitors"
+          />
+          <StatCard
+            label="Bugungi bandlik"
+            icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+            value={`${occupancyPercent}%`}
+            hint={`${totalOccupied}/${totalCapacity} joy`}
+            testId="text-occupancy"
+          />
         </div>
 
         {/* Recent Visitors */}
@@ -661,8 +608,31 @@ export default function GymOwnerPage() {
           </Card>
         )}
 
+          </TabsContent>
+
+          <TabsContent value="finance" className="mt-4 space-y-4">
+        {/* Balans */}
+        <Card className="overflow-hidden" data-testid="card-your-earnings">
+          <div className="bg-green-500/10 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Joriy balans</p>
+                <p className="text-3xl font-bold tabular-nums text-green-600 break-words" data-testid="text-your-earnings">
+                  {formatCurrency(currentBalance)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                  Jami ishlangan: {formatCurrency(gym.totalEarnings)} • To'langan: {formatCurrency(totalPaid)}
+                </p>
+              </div>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-500/15">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Payments */}
-        <Card className="border-0 shadow-sm" data-testid="card-payments">
+        <Card data-testid="card-payments">
           <CardHeader className="pb-2 px-4 pt-4">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -695,6 +665,9 @@ export default function GymOwnerPage() {
             )}
           </CardContent>
         </Card>
+
+          </TabsContent>
+        </Tabs>
 
         <div className="pb-4" />
       </div>
@@ -858,110 +831,11 @@ export default function GymOwnerPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showTimeSlots} onOpenChange={setShowTimeSlots}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Vaqt slotlari
-            </DialogTitle>
-            <DialogDescription>Haftalik jadval boshqaruvi</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="p-3 border rounded-md bg-muted/30">
-              <p className="text-xs text-muted-foreground mb-2">
-                Du-Sh, 09:00-21:00, har soatga 15 kishi. Dam kunlari zal sozlamalaridan aniqlanadi.
-              </p>
-              <Button
-                onClick={handleOwnerAutoGenerate}
-                disabled={isAutoGenerating}
-                className="w-full"
-                data-testid="button-owner-auto-generate"
-              >
-                {isAutoGenerating ? 'Yaratilmoqda...' : 'Avtomatik yaratish'}
-              </Button>
-            </div>
-
-            {timeSlots.length === 0 ? (
-              <p className="text-center text-muted-foreground text-sm py-4">Hali vaqt slotlari yo'q</p>
-            ) : (
-              <div className="space-y-3">
-                {groupedSlots.filter(g => g.slots.length > 0).map(group => (
-                  <div key={group.day}>
-                    <h4 className="text-sm font-semibold mb-1.5">{group.day}</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {group.slots.map(slot => (
-                        <div key={slot.id} className="flex items-center justify-between w-full border rounded-md px-3 py-2 text-sm">
-                          <span className="font-medium">{slot.startTime}-{slot.endTime}</span>
-                          <div className="flex items-center gap-2">
-                            {editingSlotId === slot.id ? (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  className="w-16 h-8 text-xs"
-                                  value={editingCapacity}
-                                  onChange={(e) => setEditingCapacity(e.target.value)}
-                                  autoFocus
-                                  data-testid={`input-owner-slot-capacity-${slot.id}`}
-                                />
-                                <Button
-                                  size="sm"
-                                  className="h-8 px-2"
-                                  onClick={() => {
-                                    const cap = parseInt(editingCapacity);
-                                    if (cap > 0) updateCapacityMutation.mutate({ slotId: slot.id, capacity: cap });
-                                  }}
-                                  disabled={updateCapacityMutation.isPending}
-                                  data-testid={`button-owner-save-capacity-${slot.id}`}
-                                >
-                                  OK
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 px-2"
-                                  onClick={() => setEditingSlotId(null)}
-                                  data-testid={`button-owner-cancel-capacity-${slot.id}`}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <>
-                                <Badge
-                                  variant="outline"
-                                  className="cursor-pointer"
-                                  onClick={() => {
-                                    setEditingSlotId(slot.id);
-                                    setEditingCapacity(slot.capacity.toString());
-                                  }}
-                                  data-testid={`badge-owner-slot-capacity-${slot.id}`}
-                                >
-                                  {slot.availableSpots}/{slot.capacity}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive"
-                                  onClick={() => handleDeleteSlot(slot.id)}
-                                  data-testid={`button-owner-delete-slot-${slot.id}`}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/*
+        Eski "Vaqt slotlari" modali olib tashlandi — uning o'rnini "Jadval" tabi
+        egalladi. Modal ichidagi tekis ro'yxatda haftalik manzarani ko'rib
+        bo'lmasdi va pik vaqt tushunchasi uchun joy yo'q edi.
+      */}
 
       <Dialog open={!!selectedVisitor} onOpenChange={() => setSelectedVisitor(null)}>
         <DialogContent className="max-w-sm">
@@ -1056,7 +930,7 @@ export default function GymOwnerPage() {
                 value={switchModeCode}
                 onChange={(e) => setSwitchModeCode(e.target.value.toUpperCase())}
                 placeholder="Masalan: ABC123"
-                maxLength={6}
+                maxLength={8}
                 className="mt-1 font-mono tracking-widest text-center text-lg uppercase"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSwitchToUserMode(); }}
                 data-testid="input-switch-code"

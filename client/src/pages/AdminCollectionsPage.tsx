@@ -13,6 +13,8 @@ import {
   Lock, Unlock, ChevronDown, ChevronUp, CreditCard, Image as ImageIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AdminHeader from "@/components/shared/PageHeader";
+import { formatNumber } from "@/lib/format";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link, useLocation } from "wouter";
 
@@ -477,28 +479,23 @@ export default function AdminCollectionsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white">
-        <div className="max-w-3xl mx-auto px-4 py-5 flex items-center gap-3">
-          <Link href="/admin">
-            <button className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold">Video Kurslar</h1>
-            <p className="text-purple-200 text-sm">{collections.length} ta kurs</p>
-          </div>
+      <AdminHeader
+        title="Video kurslar"
+        subtitle={`${collections.length} ta kurs`}
+        backHref="/admin"
+        action={
           <Button
             size="sm"
-            className="bg-white text-purple-700 hover:bg-purple-50 gap-1.5"
+            className="h-9 border-0 bg-white/15 text-white hover:bg-white/25"
             onClick={() => setCreateOpen(true)}
             data-testid="button-create-collection"
           >
-            <Plus className="h-4 w-4" /> Yangi kurs
+            <Plus className="mr-1 h-4 w-4" />
+            <span className="hidden xs:inline">Yangi kurs</span>
+            <span className="xs:hidden">Yangi</span>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Collections list */}
       <div className="max-w-3xl mx-auto px-4 py-5 space-y-3">
@@ -530,27 +527,28 @@ export default function AdminCollectionsPage() {
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm truncate">{col.name}</span>
+                <div className="min-w-0 flex-1">
+                  {/* Nom endi alohida qatorda va ikki qatorgacha o'raladi —
+                      ilgari u nishon bilan bir qatorda siqilib "Yoga boshla…"
+                      bo'lib kesilardi */}
+                  <p className="line-clamp-2 text-sm font-semibold leading-snug">{col.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                     {col.isFree ? (
-                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-0 text-[10px] h-5 px-2">
-                        <Unlock className="h-2.5 w-2.5 mr-1" /> Bepul
+                      <Badge className="h-5 border-0 bg-emerald-100 px-2 text-[10px] text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                        <Unlock className="mr-1 h-2.5 w-2.5" /> Bepul
                       </Badge>
                     ) : (
-                      <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400 border-0 text-[10px] h-5 px-2">
-                        <CreditCard className="h-2.5 w-2.5 mr-1" /> {col.price} kr
+                      <Badge className="h-5 border-0 bg-muted px-2 text-[10px] tabular-nums text-foreground">
+                        <CreditCard className="mr-1 h-2.5 w-2.5" /> {formatNumber(col.price)} kredit
                       </Badge>
                     )}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
                       <Play className="h-3 w-3" /> {col.videoCount ?? 0} ta video
                     </span>
                     {(col.categories || []).slice(0, 2).map(c => {
                       const cat = CATEGORIES.find(x => x.id === c);
                       return cat ? (
-                        <span key={c} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                        <span key={c} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                           {cat.name}
                         </span>
                       ) : null;

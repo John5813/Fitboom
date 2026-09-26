@@ -25,11 +25,16 @@ const buttonVariants = cva(
       // Heights are set as "min" heights, because sometimes Ai will place large amount of content
       // inside buttons. With a min-height they will look appropriate with small amounts of content,
       // but will expand to fit large amounts of content.
+      /*
+       * O'lchamlar uchala panelda bir xil.
+       * `sm` ilgari 28px edi — barmoq bilan bosish uchun juda kichik va admin
+       * panelidagi 40px li tugmalar bilan yonma-yon turganda nomutanosib edi.
+       */
       size: {
-        default: "min-h-9 px-4 py-2 text-xs",
-        sm: "min-h-7 rounded-md px-2.5 text-[0.688rem]",
-        lg: "min-h-10 rounded-md px-8 text-xs",
-        icon: "h-9 w-9",
+        default: "min-h-10 px-4 py-2 text-sm",
+        sm: "min-h-9 rounded-md px-3 text-xs",
+        lg: "min-h-11 rounded-md px-8 text-sm",
+        icon: "h-10 w-10",
       },
     },
     defaultVariants: {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,24 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Send, Phone, ChevronLeft, Dumbbell } from "lucide-react";
-import fitboomLogo from "@/assets/fitboom-logo-transparent.png";
+import Wordmark from "@/components/brand/Wordmark";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LEGAL_LAST_UPDATED } from "@/content/legal";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { completeProfileSchema } from "@shared/schema";
 
-const completeProfileSchema = z.object({
-  name: z.string().min(2, "Ism kamida 2 belgidan iborat bo'lishi kerak"),
-  age: z.number().min(10, "Yosh kamida 10 bo'lishi kerak").max(120, "Yosh 120 dan oshmasligi kerak"),
-  gender: z.enum(["Erkak", "Ayol"], { errorMap: () => ({ message: "Jinsni tanlang" }) }),
-});
-
+/*
+ * Sxema `@shared/schema` dan olinadi.
+ *
+ * Ilgari bu yerda uning nusxasi turardi va ular ajralib ketgandi: bu yerda
+ * yosh chegarasi 120, serverda esa 100 edi — ya'ni 101 yoshni forma qabul
+ * qilardi-yu, server rad etardi.
+ */
 type CompleteProfileFormData = z.infer<typeof completeProfileSchema>;
 
 type Step = "method" | "telegram-code" | "sms-phone" | "sms-code";
@@ -42,7 +46,13 @@ export default function RegisterPage() {
 
   const form = useForm<CompleteProfileFormData>({
     resolver: zodResolver(completeProfileSchema),
-    defaultValues: { name: "", age: 18, gender: undefined },
+    defaultValues: {
+      name: "",
+      age: 18,
+      gender: undefined,
+      acceptedTerms: undefined as unknown as true,
+      termsVersion: LEGAL_LAST_UPDATED,
+    },
   });
 
   useEffect(() => {
@@ -219,12 +229,7 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-6">
-          <img
-            src={fitboomLogo}
-            alt="FitBoom"
-            className="h-28 w-auto mx-auto drop-shadow-[0_0_30px_rgba(249,115,22,0.5)]"
-            data-testid="img-logo"
-          />
+          <Wordmark className="text-5xl block" />
           <p className="text-orange-200/70 text-sm mt-2 font-medium">Sport platformasi</p>
         </div>
 
@@ -473,6 +478,37 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
+              {/* Rozilik — server tomonda ham majburiy tekshiriladi */}
+              <FormField
+                control={form.control}
+                name="acceptedTerms"
+                render={({ field }) => (
+                  <FormItem className="rounded-xl border p-3">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="accept-terms"
+                        checked={field.value === true}
+                        onCheckedChange={(checked) => field.onChange(checked === true ? true : undefined)}
+                        className="mt-0.5"
+                        data-testid="checkbox-accept-terms"
+                      />
+                      <label htmlFor="accept-terms" className="cursor-pointer text-sm leading-snug">
+                        Men{" "}
+                        <Link href="/legal/oferta">
+                          <span className="text-primary underline underline-offset-2">ommaviy oferta</span>
+                        </Link>{" "}
+                        va{" "}
+                        <Link href="/legal/maxfiylik">
+                          <span className="text-primary underline underline-offset-2">maxfiylik siyosati</span>
+                        </Link>{" "}
+                        shartlari bilan tanishdim va roziman
+                      </label>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Button
                 type="submit"
                 className="w-full rounded-xl bg-orange-500 hover:bg-orange-600 h-12 font-semibold"

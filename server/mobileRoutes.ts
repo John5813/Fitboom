@@ -19,6 +19,9 @@ import { sendPaymentReceiptToAdmin, getAppUrl, syncAdminFlag } from './telegram'
 import { Client as ObjectStorageClient } from '@replit/object-storage';
 import { publicGym, rateLimit } from './security';
 import { isAuthenticGymQr } from './qrSignature';
+import { checkBookingAllowed, buildAvailability, loadGymSchedule } from './scheduleRoutes';
+import { dayOfWeekFromDate, findPeakWindow } from '@shared/schedule';
+import { ALLOWED_CREDIT_AMOUNTS, gymPayoutForVisit, priceForCredits } from '@shared/pricing';
 import {
   requireMobileAuth,
   generateTokenPair,
@@ -67,13 +70,9 @@ function fixGymImages(gym: any): any {
   };
 }
 
-const ALLOWED_CREDIT_PACKAGES = [60, 130, 240];
-
-const CREDIT_PRICES: Record<number, number> = {
-  60: 60000,
-  130: 130000,
-  240: 240000,
-};
+// Narxlar `@shared/pricing` da — ilgari bu yerda web'dagidan uch baravar
+// arzon narxlar yozilgan edi va mobil mijoz kamroq to'lardi
+const ALLOWED_CREDIT_PACKAGES = ALLOWED_CREDIT_AMOUNTS;
 
 function getTashkentNow(): Date {
   const now = new Date();
@@ -577,15 +576,35 @@ export function registerMobileRoutes(app: Express) {
         ? Math.round((ratings.reduce((s, r) => s + r.rating, 0) / ratings.length) * 10) / 10
         : null;
 
+      // Haftalik jadval — bu SHABLON, aniq sana emas.
+      // Shu sababli bu yerda haqiqiy bo'sh joy soni qaytarilmaydi: bandlik
+      // har bir sana uchun alohida va `/gyms/:id/slots?date=` dan olinadi.
+      // `isAvailable` faqat "bu vaqtda umuman bron qilish mumkinmi" degani.
       const DAY_NAMES = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+      const schedule = await loadGymSchedule(req.params.id);
+
       const weeklySchedule = DAY_NAMES.map((dayName, dayNum) => {
-        const isDayOff = (gym.closedDays || []).includes(String(dayNum));
+        const hoursRow = schedule.hours.find((h) => h.dayOfWeek === dayNum);
+        const isDayOff = (gym.closedDays || []).includes(String(dayNum)) || !!hoursRow?.isClosed;
         const daySlots = isDayOff ? [] : allSlots.filter((s: any) => s.dayOfWeek === dayName);
+
         return {
           dayNum,
           dayName,
           is_day_off: isDayOff,
-          slots: daySlots.map((s: any) => ({ ...s, isAvailable: s.availableSpots > 0 })),
+          openTime: hoursRow?.openTime ?? null,
+          closeTime: hoursRow?.closeTime ?? null,
+          slots: daySlots.map((s: any) => {
+            const peak = findPeakWindow(schedule.peakWindows, dayNum, s.startTime, s.endTime);
+            const isPeakBlocked = !!peak && peak.maxCapacity === 0;
+            return {
+              ...s,
+              capacity: s.capacity,
+              isPeak: !!peak,
+              peakMaxCapacity: peak?.maxCapacity ?? null,
+              isAvailable: !isPeakBlocked,
+            };
+          }),
         };
       });
 
@@ -618,39 +637,50 @@ export function registerMobileRoutes(app: Express) {
       const gym = await storage.getGym(req.params.id);
       if (!gym) return mobileError(res, 'Sport zal topilmadi', 404);
 
-      const dayNames = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
-      const [y, m, d] = date.split('-').map(Number);
-      const dateObj = new Date(y, m - 1, d);
-      const dayOfWeek = dayNames[dateObj.getDay()];
-      const dayNum = dateObj.getDay();
+      const dateNormalized = String(date).split('T')[0];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateNormalized)) {
+        return mobileError(res, "Sana YYYY-MM-DD formatida bo'lishi kerak");
+      }
 
-      const isDayOff = (gym.closedDays || []).includes(String(dayNum));
+      const dayNames = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+      const dayNum = dayOfWeekFromDate(dateNormalized);
+      const dayOfWeek = dayNames[dayNum];
+
+      // Yopiqlik uchta manbadan kelib chiqadi: haftalik ish vaqti, aniq sanadagi
+      // istisno, va eski `closedDays` ustuni (moslik uchun saqlanmoqda).
+      const schedule = await loadGymSchedule(req.params.id);
+      const hoursRow = schedule.hours.find((h) => h.dayOfWeek === dayNum);
+      const isDayOff = (gym.closedDays || []).includes(String(dayNum))
+        || !!hoursRow?.isClosed
+        || schedule.closureDates.has(dateNormalized);
 
       if (isDayOff) {
         return mobileSuccess(res, {
-          date,
+          date: dateNormalized,
           dayOfWeek,
           dayNum,
           is_day_off: true,
           isClosed: true,
           slots: [],
-          message: "Bu kun sport zal yopiq",
+          message: schedule.closureDates.has(dateNormalized)
+            ? "Bu sanada sport zal yopiq"
+            : "Bu kun sport zal yopiq",
         });
       }
 
-      const allSlots = await storage.getTimeSlots(req.params.id);
-      const daySlots = allSlots.filter(s => s.dayOfWeek === dayOfWeek);
+      // Bandlik shu SANA uchun hisoblanadi (pik oynalar ham hisobga olinadi)
+      const slots = await buildAvailability(req.params.id, dateNormalized);
 
       mobileSuccess(res, {
-        date,
+        date: dateNormalized,
         dayOfWeek,
         dayNum,
         is_day_off: false,
         isClosed: false,
-        slots: daySlots.map(slot => ({
-          ...slot,
-          isAvailable: slot.availableSpots > 0,
-        })),
+        openTime: hoursRow?.openTime,
+        closeTime: hoursRow?.closeTime,
+        // Pik oynada bron qilib bo'lmaydigan slotlar ro'yxatdan chiqariladi
+        slots: slots.filter((s) => s.state !== 'closed'),
       });
     } catch (err: any) {
       mobileError(res, 'Vaqt slotlarini olishda xatolik', 500);
@@ -800,7 +830,12 @@ export function registerMobileRoutes(app: Express) {
       const gym = await storage.getGym(gymId);
       if (!gym) return mobileError(res, 'Sport zal topilmadi', 404);
 
-      const dayNum = new Date(date).getDay();
+      const dateNormalized = String(date).split('T')[0];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateNormalized)) {
+        return mobileError(res, "Sana YYYY-MM-DD formatida bo'lishi kerak");
+      }
+
+      const dayNum = dayOfWeekFromDate(dateNormalized);
       if ((gym.closedDays || []).includes(String(dayNum))) {
         return mobileError(res, 'Bu kun sport zal yopiq');
       }
@@ -808,7 +843,11 @@ export function registerMobileRoutes(app: Express) {
       const timeSlot = await storage.getTimeSlot(timeSlotId);
       if (!timeSlot) return mobileError(res, 'Vaqt sloti topilmadi', 404);
       if (timeSlot.gymId !== gymId) return mobileError(res, 'Vaqt sloti bu zalga tegishli emas');
-      if (timeSlot.availableSpots <= 0) return mobileError(res, "Bu vaqt slotida joy qolmagan");
+
+      // Jadval qoidalari: hafta kuni mosligi, ish vaqti, yopiq sanalar, pik oynalar.
+      // Kreditni yechishdan OLDIN tekshiriladi.
+      const rule = await checkBookingAllowed({ gymId, date: dateNormalized, slot: timeSlot });
+      if (!rule.ok) return mobileError(res, rule.message || "Bu vaqtda bron qilib bo'lmaydi");
 
       if (currentUser.credits < gym.credits) {
         return mobileError(res, `Kredit yetarli emas. Kerak: ${gym.credits}, mavjud: ${currentUser.credits}`);
@@ -845,7 +884,7 @@ export function registerMobileRoutes(app: Express) {
         return mobileError(res, `Kredit yetarli emas. Kerak: ${gym.credits}`);
       }
 
-      const reserved = await storage.reserveTimeSlotSpot(timeSlotId);
+      const reserved = await storage.reserveSlotOnDate(timeSlotId, dateNormalized, rule.effectiveCapacity);
       if (!reserved) {
         await storage.refundUserCredits(mobileUser.id, gym.credits);
         return mobileError(res, "Bu vaqt slotida joy qolmagan");
@@ -866,7 +905,7 @@ export function registerMobileRoutes(app: Express) {
         });
       } catch (createErr) {
         await storage.refundUserCredits(mobileUser.id, gym.credits);
-        await storage.releaseTimeSlotSpot(timeSlotId);
+        await storage.releaseSlotOnDate(timeSlotId, dateNormalized);
         throw createErr;
       }
 
@@ -952,7 +991,7 @@ export function registerMobileRoutes(app: Express) {
       }
 
       if (booking.timeSlotId) {
-        await storage.releaseTimeSlotSpot(booking.timeSlotId);
+        await storage.releaseSlotOnDate(booking.timeSlotId, (booking.date || '').split('T')[0]);
       }
 
       mobileSuccess(res, {
@@ -1035,7 +1074,7 @@ export function registerMobileRoutes(app: Express) {
 
       const user = await storage.getUser(mobileUser.id);
       const creditsEarned = gym.credits;
-      const pricePerVisit = Math.round(gym.credits * 1500);
+      const pricePerVisit = gymPayoutForVisit(gym.credits);
 
       await storage.createGymVisit({
         gymId,
@@ -1097,8 +1136,8 @@ export function registerMobileRoutes(app: Express) {
         isExpired: expiryDate ? new Date(expiryDate) < now : false,
         packages: ALLOWED_CREDIT_PACKAGES.map(c => ({
           credits: c,
-          price: CREDIT_PRICES[c],
-          priceFormatted: `${CREDIT_PRICES[c].toLocaleString()} so'm`,
+          price: priceForCredits(c),
+          priceFormatted: `${(priceForCredits(c) ?? 0).toLocaleString('en-US').replace(/,/g, ' ')} so'm`,
         })),
         paymentUrl: `${appUrl}/mobile-pay?token=${mobileToken}`,
         mapUrl: `${appUrl}/map`,
@@ -1136,7 +1175,7 @@ export function registerMobileRoutes(app: Express) {
       const mobileUser = (req as any).mobileUser;
       const { credits, price } = req.body;
       const creditsNum = parseInt(credits);
-      const priceNum = price ? parseInt(price) : CREDIT_PRICES[creditsNum];
+      const priceNum = price ? parseInt(price) : (priceForCredits(creditsNum) ?? 0);
 
       if (!creditsNum || !ALLOWED_CREDIT_PACKAGES.includes(creditsNum)) {
         return mobileError(res, `Noto'g'ri kredit paketi. Ruxsat etilganlar: ${ALLOWED_CREDIT_PACKAGES.join(', ')}`);
@@ -1147,21 +1186,21 @@ export function registerMobileRoutes(app: Express) {
       const payment = await storage.createCreditPayment({
         userId: mobileUser.id,
         credits: creditsNum,
-        price: priceNum || CREDIT_PRICES[creditsNum],
+        price: priceNum || (priceForCredits(creditsNum) ?? 0),
         status: 'pending',
-        remainingAmount: priceNum || CREDIT_PRICES[creditsNum],
+        remainingAmount: priceNum || (priceForCredits(creditsNum) ?? 0),
       });
 
       await storage.updateCreditPayment(payment.id, { receiptUrl } as any);
 
       const user = await storage.getUser(mobileUser.id);
-      await sendPaymentReceiptToAdmin(storage, payment.id, req.file.buffer, user, creditsNum, priceNum || CREDIT_PRICES[creditsNum], false, receiptFilename);
+      await sendPaymentReceiptToAdmin(storage, payment.id, req.file.buffer, user, creditsNum, priceNum || (priceForCredits(creditsNum) ?? 0), false, receiptFilename);
 
       mobileSuccess(res, {
         message: "Chek yuborildi. Admin tasdiqlashini kuting.",
         paymentId: payment.id,
         credits: creditsNum,
-        price: priceNum || CREDIT_PRICES[creditsNum],
+        price: priceNum || (priceForCredits(creditsNum) ?? 0),
       }, 201);
     } catch (err: any) {
       console.error('[Mobile] Credit purchase error:', err);
