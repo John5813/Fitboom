@@ -24,12 +24,18 @@ import {
   type PaymentStatusResponse,
 } from "@/services/api";
 import Colors from "@/constants/Colors";
+import { CREDIT_PACKAGES } from "@shared/pricing";
 
-const FALLBACK_PACKAGES = [
-  { credits: 60, price: 60000, priceFormatted: "60 000 so'm" },
-  { credits: 130, price: 130000, priceFormatted: "130 000 so'm" },
-  { credits: 240, price: 240000, priceFormatted: "240 000 so'm" },
-];
+/*
+ * Server javob berguncha (yoki tarmoq uzilganda) ko'rsatiladigan paketlar.
+ * Ilgari bu yerda eski narxlar qattiq yozilgan edi (60 000 / 130 000 /
+ * 240 000) — haqiqiy narxdan uch baravar arzon. Endi veb va server bilan
+ * bitta manbadan olinadi.
+ */
+const FALLBACK_PACKAGES = CREDIT_PACKAGES.map((p) => ({
+  ...p,
+  priceFormatted: `${String(p.price).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} so'm`,
+}));
 
 type Step = "select" | "receipt" | "pending" | "done" | "rejected";
 
