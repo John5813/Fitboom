@@ -25,7 +25,7 @@ export default function AdminHeader({ title, subtitle, backHref, onBack, action 
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.30) 0%, transparent 65%)",
+            "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(217,167,81,0.30) 0%, transparent 65%)",
         }}
       />
       <div className="relative mx-auto flex max-w-5xl items-center gap-3 px-4 py-4 sm:px-6">
@@ -34,7 +34,7 @@ export default function AdminHeader({ title, subtitle, backHref, onBack, action 
           <button
             type="button"
             onClick={onBack}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-orange-200/80 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-amber-100/80 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Orqaga"
             data-testid="button-back"
           >
@@ -44,7 +44,7 @@ export default function AdminHeader({ title, subtitle, backHref, onBack, action 
 
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-display font-bold sm:text-xl">{title}</h1>
-          {subtitle && <p className="truncate text-xs text-orange-200/70 sm:text-sm">{subtitle}</p>}
+          {subtitle && <p className="truncate text-xs text-amber-100/70 sm:text-sm">{subtitle}</p>}
         </div>
 
         {action && <div className="shrink-0">{action}</div>}

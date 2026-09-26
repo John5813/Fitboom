@@ -461,9 +461,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeBooking(id: string): Promise<void> {
+    // isCompleted va status doim birga o'zgaradi. Ilgari faqat isCompleted
+    // yozilardi: mobil ilova orqali QR tasdiqlangan bron status="pending"
+    // bo'lib qolar, saytda "Kutilmoqda" ko'rinar va statistikani buzardi.
     await db
       .update(bookings)
-      .set({ isCompleted: true })
+      .set({ isCompleted: true, status: 'completed' })
       .where(eq(bookings.id, id));
   }
 

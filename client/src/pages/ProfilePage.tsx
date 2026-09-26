@@ -12,6 +12,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDateShort } from "@/lib/format";
+import IconTile from "@/components/IconTile";
+import DefaultAvatar from "@/components/DefaultAvatar";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import type { Booking, Gym } from "@shared/schema";
@@ -107,7 +109,7 @@ export default function ProfilePage() {
     if (!user?.creditExpiryDate || !user?.credits) return null;
     const days = Math.ceil((new Date(user.creditExpiryDate).getTime() - Date.now()) / 86400000);
     if (days < 0) return { text: "Muddati o'tgan", color: "text-red-500 bg-red-50 dark:bg-red-950/30" };
-    if (days <= 7) return { text: `${days} kun qoldi`, color: "text-orange-500 bg-orange-50 dark:bg-orange-950/30" };
+    if (days <= 7) return { text: `${days} kun qoldi`, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/30" };
     return { text: `${days} kun`, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30" };
   };
   const expiry = expiryText();
@@ -121,7 +123,7 @@ export default function ProfilePage() {
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.45) 0%, transparent 65%)",
+              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(217,167,81,0.45) 0%, transparent 65%)",
           }}
         />
         <div className="absolute inset-0 bg-black/10" />
@@ -148,16 +150,19 @@ export default function ProfilePage() {
         {/* Avatar */}
         <div className="relative flex flex-col items-center mt-4">
           <div className="relative">
-            <Avatar className="w-24 h-24 ring-4 ring-white/40 shadow-2xl">
-              <AvatarImage
-                src={(user as any)?.profileImageUrl || undefined}
-                alt={user?.name || "Profile"}
-                className="object-cover"
-              />
-              <AvatarFallback className="text-3xl font-bold bg-white/30 text-white backdrop-blur-sm">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            {/* Tilla halqa; rasm bo'lmasa — harflar emas, tilla siymo */}
+            <div className="rounded-full bg-gradient-to-br from-[#f3d9a4] via-[#d9a751] to-[#b98537] p-[3px] shadow-2xl shadow-black/40">
+              <Avatar className="w-24 h-24 border-2 border-slate-950">
+                <AvatarImage
+                  src={(user as any)?.profileImageUrl || undefined}
+                  alt={user?.name || "Profile"}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-transparent p-0" aria-label={initials}>
+                  <DefaultAvatar className="h-full w-full" />
+                </AvatarFallback>
+              </Avatar>
+            </div>
             <input
               type="file"
               ref={fileInputRef}
@@ -168,7 +173,7 @@ export default function ProfilePage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white shadow-lg flex items-center justify-center text-orange-500 active:scale-90 transition-transform disabled:opacity-60"
+              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white shadow-lg flex items-center justify-center text-primary active:scale-90 transition-transform disabled:opacity-60"
               data-testid="button-upload-image"
             >
               <Camera className="h-4 w-4" />
@@ -203,26 +208,20 @@ export default function ProfilePage() {
       {/* Stats strip - floated up */}
       <div className="max-w-md mx-auto px-4 -mt-10 relative z-10">
         <div className="bg-card rounded-2xl shadow-xl border grid grid-cols-3 divide-x overflow-hidden">
-          <div className="flex flex-col items-center py-4 px-2">
-            <div className="flex items-center gap-1">
-              <CreditCard className="h-4 w-4 text-orange-500" />
-              <span className="text-lg font-bold" data-testid="text-credits">{user?.credits ?? 0}</span>
-            </div>
-            <span className="text-[11px] text-muted-foreground mt-0.5">Kredit</span>
+          <div className="flex flex-col items-center gap-1.5 py-4 px-2">
+            <IconTile icon={CreditCard} kind="credits" size={32} />
+            <span className="text-lg font-bold leading-none" data-testid="text-credits">{user?.credits ?? 0}</span>
+            <span className="text-[11px] text-muted-foreground">Kredit</span>
           </div>
-          <div className="flex flex-col items-center py-4 px-2">
-            <div className="flex items-center gap-1">
-              <Dumbbell className="h-4 w-4 text-blue-500" />
-              <span className="text-lg font-bold">{bookings.length}</span>
-            </div>
-            <span className="text-[11px] text-muted-foreground mt-0.5">Jami bron</span>
+          <div className="flex flex-col items-center gap-1.5 py-4 px-2">
+            <IconTile icon={Dumbbell} kind="bookings" size={32} />
+            <span className="text-lg font-bold leading-none">{bookings.length}</span>
+            <span className="text-[11px] text-muted-foreground">Jami bron</span>
           </div>
-          <div className="flex flex-col items-center py-4 px-2">
-            <div className="flex items-center gap-1">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span className="text-lg font-bold">{completedBookings.length}</span>
-            </div>
-            <span className="text-[11px] text-muted-foreground mt-0.5">Bajarildi</span>
+          <div className="flex flex-col items-center gap-1.5 py-4 px-2">
+            <IconTile icon={CheckCircle2} kind="done" size={32} />
+            <span className="text-lg font-bold leading-none">{completedBookings.length}</span>
+            <span className="text-[11px] text-muted-foreground">Bajarildi</span>
           </div>
         </div>
       </div>
@@ -248,18 +247,14 @@ export default function ProfilePage() {
           </div>
           <div className="divide-y">
             <div className="flex items-center gap-3 px-4 py-3">
-              <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0">
-                <Phone className="h-4 w-4 text-blue-500" />
-              </div>
+              <IconTile icon={Phone} kind="phone" />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-muted-foreground">Telefon</p>
                 <p className="text-sm font-medium" data-testid="text-user-phone-detail">{user?.phone || "—"}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 px-4 py-3">
-              <div className="h-8 w-8 rounded-full bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center shrink-0">
-                <User className="h-4 w-4 text-orange-500" />
-              </div>
+              <IconTile icon={User} kind="name" />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-muted-foreground">Ism</p>
                 <p className="text-sm font-medium">{user?.name || "—"}</p>
@@ -273,9 +268,7 @@ export default function ProfilePage() {
             </div>
             {(user as any)?.gender && (
               <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-8 w-8 rounded-full bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center shrink-0">
-                  <User className="h-4 w-4 text-purple-500" />
-                </div>
+                <IconTile icon={User} kind="gender" />
                 <div>
                   <p className="text-[11px] text-muted-foreground">Jins</p>
                   <p className="text-sm font-medium">
@@ -286,9 +279,7 @@ export default function ProfilePage() {
             )}
             {(user as any)?.age && (
               <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-8 w-8 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center shrink-0">
-                  <Calendar className="h-4 w-4 text-emerald-500" />
-                </div>
+                <IconTile icon={Calendar} kind="age" />
                 <div>
                   <p className="text-[11px] text-muted-foreground">Yosh</p>
                   <p className="text-sm font-medium">{(user as any).age} {t('profile.age')}</p>
@@ -310,9 +301,7 @@ export default function ProfilePage() {
                 const gym = gyms.find(g => g.id === b.gymId);
                 return (
                   <div key={b.id} className="flex items-center gap-3 px-4 py-3" data-testid={`active-booking-${b.id}`}>
-                    <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0">
-                      <Dumbbell className="h-4 w-4 text-blue-500" />
-                    </div>
+                    <IconTile icon={Dumbbell} kind="bookings" size={36} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{gym?.name || "Zal"}</p>
                       <p className="text-xs text-muted-foreground">{formatDate(b.date)} · {b.time}</p>
@@ -352,14 +341,7 @@ export default function ProfilePage() {
                       className="flex items-center gap-3 px-4 py-3"
                       data-testid={`booking-history-${booking.id}`}
                     >
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        isMissed ? 'bg-red-50 dark:bg-red-950/30' : 'bg-emerald-50 dark:bg-emerald-950/30'
-                      }`}>
-                        {isMissed
-                          ? <XCircle className="h-4 w-4 text-red-500" />
-                          : <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        }
-                      </div>
+                      <IconTile icon={isMissed ? XCircle : CheckCircle2} kind={isMissed ? "missed" : "done"} size={36} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{gym?.name || t('profile.unknown_gym')}</p>
                         <p className="text-xs text-muted-foreground">{formatDate(booking.date)} · {booking.time}</p>

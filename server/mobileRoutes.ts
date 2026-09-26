@@ -1369,13 +1369,24 @@ export function registerMobileRoutes(app: Express) {
         return mobileError(res, `Kredit yetarli emas. Kerak: ${collection.price}, mavjud: ${currentUser.credits}`);
       }
 
-      await storage.updateUserCredits(mobileUser.id, currentUser.credits - collection.price);
+      // Atomik yechish: "credits >= narx" sharti bilan bitta UPDATE. Ilgari
+      // balans o'qilib, "eski - narx" qilib yozilardi — bir vaqtdagi boshqa
+      // xarid yoki bron yechgan kreditni ustidan yozib yuborardi.
+      const charged = await storage.spendUserCredits(mobileUser.id, collection.price);
+      if (!charged) {
+        return mobileError(res, `Kredit yetarli emas. Kerak: ${collection.price}`);
+      }
+      // Ikki marta bosilgan bo'lsa — ikkinchi yechilgan kredit qaytariladi
+      if (await storage.hasPurchased(mobileUser.id, collection.id)) {
+        await storage.refundUserCredits(mobileUser.id, collection.price);
+        return mobileError(res, 'Bu kursni allaqachon sotib olgansiz', 409);
+      }
       await storage.createUserPurchase({ userId: mobileUser.id, collectionId: collection.id });
 
       mobileSuccess(res, {
         message: `"${collection.name}" kursi muvaffaqiyatli sotib olindi!`,
         creditsUsed: collection.price,
-        remainingCredits: currentUser.credits - collection.price,
+        remainingCredits: charged.credits,
       }, 201);
     } catch (err: any) {
       mobileError(res, 'Kurs sotib olishda xatolik', 500);

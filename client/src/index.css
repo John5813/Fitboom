@@ -16,6 +16,12 @@ body {
 
 /* LIGHT MODE - Zamonaviy va qulay dizayn */
 :root {
+  /*
+   * Brend ranglari: YASHIL — asosiy amallar (tugma, faol holat, havola),
+   * TILLA — brend urg'usi (logo, kredit belgilari, premium elementlar).
+   * Ilova (mobile/constants/theme.ts) xuddi shu qiymatlarni ishlatadi —
+   * birini o'zgartirsangiz, ikkinchisini ham o'zgartiring.
+   */
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
 
@@ -35,28 +41,28 @@ body {
   --sidebar: 210 35% 97%;
   --sidebar-foreground: 210 20% 20%;
   --sidebar-border: 210 30% 88%;
-  --sidebar-primary: 22 95% 53%;
+  --sidebar-primary: 142 76% 36%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 30 30% 95%;
-  --sidebar-accent-foreground: 24 30% 15%;
-  --sidebar-ring: 22 95% 53%;
+  --sidebar-accent: 42 45% 94%;
+  --sidebar-accent-foreground: 32 45% 16%;
+  --sidebar-ring: 142 76% 36%;
   --popover: 0 0% 100%;
   --popover-foreground: 210 20% 20%;
   --popover-border: 210 25% 92%;
-  --primary: 22 95% 53%;
+  --primary: 142 76% 36%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 30 30% 96%;
-  --secondary-foreground: 24 30% 18%;
+  --secondary: 42 45% 95%;
+  --secondary-foreground: 32 45% 18%;
   --muted: 210 25% 96%;
   --muted-foreground: 210 15% 50%;
-  --accent: 38 95% 55%;
-  --accent-foreground: 24 50% 15%;
+  --accent: 39 64% 58%;
+  --accent-foreground: 30 60% 8%;
   --destructive: 0 75% 55%;
   --destructive-foreground: 0 0% 100%;
   --input: 210 25% 82%;
-  --ring: 22 95% 53%;
-  --chart-1: 22 95% 53%;
-  --chart-2: 38 95% 55%;
+  --ring: 142 76% 36%;
+  --chart-1: 142 76% 36%;
+  --chart-2: 39 64% 58%;
   --chart-3: 165 70% 48%;
   --chart-4: 210 75% 55%;
   --chart-5: 280 65% 60%;
@@ -127,28 +133,28 @@ body {
   --sidebar: 210 32% 12%;
   --sidebar-foreground: 210 15% 95%;
   --sidebar-border: 210 30% 18%;
-  --sidebar-primary: 22 95% 58%;
+  --sidebar-primary: 142 69% 45%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 24 25% 18%;
   --sidebar-accent-foreground: 30 20% 92%;
-  --sidebar-ring: 22 95% 58%;
+  --sidebar-ring: 142 69% 45%;
   --popover: 210 30% 14%;
   --popover-foreground: 210 15% 95%;
   --popover-border: 210 28% 22%;
-  --primary: 22 95% 58%;
+  --primary: 142 69% 45%;
   --primary-foreground: 0 0% 100%;
   --secondary: 210 25% 20%;
   --secondary-foreground: 210 15% 95%;
   --muted: 210 20% 22%;
   --muted-foreground: 210 10% 65%;
-  --accent: 38 95% 60%;
-  --accent-foreground: 24 50% 15%;
+  --accent: 39 70% 62%;
+  --accent-foreground: 30 60% 8%;
   --destructive: 0 70% 58%;
   --destructive-foreground: 0 0% 100%;
   --input: 210 25% 30%;
-  --ring: 22 95% 58%;
-  --chart-1: 22 95% 58%;
-  --chart-2: 38 95% 60%;
+  --ring: 142 69% 45%;
+  --chart-1: 142 69% 45%;
+  --chart-2: 39 70% 62%;
   --chart-3: 165 65% 55%;
   --chart-4: 210 65% 65%;
   --chart-5: 280 60% 65%;
@@ -430,4 +436,54 @@ body {
     padding-top: 72px;
     padding-bottom: calc(40px + env(safe-area-inset-bottom));
   }
+}
+
+/* ═══════════ Zalga kirish ruxsatnomasi ═══════════ */
+
+@keyframes access-pass-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes access-pass-draw {
+  from { stroke-dashoffset: 48; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes access-pass-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes access-pass-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(200%); }
+}
+@keyframes access-pass-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes access-pass-bubble {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45), 0 10px 25px -5px rgba(20, 83, 45, 0.3); }
+  50% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0), 0 10px 25px -5px rgba(20, 83, 45, 0.3); }
+}
+
+.access-pass-pop { animation: access-pass-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.access-pass-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: access-pass-draw 0.45s ease-out 0.35s forwards;
+}
+/* Doimiy to'lqin — ekran jonli ekanini ko'rsatadi */
+.access-pass-ring { animation: access-pass-ring 2s ease-out 0.6s infinite; }
+.access-pass-ring-2 { animation-delay: 1.6s; }
+.access-pass-shimmer { animation: access-pass-shimmer 1.8s linear infinite; }
+.access-pass-live { animation: access-pass-live 1.2s ease-in-out infinite; }
+.access-pass-bubble { animation: access-pass-bubble 2.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .access-pass-pop,
+  .access-pass-ring,
+  .access-pass-shimmer,
+  .access-pass-bubble { animation: none; }
+  .access-pass-check { stroke-dashoffset: 0; animation: none; }
+  /* Soat baribir har soniyada yuradi — "jonli"lik shundan ham ko'rinadi */
 }

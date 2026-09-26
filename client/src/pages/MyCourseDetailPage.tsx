@@ -96,7 +96,7 @@ export default function MyCourseDetailPage() {
                 <Unlock className="h-3 w-3 mr-1" /> Bepul
               </Badge>
             ) : (
-              <Badge className="bg-orange-500 text-white border-0 text-xs">
+              <Badge className="bg-amber-400 text-amber-950 border-0 text-xs">
                 <CreditCard className="h-3 w-3 mr-1" /> {collection.price} kredit
               </Badge>
             )}
@@ -144,9 +144,9 @@ export default function MyCourseDetailPage() {
 
         {/* Lock warning */}
         {!isPurchased && (
-          <div className="flex items-center gap-3 bg-orange-50 dark:bg-orange-950/30 rounded-2xl px-4 py-3 border border-orange-200 dark:border-orange-900">
-            <Lock className="h-5 w-5 text-orange-500 shrink-0" />
-            <p className="text-sm text-orange-700 dark:text-orange-300">
+          <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 rounded-2xl px-4 py-3 border border-amber-200 dark:border-amber-900">
+            <Lock className="h-5 w-5 text-amber-600 shrink-0" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">
               {collection.isFree
                 ? "Bu kurs bepul — asosiy sahifadan oching"
                 : `Bu kursni ochish uchun kurslar sahifasidan ${collection.price} kredit sarflang`}

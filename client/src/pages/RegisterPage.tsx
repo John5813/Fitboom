@@ -214,7 +214,7 @@ export default function RegisterPage() {
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(249,115,22,0.35) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(251,191,36,0.18) 0%, transparent 60%)",
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(217,167,81,0.35) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(251,191,36,0.18) 0%, transparent 60%)",
         }}
       />
       <div
@@ -230,7 +230,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="text-center mb-6">
           <Wordmark className="text-5xl block" />
-          <p className="text-orange-200/70 text-sm mt-2 font-medium">Sport platformasi</p>
+          <p className="text-amber-100/70 text-sm mt-2 font-medium">Sport platformasi</p>
         </div>
 
         <Card className="border-0 shadow-xl rounded-3xl overflow-hidden" data-testid="card-register">
@@ -511,7 +511,7 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                className="w-full rounded-xl bg-orange-500 hover:bg-orange-600 h-12 font-semibold"
+                className="w-full rounded-xl bg-primary hover:bg-primary/90 h-12 font-semibold"
                 disabled={completeProfileMutation.isPending}
                 data-testid="button-complete-profile"
               >

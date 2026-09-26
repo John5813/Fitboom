@@ -124,7 +124,7 @@ export default function MobilePayPage() {
                 data-testid={`button-package-${pkg.credits}`}
               >
                 {pkg.isPopular && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full">
                     Mashhur
                   </span>
                 )}
@@ -134,7 +134,7 @@ export default function MobilePayPage() {
                   </span>
                 )}
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center flex-shrink-0">
                     <KeyRound className="w-5 h-5 text-white" />
                   </div>
                   <div className="text-left">
@@ -145,7 +145,7 @@ export default function MobilePayPage() {
                     </p>
                   </div>
                 </div>
-                <span className="bg-orange-500 text-white text-sm font-semibold px-4 py-2 rounded-xl">
+                <span className="bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-xl">
                   Tanlash
                 </span>
               </button>
@@ -157,9 +157,9 @@ export default function MobilePayPage() {
         {step === "payment" && selected && (
           <div className="space-y-4 mt-2">
             {/* Amount */}
-            <div className="rounded-2xl bg-orange-500/10 border border-orange-500/30 p-4 text-center">
+            <div className="rounded-2xl bg-amber-400/10 border border-amber-400/30 p-4 text-center">
               <p className="text-gray-400 text-xs mb-1">To'lov miqdori</p>
-              <p className="text-3xl font-bold text-orange-400">
+              <p className="text-3xl font-bold text-amber-300">
                 {formatSom(selected.price)}
               </p>
               <p className="text-gray-400 text-xs mt-1">{selected.credits} kredit uchun</p>
@@ -168,7 +168,7 @@ export default function MobilePayPage() {
             {/* Card info */}
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3">
               <div className="flex items-center gap-2 mb-1">
-                <CreditCard className="w-4 h-4 text-orange-400" />
+                <CreditCard className="w-4 h-4 text-amber-300" />
                 <p className="text-sm font-semibold text-gray-300">Karta ma'lumotlari</p>
               </div>
 
@@ -222,7 +222,7 @@ export default function MobilePayPage() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
               data-testid="button-send-receipt"
             >
               {uploading ? (

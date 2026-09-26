@@ -1648,9 +1648,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Kreditni ayirish
-      const newCredits = (user.credits || 0) - creditCost;
-      await storage.updateUserCredits(user.id, newCredits);
+      // Atomik yechish (mobil API bilan bir xil) — bir vaqtdagi bron yoki
+      // boshqa xarid yechgan kreditni ustidan yozib yubormaslik uchun
+      const charged = await storage.spendUserCredits(user.id, creditCost);
+      if (!charged) {
+        return res.status(400).json({ message: `Kredit yetarli emas. Kerak: ${creditCost}` });
+      }
+      if (await storage.hasUserPurchasedCollection(user.id, collectionId)) {
+        await storage.refundUserCredits(user.id, creditCost);
+        return res.status(400).json({ message: "Siz bu kursga allaqachon kirish huquqiga egasiz" });
+      }
+      const newCredits = charged.credits;
 
       // Kirish huquqini saqlash
       await storage.createUserPurchase({ userId: user.id, collectionId });

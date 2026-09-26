@@ -24,7 +24,13 @@ A digital fitness aggregator platform for gyms in Uzbekistan. Users can discover
   - `storage.ts` — Data access layer (Drizzle ORM)
   - `auth.ts` — Passport.js session auth
   - `migrate.ts` — DB migration runner
-- `shared/schema.ts` — Database schema (Drizzle + Zod types)
+- `shared/` — Code shared by web, server **and the mobile app**
+  - `schema.ts` — Database schema (Drizzle + Zod types) — server/web only
+  - `pricing.ts`, `categories.ts`, `schedule.ts` — pure modules, safe to import from `mobile/`
+- `mobile/` — Expo (React Native) app, moved here from the former
+  `Fitboomapp` repo with its history. Separate npm project (React 19 / Expo 54
+  vs React 18 on the web), so it has its own `package.json` and lockfile.
+  See `mobile/README.md`.
 - `migrations/` — SQL migration files
 
 ## Routes
@@ -143,6 +149,15 @@ npm run db:migrate  # Run DB migrations manually
 
 CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on every push
 and pull request.
+
+Mobile app (from `mobile/`):
+
+```bash
+cd mobile
+npm install
+npm run tunnel         # Expo Go orqali telefonda ochish (QR kod chiqadi)
+npm run build:android  # EAS orqali APK (eas-cli login kerak)
+```
 
 ## Database
 

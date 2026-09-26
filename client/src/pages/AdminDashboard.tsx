@@ -149,16 +149,16 @@ export default function AdminDashboard() {
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.35) 0%, transparent 65%)",
+              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(217,167,81,0.35) 0%, transparent 65%)",
           }}
         />
         <div className="relative w-full max-w-sm">
           <div className="text-center mb-8">
-            <div className="inline-flex p-4 rounded-2xl bg-orange-500/15 ring-1 ring-orange-400/30 backdrop-blur-sm mb-4">
-              <ShieldCheck className="h-10 w-10 text-orange-400" />
+            <div className="inline-flex p-4 rounded-2xl bg-amber-400/15 ring-1 ring-amber-300/30 backdrop-blur-sm mb-4">
+              <ShieldCheck className="h-10 w-10 text-amber-300" />
             </div>
             <h1 className="text-2xl font-display font-bold text-white mb-1">Admin Panel</h1>
-            <p className="text-orange-200/70 text-sm">Kirish uchun parolni kiriting</p>
+            <p className="text-amber-100/70 text-sm">Kirish uchun parolni kiriting</p>
           </div>
           <Card className="border-0 shadow-2xl shadow-black/20">
             <CardContent className="pt-6 space-y-4">
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
           </Card>
           <div className="text-center mt-4">
             <Link href="/home">
-              <Button variant="ghost" size="sm" className="text-orange-200/80 hover:text-white hover:bg-white/10" data-testid="button-back-from-gate">
+              <Button variant="ghost" size="sm" className="text-amber-100/80 hover:text-white hover:bg-white/10" data-testid="button-back-from-gate">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Orqaga
               </Button>
