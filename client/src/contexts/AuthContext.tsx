@@ -58,12 +58,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setTokenLoginDone(true));
   }, []);
 
-  const { data, isLoading } = useQuery<{ user: User } | null>({
+  const { data, isPending } = useQuery<{ user: User } | null>({
     queryKey: ['/api/user'],
     queryFn: getQueryFn<{ user: User } | null>({ on401: "returnNull" }),
     retry: false,
     enabled: tokenLoginDone,
   });
+
+  /*
+   * `isLoading` emas, `isPending`: TanStack Query v5 da o'chirilgan
+   * (`enabled: false`) so'rovning `isLoading` qiymati false bo'ladi. Birinchi
+   * renderda token tekshiruvi hali tugamagan va so'rov o'chiq — ilgari bu
+   * "yuklanmayapti va foydalanuvchi yo'q" deb o'qilardi, ProtectedRoute darhol
+   * /login ga, u yerdan /home ga otardi. Natijada /profile, /courses,
+   * /settings va /admin sahifalari yangilanganda (yoki havola orqali
+   * ochilganda) bosh sahifaga tushib qolardi.
+   */
+  const isLoading = !tokenLoginDone || isPending;
 
   const user = data?.user || null;
   const isAuthenticated = !!user;
@@ -101,7 +112,7 @@ function AuthLoading() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
         <p className="text-gray-600 dark:text-gray-400">Yuklanmoqda...</p>
       </div>
     </div>
