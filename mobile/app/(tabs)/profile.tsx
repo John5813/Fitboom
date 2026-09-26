@@ -12,7 +12,26 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  ArrowLeft,
+  Calendar,
+  Camera,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  Dumbbell,
+  Pencil,
+  Phone,
+  User as UserIcon,
+  XCircle,
+} from "lucide-react-native";
+import { formatDateShort } from "@shared/format";
+import { Font, Radius } from "@/components/ui";
+import IconTile from "@/components/IconTile";
+import DefaultAvatar from "@/components/DefaultAvatar";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
@@ -27,6 +46,7 @@ import {
   adminLogin,
   getPaymentConfig,
   uploadAvatar,
+  getBookings,
 } from "@/services/api";
 import { usePartialPaymentDismiss } from "@/hooks/usePartialPaymentDismiss";
 import Colors from "@/constants/Colors";
@@ -44,6 +64,7 @@ export default function ProfileScreen() {
   const { user, logout, refetchUser } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const { theme, isDark, toggle: toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [editModal, setEditModal] = useState(false);
   const [langModal, setLangModal] = useState(false);
   const [adminModal, setAdminModal] = useState(false);
@@ -162,7 +183,7 @@ export default function ProfileScreen() {
     {
       icon: "video" as const,
       label: t("courses.title"),
-      onPress: () => router.push("/courses/index" as any),
+      onPress: () => router.push("/(tabs)/courses" as any),
       color: Colors.coursePurple,
     },
     {
@@ -195,179 +216,224 @@ export default function ProfileScreen() {
     },
   ];
 
+  const { data: bookingsData } = useQuery({
+    queryKey: ["bookings"],
+    queryFn: getBookings,
+    enabled: !!user,
+  });
+  const bookings: any[] = bookingsData?.bookings || [];
+  const completedBookings = bookings.filter((b) => b.isCompleted || b.status === "completed" || b.status === "missed");
+  const activeBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "pending");
+  const initials = user?.name
+    ? user.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+  const genderLabel = user?.gender ? (user.gender === "Erkak" ? t("profile.male") : t("profile.female")) : null;
+  const expiry =
+    daysLeft === null || !user?.credits
+      ? null
+      : daysLeft < 0
+        ? { text: "Muddati o'tgan", fg: "#EF4444", bg: "#FEF2F2" }
+        : daysLeft <= 7
+          ? { text: `${daysLeft} kun qoldi`, fg: "#D97706", bg: "#FFFBEB" }
+          : { text: `${daysLeft} kun`, fg: "#059669", bg: "#ECFDF5" };
+
+  const openEdit = () => {
+    setEditName(user?.name || "");
+    setEditAge(String(user?.age || ""));
+    setEditGender((user?.gender as any) || "");
+    setEditModal(true);
+  };
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top"]}>
+    <View style={[styles.safeArea, { backgroundColor: theme.background }]}>
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 16, paddingBottom: 100 },
-      ]}
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 110 }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.profileCard}>
-        <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={handleAvatarUpload} style={styles.avatarWrapper}>
-            <View style={styles.avatar}>
-              {avatarUploading ? (
-                <ActivityIndicator color={Colors.primary} />
-              ) : user?.profileImageUrl ? (
-                <Image
-                  source={{ uri: user.profileImageUrl }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <Text style={styles.avatarInitials}>
-                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+      {/*
+        Tuzilish vebdagi client/src/pages/ProfilePage.tsx bilan bir xil:
+        qorong'i sarlavha, avatar, statistika, kredit muddati, ma'lumotlar,
+        faol bronlar va bronlar tarixi. Pastdagi "Sozlamalar" vebda
+        /settings sahifasida turadi.
+      */}
+      <LinearGradient
+        colors={["#020617", "#0F172A", "#020617"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.pHero, { paddingTop: insets.top }]}
+      >
+        <LinearGradient
+          colors={["rgba(217,167,81,0.45)", "rgba(217,167,81,0)"]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 0.7 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.pTopBar}>
+          <TouchableOpacity onPress={() => router.push("/(tabs)" as any)} style={styles.pRoundBtn} accessibilityLabel="Orqaga">
+            <ArrowLeft size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.pTopTitle}>{t("profile.title")}</Text>
+          <TouchableOpacity onPress={openEdit} style={[styles.pRoundBtn, { marginLeft: "auto" }]} accessibilityLabel={t("profile.edit")}>
+            <Pencil size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.pAvatarBlock}>
+          <View>
+            {/* Tilla halqa; rasm bo'lmasa — harflar emas, tilla siymo */}
+            <LinearGradient colors={["#F3D9A4", "#D9A751", "#B98537"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.pRing}>
+              <View style={styles.pAvatar} accessibilityLabel={initials}>
+                {avatarUploading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : user?.profileImageUrl ? (
+                  <Image source={{ uri: user.profileImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                ) : (
+                  <DefaultAvatar size={92} />
+                )}
+              </View>
+            </LinearGradient>
+            <TouchableOpacity onPress={handleAvatarUpload} disabled={avatarUploading} style={styles.pCameraBtn} accessibilityLabel="Rasm yuklash">
+              <Camera size={16} color={theme.primary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.pName}>{user?.name || t("profile.user")}</Text>
+          <Text style={styles.pPhone}>{user?.phone || t("profile.no_phone")}</Text>
+          {(genderLabel || user?.age) && (
+            <View style={styles.pBadges}>
+              {genderLabel && <Text style={styles.pBadge}>{genderLabel}</Text>}
+              {!!user?.age && (
+                <Text style={styles.pBadge}>
+                  {user.age} {t("profile.age")}
                 </Text>
               )}
             </View>
-            <View style={styles.avatarCameraBtn}>
-              <Feather name="camera" size={12} color="#fff" />
-            </View>
-          </TouchableOpacity>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || t("profile.default_user")}</Text>
-            <Text style={styles.userPhone}>{user?.phone || ""}</Text>
-            <View style={styles.genderAgeBadge}>
-              <Text style={styles.genderAgeText}>
-                {user?.gender || ""}{user?.age ? `, ${user.age} ${t("profile.years")}` : ""}
-              </Text>
-            </View>
-          </View>
+          )}
         </View>
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => {
-            setEditName(user?.name || "");
-            setEditAge(String(user?.age || ""));
-            setEditGender((user?.gender as any) || "");
-            setEditModal(true);
-          }}
-        >
-          <Feather name="edit-2" size={16} color={Colors.primary} />
-        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* Statistika — sarlavha ustiga chiqib turadi */}
+      <View style={styles.pStatsWrap}>
+        <View style={[styles.pStats, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+          <Stat icon={<IconTile icon={CreditCard} kind="credits" size={32} />} value={user?.credits ?? 0} label="Kredit" />
+          <View style={[styles.pDivider, { backgroundColor: theme.border }]} />
+          <Stat icon={<IconTile icon={Dumbbell} kind="bookings" size={32} />} value={bookings.length} label="Jami bron" />
+          <View style={[styles.pDivider, { backgroundColor: theme.border }]} />
+          <Stat icon={<IconTile icon={CheckCircle2} kind="done" size={32} />} value={completedBookings.length} label="Bajarildi" />
+        </View>
       </View>
 
-      <View style={styles.creditCard}>
-        <View style={styles.creditLeft}>
-          <Text style={styles.creditLabel}>{t("home.balance")}</Text>
-          <View style={styles.creditRow}>
-            <Text style={styles.creditAmount}>{user?.credits ?? 0}</Text>
-            <Text style={styles.creditUnit}>{t("profile.credits")}</Text>
+      <View style={styles.pContent}>
+        {expiry && (
+          <View style={[styles.pExpiry, { backgroundColor: expiry.bg }]}>
+            <View style={styles.pInline}>
+              <Calendar size={16} color={expiry.fg} />
+              <Text style={[styles.pExpiryLabel, { color: expiry.fg }]}>Kredit muddati</Text>
+            </View>
+            <Text style={[styles.pExpiryValue, { color: expiry.fg }]}>{expiry.text}</Text>
           </View>
-        </View>
-        <View style={styles.creditRight}>
-          {daysLeft !== null && (
-            <View
-              style={[
-                styles.expiryBadge,
-                daysLeft <= 5 && daysLeft > 0
-                  ? styles.expiryWarning
-                  : daysLeft <= 0
-                  ? styles.expiryDanger
-                  : styles.expiryOk,
-              ]}
+        )}
+
+        {partialBannerVisible && activePartialPayment && (
+          <View style={styles.partialBanner}>
+            <View style={styles.partialBannerLeft}>
+              <Feather name="alert-circle" size={20} color="#fff" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.partialBannerTitle}>{t("partial.title")}</Text>
+                <Text style={styles.partialBannerSub}>
+                  {Number(activePartialPayment.remainingAmount).toLocaleString()} {t("partial.sub")}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.partialPayBtn}
+              onPress={() => { setSelectorMode("partial"); setSelectorVisible(true); }}
+              activeOpacity={0.85}
             >
-              <Text style={styles.expiryText}>
-                {daysLeft <= 0
-                  ? t("profile.expired_badge")
-                  : `${daysLeft} ${t("profile.days_left")}`}
-              </Text>
+              <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Section title="MA'LUMOTLAR">
+          <InfoRow icon={<IconTile icon={Phone} kind="phone" />} label="Telefon" value={user?.phone || "—"} />
+          <InfoRow icon={<IconTile icon={UserIcon} kind="name" />} label="Ism" value={user?.name || "—"} onPress={openEdit} />
+          {genderLabel && <InfoRow icon={<IconTile icon={UserIcon} kind="gender" />} label="Jins" value={genderLabel} />}
+          {!!user?.age && (
+            <InfoRow icon={<IconTile icon={Calendar} kind="age" />} label="Yosh" value={`${user.age} ${t("profile.age")}`} />
+          )}
+        </Section>
+
+        {activeBookings.length > 0 && (
+          <Section title="FAOL BRONLAR" count={activeBookings.length}>
+            {activeBookings.map((b) => (
+              <View key={b.id} style={styles.pRow}>
+                <IconTile icon={Dumbbell} kind="bookings" size={36} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.pRowTitle, { color: theme.text }]} numberOfLines={1}>{b.gym?.name || "Zal"}</Text>
+                  <Text style={[styles.pRowSub, { color: theme.textSecondary }]}>
+                    {formatDateShort(b.scheduledDate || b.date)} · {b.time}
+                  </Text>
+                </View>
+                <View style={[styles.pChip, { backgroundColor: "#FEF9C3" }]}>
+                  <Clock size={10} color="#A16207" />
+                  <Text style={[styles.pChipText, { color: "#A16207" }]}>Kutilmoqda</Text>
+                </View>
+              </View>
+            ))}
+          </Section>
+        )}
+
+        <Section title={t("profile.history_title").toUpperCase()} count={completedBookings.length || undefined}>
+          {completedBookings.length > 0 ? (
+            [...completedBookings]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((b) => {
+                const missed = b.status === "missed";
+                return (
+                  <View key={b.id} style={styles.pRow}>
+                    <IconTile icon={missed ? XCircle : CheckCircle2} kind={missed ? "missed" : "done"} size={36} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.pRowTitle, { color: theme.text }]} numberOfLines={1}>
+                        {b.gym?.name || t("profile.unknown_gym")}
+                      </Text>
+                      <Text style={[styles.pRowSub, { color: theme.textSecondary }]}>
+                        {formatDateShort(b.scheduledDate || b.date)} · {b.time}
+                      </Text>
+                    </View>
+                    {missed && <Text style={styles.pMissed}>{t("profile.missed")}</Text>}
+                  </View>
+                );
+              })
+          ) : (
+            <View style={styles.pEmpty}>
+              <View style={[styles.pEmptyIcon, { backgroundColor: theme.surface }]}>
+                <Dumbbell size={28} color={theme.textSecondary} style={{ opacity: 0.4 }} />
+              </View>
+              <Text style={[styles.pRowSub, { color: theme.textSecondary, fontSize: 14 }]}>{t("profile.no_history")}</Text>
             </View>
           )}
-          <TouchableOpacity
-            style={styles.topupBtn}
-            onPress={() => { setSelectorMode("topup"); setSelectorVisible(true); }}
-          >
-            <Feather name="plus" size={14} color="#fff" />
-            <Text style={styles.topupBtnText}>{t("home.topup")}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        </Section>
 
-      {partialBannerVisible && activePartialPayment && (
-        <View style={styles.partialBanner}>
-          <View style={styles.partialBannerLeft}>
-            <Feather name="alert-circle" size={20} color="#fff" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.partialBannerTitle}>{t("partial.title")}</Text>
-              <Text style={styles.partialBannerSub}>
-                {Number(activePartialPayment.remainingAmount).toLocaleString()} {t("partial.sub")}
+        <Section title="SOZLAMALAR">
+          {menuItems.map((item) => (
+            <TouchableOpacity key={item.label} style={styles.pRow} onPress={item.onPress}>
+              <LinearGradient
+                colors={MENU_TILE[item.icon as string] ?? ["#94A3B8", "#475569"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.pMenuTile}
+              >
+                <Feather name={item.icon} size={18} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={[styles.pRowTitle, { flex: 1, color: item.icon === "log-out" ? item.color : theme.text }]}>
+                {item.label}
               </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.partialPayBtn}
-            onPress={() => { setSelectorMode("partial"); setSelectorVisible(true); }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={styles.historyCard}>
-        <Text style={styles.sectionTitle}>{t("profile.credit_history")}</Text>
-        {creditsConfig === undefined ? (
-          <ActivityIndicator color={Colors.primary} />
-        ) : (creditsConfig?.creditHistory || []).length > 0 ? (
-          (creditsConfig.creditHistory as any[]).slice(0, 5).map((item: any, i: number) => (
-            <View key={item.id || i} style={styles.historyItem}>
-              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
-              <Text style={styles.historySubText}>{item.date || "-"}</Text>
-              <Text style={styles.historyAmount}>{item.amount} {t("profile.credits")}</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.emptyHistoryText}>{t("profile.no_credit_history")}</Text>
-        )}
-      </View>
-
-      <View style={styles.historyCard}>
-        <Text style={styles.sectionTitle}>{t("profile.topup_history")}</Text>
-        {creditsConfig === undefined ? (
-          <ActivityIndicator color={Colors.primary} />
-        ) : (creditsConfig?.topupHistory || []).length > 0 ? (
-          (creditsConfig.topupHistory as any[]).slice(0, 5).map((item: any, i: number) => (
-            <View key={item.id || i} style={styles.historyItem}>
-              <Text style={styles.historyText}>{item.description || item.type || "-"}</Text>
-              <Text style={styles.historySubText}>{item.date || "-"}</Text>
-              <Text style={styles.historyAmount}>+{item.amount} {t("profile.credits")}</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.emptyHistoryText}>{t("profile.no_topup_history")}</Text>
-        )}
-      </View>
-
-      <View style={styles.menuCard}>
-        {menuItems.map((item, idx) => (
-          <TouchableOpacity
-            key={item.label}
-            style={[
-              styles.menuItem,
-              idx < menuItems.length - 1 && styles.menuItemBorder,
-            ]}
-            onPress={item.onPress}
-          >
-            <View
-              style={[
-                styles.menuIconBox,
-                { backgroundColor: item.color + "18" },
-              ]}
-            >
-              <Feather name={item.icon} size={18} color={item.color} />
-            </View>
-            <Text style={[styles.menuLabel, { color: item.color }]}>
-              {item.label}
-            </Text>
-            {item.icon !== "log-out" && (
-              <Feather name="chevron-right" size={16} color={Colors.textSecondary} />
-            )}
-          </TouchableOpacity>
-        ))}
+              {item.icon !== "log-out" && <ChevronRight size={16} color={theme.textSecondary} />}
+            </TouchableOpacity>
+          ))}
+        </Section>
       </View>
 
       <Modal
@@ -392,7 +458,7 @@ export default function ProfileScreen() {
               placeholder={t("profile.name_placeholder")}
               placeholderTextColor={Colors.textSecondary}
             />
-            <Text style={styles.modalLabel}>{t("profile.age")}</Text>
+            <Text style={styles.modalLabel}>{t("profile.age_label")}</Text>
             <TextInput
               style={styles.modalInput}
               value={editAge}
@@ -544,11 +610,205 @@ export default function ProfileScreen() {
         />
       )}
     </ScrollView>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+/** Sozlamalar qatorlari uchun gradient plitkalar (ICON_TILES bilan bir uslubda) */
+const MENU_TILE: Record<string, [string, string]> = {
+  "credit-card": ["#4ADE80", "#15803D"],
+  video: ["#C084FC", "#7C3AED"],
+  globe: ["#38BDF8", "#2563EB"],
+  moon: ["#475569", "#0F172A"],
+  sun: ["#FDE68A", "#D97706"],
+  shield: ["#F3D9A4", "#B98537"],
+  "log-out": ["#F87171", "#B91C1C"],
+};
+
+function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.pStat}>
+      {icon}
+      <Text style={[styles.pStatValue, { color: theme.text }]}>{value}</Text>
+      <Text style={[styles.pStatLabel, { color: theme.textSecondary }]}>{label}</Text>
+    </View>
+  );
+}
+
+function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+  const { theme } = useTheme();
+  const items = React.Children.toArray(children).filter(Boolean);
+  return (
+    <View style={[styles.pCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+      <View style={styles.pCardHeader}>
+        <Text style={[styles.pCardTitle, { color: theme.textSecondary }]}>{title}</Text>
+        {count != null && (
+          <View style={styles.pCount}>
+            <Text style={styles.pCountText}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {items.map((child, i) => (
+        <View key={i} style={i > 0 ? { borderTopWidth: 1, borderTopColor: theme.border } : undefined}>
+          {child}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  onPress?: () => void;
+}) {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.pRow}>
+      {icon}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[styles.pInfoLabel, { color: theme.textSecondary }]}>{label}</Text>
+        <Text style={[styles.pRowTitle, { color: theme.text }]}>{value}</Text>
+      </View>
+      {onPress && (
+        <TouchableOpacity onPress={onPress} hitSlop={12}>
+          <ChevronRight size={16} color={theme.textSecondary} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // ─── Vebdagi ProfilePage ───
+  pHero: { paddingBottom: 80, overflow: "hidden" },
+  pTopBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  pRoundBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pTopTitle: { marginLeft: 12, color: "#FFFFFF", fontSize: 18, fontFamily: Font.bold },
+  pAvatarBlock: { alignItems: "center", marginTop: 16 },
+  pRing: {
+    padding: 3,
+    borderRadius: 999,
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 25,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 12,
+  },
+  pAvatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: "#020617",
+    backgroundColor: "#0F172A",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  pInitials: { color: "#FFFFFF", fontSize: 30, fontFamily: Font.bold },
+  pCameraBtn: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  pName: { marginTop: 12, color: "#FFFFFF", fontSize: 20, fontFamily: Font.bold },
+  pPhone: { marginTop: 2, color: "rgba(255,255,255,0.7)", fontSize: 14, fontFamily: Font.regular },
+  pBadges: { flexDirection: "row", gap: 8, marginTop: 8 },
+  pBadge: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: Font.regular,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  pStatsWrap: { marginTop: -40, paddingHorizontal: 16 },
+  pStats: {
+    flexDirection: "row",
+    borderRadius: Radius["2xl"],
+    borderWidth: 1,
+    overflow: "hidden",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.15,
+    shadowRadius: 25,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 8,
+  },
+  pStat: { flex: 1, alignItems: "center", gap: 6, paddingVertical: 16, paddingHorizontal: 8 },
+  pStatValue: { fontSize: 18, lineHeight: 20, fontFamily: Font.bold },
+  pStatLabel: { fontSize: 11, fontFamily: Font.regular, marginTop: 2 },
+  pDivider: { width: 1 },
+  pContent: { paddingHorizontal: 16, marginTop: 16, gap: 16 },
+  pInline: { flexDirection: "row", alignItems: "center", gap: 4 },
+  pExpiry: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: Radius["2xl"],
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  pExpiryLabel: { fontSize: 14, fontFamily: Font.medium, marginLeft: 4 },
+  pExpiryValue: { fontSize: 14, fontFamily: Font.bold },
+  pCard: {
+    borderRadius: Radius["2xl"],
+    borderWidth: 1,
+    overflow: "hidden",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  pCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  pCardTitle: { fontSize: 12, fontFamily: Font.semibold, letterSpacing: 1.2 },
+  pCount: { backgroundColor: "#F8F5ED", borderRadius: Radius.md, paddingHorizontal: 8, paddingVertical: 2 },
+  pCountText: { color: "#432F19", fontSize: 10, fontFamily: Font.semibold },
+  pRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  pTile: { width: 36, height: 36, borderRadius: Radius.xl, alignItems: "center", justifyContent: "center" },
+  pMenuTile: { width: 40, height: 40, borderRadius: Radius.xl, alignItems: "center", justifyContent: "center" },
+  pRowTitle: { fontSize: 14, fontFamily: Font.medium },
+  pRowSub: { fontSize: 12, fontFamily: Font.regular },
+  pInfoLabel: { fontSize: 11, fontFamily: Font.regular },
+  pChip: { flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 999 },
+  pChipText: { fontSize: 10, fontFamily: Font.medium },
+  pMissed: { color: "#EF4444", fontSize: 10, fontFamily: Font.medium },
+  pEmpty: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 16, gap: 12 },
+  pEmptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
   safeArea: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: 16, gap: 16 },

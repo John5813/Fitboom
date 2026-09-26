@@ -87,7 +87,7 @@ export default function CompleteProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{t("profile.age")}</Text>
+            <Text style={styles.label}>{t("profile.age_label")}</Text>
             <TextInput
               style={styles.input}
               value={age}

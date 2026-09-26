@@ -15,7 +15,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccessPass } from "@/contexts/AccessPassContext";
+import { formatDateShort } from "@/lib/format";
 import { buildAccessPass } from "@shared/accessPass";
+import { DAY_SHORT_UZ } from "@shared/schedule";
+
+const DAY_SHORT_RU = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+const DAY_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import type { Gym, GymWithRating, Booking } from "@shared/schema";
@@ -302,11 +307,19 @@ export default function HomePage() {
   });
 
   const bookings = bookingsData?.bookings || [];
-  const activeBookings = bookings.filter(b => !b.isCompleted && b.status !== 'missed' && b.status !== 'completed');
+  // Eng yaqin bron tepada (ilovada ham shunday)
+  const activeBookings = bookings
+    .filter(b => !b.isCompleted && b.status !== 'missed' && b.status !== 'completed')
+    .sort((a, b) => `${a.date} ${a.scheduledStartTime || a.time}`.localeCompare(`${b.date} ${b.scheduledStartTime || b.time}`));
   const completedBookings = bookings.filter(b => b.isCompleted || b.status === 'missed' || b.status === 'completed');
 
+  // Filtr tugmalarida toifa NOMI ("Yoga") ko'rsatiladi, zalda esa ID ("yoga")
+  // saqlanadi. Ilgari nom to'g'ridan-to'g'ri ID bilan solishtirilardi va
+  // toifa tanlanganda ro'yxat doim bo'sh chiqardi.
+  const selectedCategoryId =
+    CATEGORIES.find((c) => c.name === selectedCategory)?.id ?? selectedCategory;
   const filteredGyms = gymsWithDistance.filter(gym => {
-    const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategory);
+    const matchesCategory = selectedCategory === 'all' || gym.categories?.includes(selectedCategoryId);
     const matchesSearch = gym.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPrice = maxPrice === undefined || gym.credits <= maxPrice;
     return matchesCategory && matchesSearch && matchesPrice;
@@ -643,8 +656,10 @@ export default function HomePage() {
                     id={booking.id}
                     gymName={gym?.name || t('profile.unknown_gym')}
                     gymImage={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
-                    date={new Date(booking.date).toLocaleDateString()}
+                    date={formatDateShort(booking.date)}
                     time={booking.time}
+                    scheduledStartTime={booking.scheduledStartTime ?? undefined}
+                    scheduledEndTime={booking.scheduledEndTime ?? undefined}
                     latitude={gym?.latitude ?? undefined}
                     longitude={gym?.longitude ?? undefined}
                     gymAddress={gym?.address ?? undefined}
@@ -676,8 +691,10 @@ export default function HomePage() {
                     id={booking.id}
                     gymName={gym?.name || t('profile.unknown_gym')}
                     gymImage={gym?.imageUrl || getGymImage(gym?.categories?.[0] || '')}
-                    date={new Date(booking.date).toLocaleDateString()}
+                    date={formatDateShort(booking.date)}
                     time={booking.time}
+                    scheduledStartTime={booking.scheduledStartTime ?? undefined}
+                    scheduledEndTime={booking.scheduledEndTime ?? undefined}
                     latitude={gym?.latitude ?? undefined}
                     longitude={gym?.longitude ?? undefined}
                     gymAddress={gym?.address ?? undefined}
@@ -710,7 +727,7 @@ export default function HomePage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{bGym?.name || t('profile.unknown_gym')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(booking.date).toLocaleDateString()} • {booking.time}
+                        {formatDateShort(booking.date)} • {booking.time}
                       </p>
                     </div>
                     <Badge variant={booking.status === 'completed' ? 'secondary' : 'outline'} className="text-[10px] h-5 px-1.5 flex-shrink-0">
@@ -840,7 +857,8 @@ export default function HomePage() {
                           data-testid={`button-date-${dateStr}`}
                         >
                           <span className="text-[10px] opacity-70">
-                            {date.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', { weekday: 'short' })}
+                            {/* toLocaleDateString('uz-UZ') ko'p brauzerda inglizchaga tushardi ("Sat") */}
+                            {(language === 'ru' ? DAY_SHORT_RU : language === 'en' ? DAY_SHORT_EN : DAY_SHORT_UZ)[date.getDay()]}
                           </span>
                           <span className="text-sm font-bold">{date.getDate()}</span>
                         </Button>

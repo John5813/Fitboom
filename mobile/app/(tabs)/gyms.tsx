@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  RefreshControl,
-} from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { MapPin, Search } from "lucide-react-native";
 
+import { CATEGORIES } from "@shared/categories";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { haptics } from "@/hooks/useHaptics";
-import { getGyms, getCategories } from "@/services/api";
-import Colors from "@/constants/Colors";
+import { getGyms } from "@/services/api";
 import GymCard from "@/components/GymCard";
 import { GymCardSkeleton } from "@/components/Skeleton";
-import { EmptyState } from "@/components/EmptyState";
 import { AnimatedListItem } from "@/components/AnimatedListItem";
+import { Button, Font, Input } from "@/components/ui";
+
+/*
+ * Zallar — vebdagi HomePage (gyms tab) + GymFilters.tsx bilan bir xil:
+ * sarlavha va "Google Maps'da ko'rish", qidiruv, maksimal narx, toifalar.
+ *
+ * Toifalar @shared/categories dan olinadi (vebda ham shunday). Ilgari
+ * serverdagi ikona nomi matn bo'lib chiqardi: "dumbbell Gym", "yoga Yoga".
+ */
 
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -30,78 +30,60 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number 
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Server toifani ID yoki {id, name} ko'rinishida qaytarishi mumkin */
+function categoryIds(gym: any): string[] {
+  return (gym.categories || []).map((c: any) => (typeof c === "string" ? c : c?.id)).filter(Boolean);
 }
 
 export default function GymsScreen() {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const [search, setSearch] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [maxPrice, setMaxPrice] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
-  const [userLat, setUserLat] = useState<number | null>(null);
-  const [userLng, setUserLng] = useState<number | null>(null);
-  const [sortedGyms, setSortedGyms] = useState<any[]>([]);
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") return;
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setUserLat(pos.coords.latitude);
-      setUserLng(pos.coords.longitude);
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
     })();
   }, []);
 
-  const { data: catData } = useQuery({
-    queryKey: ["/api/categories"],
-    queryFn: () => getCategories(),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const categories: { id: string; name: string; icon?: string }[] =
-    catData?.categories || [];
-
   const { data, refetch } = useQuery({
-    queryKey: ["/api/gyms", selectedCategoryId],
-    queryFn: () => getGyms({ category: selectedCategoryId ?? undefined }),
+    queryKey: ["/api/gyms"],
+    queryFn: () => getGyms({}),
   });
 
-  useEffect(() => {
-    const raw: any[] = data?.gyms || [];
-    const withDist = raw.map((g: any) => {
-      const lat2 = parseFloat(g.latitude);
-      const lng2 = parseFloat(g.longitude);
-      const d =
-        userLat !== null &&
-        userLng !== null &&
-        !isNaN(lat2) &&
-        !isNaN(lng2)
-          ? distKm(userLat, userLng, lat2, lng2)
-          : null;
+  const sorted = useMemo(() => {
+    const withDist = (data?.gyms || []).map((g: any) => {
+      const lat = parseFloat(g.latitude);
+      const lng = parseFloat(g.longitude);
+      const d = userPos && !isNaN(lat) && !isNaN(lng) ? distKm(userPos.lat, userPos.lng, lat, lng) : null;
       return { ...g, distanceKm: d };
     });
-    const sorted = [...withDist].sort((a: any, b: any) => {
+    return withDist.sort((a: any, b: any) => {
       if (a.distanceKm === null && b.distanceKm === null) return 0;
       if (a.distanceKm === null) return 1;
       if (b.distanceKm === null) return -1;
       return a.distanceKm - b.distanceKm;
     });
-    setSortedGyms(sorted);
-  }, [data, userLat, userLng]);
+  }, [data, userPos]);
 
-  const filtered = sortedGyms.filter((gym: any) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      gym.name.toLowerCase().includes(q) ||
-      (gym.address || "").toLowerCase().includes(q)
-    );
+  // Vebdagi filteredGyms bilan bir xil: toifa, nom, maksimal narx
+  const priceLimit = maxPrice.trim() ? Number(maxPrice) : undefined;
+  const filtered = sorted.filter((gym: any) => {
+    const matchesCategory = selectedCategory === "all" || categoryIds(gym).includes(selectedCategory);
+    const matchesSearch = gym.name.toLowerCase().includes(search.toLowerCase());
+    const matchesPrice = priceLimit === undefined || Number.isNaN(priceLimit) || gym.credits <= priceLimit;
+    return matchesCategory && matchesSearch && matchesPrice;
   });
 
   const onRefresh = async () => {
@@ -110,103 +92,84 @@ export default function GymsScreen() {
     setRefreshing(false);
   };
 
+  const openGym = (gym: any) => {
+    haptics.light();
+    router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any);
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={["top"]}>
-      <View style={[styles.header, { paddingTop: 12, backgroundColor: theme.card, borderBottomColor: theme.cardBorder }]}>
-        <Text style={styles.title}>{t("gyms.title")}</Text>
-        <View style={styles.searchRow}>
-          <View style={styles.searchBox}>
-            <Feather name="search" size={16} color={Colors.textSecondary} />
-            <TextInput
-              style={styles.searchInput}
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t("gyms.search")}
-              placeholderTextColor={Colors.textSecondary}
-            />
-            {search ? (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Feather name="x" size={16} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesScroll}
-          contentContainerStyle={styles.categoriesContent}
-        >
-          <TouchableOpacity
-            style={[
-              styles.categoryChip,
-              selectedCategoryId === null && styles.categoryChipActive,
-            ]}
-            onPress={() => setSelectedCategoryId(null)}
-          >
-            <Text
-              style={[
-                styles.categoryChipText,
-                selectedCategoryId === null && styles.categoryChipTextActive,
-              ]}
-            >
-              {t("gyms.all")}
-            </Text>
-          </TouchableOpacity>
-
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[
-                styles.categoryChip,
-                selectedCategoryId === cat.id && styles.categoryChipActive,
-              ]}
-              onPress={() => { haptics.select(); setSelectedCategoryId(cat.id); }}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  selectedCategoryId === cat.id && styles.categoryChipTextActive,
-                ]}
-              >
-                {cat.icon ? `${cat.icon} ` : ""}{cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-          />
-        }
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {data === undefined ? (
-          <GymCardSkeleton count={4} />
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon="search"
-            title={t("gyms.no_results")}
-            description={search ? `"${search}" — ${t("gyms.no_results_for")}` : undefined}
-            actionLabel={search ? t("gyms.clear_search") : undefined}
-            onAction={search ? () => setSearch("") : undefined}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.text }]}>{t("home.gyms_title")}</Text>
+          <Button variant="outline" size="sm" icon={MapPin} iconSize={16} onPress={() => router.push("/(tabs)/map" as any)}>
+            {t("map.view_on_google")}
+          </Button>
+        </View>
+
+        {/* GymFilters */}
+        <View style={styles.filters}>
+          <Input
+            leftIcon={Search}
+            value={search}
+            onChangeText={setSearch}
+            placeholder={t("common.search")}
+            returnKeyType="search"
+            testID="input-search-gyms"
           />
+          <View>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>
+              {t("settings.max_price")} ({t("profile.credits_count")})
+            </Text>
+            <Input
+              value={maxPrice}
+              onChangeText={(v) => setMaxPrice(v.replace(/[^0-9]/g, ""))}
+              placeholder={t("settings.price_filter")}
+              keyboardType="number-pad"
+              testID="input-max-price"
+            />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+            <Button
+              size="sm"
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              onPress={() => setSelectedCategory("all")}
+            >
+              {t("common.all")}
+            </Button>
+            {CATEGORIES.map((c) => (
+              <Button
+                key={c.id}
+                size="sm"
+                variant={selectedCategory === c.id ? "default" : "outline"}
+                onPress={() => {
+                  haptics.select();
+                  setSelectedCategory(c.id);
+                }}
+              >
+                {c.name}
+              </Button>
+            ))}
+          </ScrollView>
+        </View>
+
+        {data === undefined ? (
+          <GymCardSkeleton count={3} />
+        ) : filtered.length === 0 ? (
+          <Text style={[styles.empty, { color: theme.textSecondary }]}>{t("home.no_gyms_filter")}</Text>
         ) : (
-          filtered.map((gym: any, idx: number) => (
-            <AnimatedListItem key={gym.id} index={Math.min(idx, 6)}>
-              <GymCard
-                gym={gym}
-                onPress={() => { haptics.light(); router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any); }}
-              />
-            </AnimatedListItem>
-          ))
+          <View style={styles.list}>
+            {filtered.map((gym: any, idx: number) => (
+              <AnimatedListItem key={gym.id} index={Math.min(idx, 6)}>
+                <GymCard gym={gym} onPress={() => openGym(gym)} onBook={() => openGym(gym)} />
+              </AnimatedListItem>
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -214,72 +177,15 @@ export default function GymsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    backgroundColor: Colors.card,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  searchRow: { marginBottom: 12 },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: Colors.text,
-  },
-  categoriesScroll: { marginHorizontal: -16 },
-  categoriesContent: { paddingHorizontal: 16, gap: 8, paddingVertical: 4 },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  categoryChipText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
-  },
-  categoryChipTextActive: { color: "#fff" },
-  list: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-    gap: 16,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
-  },
+  safe: { flex: 1 },
+  // p-4 space-y-6
+  content: { padding: 16, gap: 24, paddingBottom: 110 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  // font-display font-bold text-2xl
+  title: { fontSize: 24, lineHeight: 32, fontFamily: Font.display, flexShrink: 1 },
+  filters: { gap: 16 },
+  label: { fontSize: 12, fontFamily: Font.regular, marginBottom: 4 },
+  chips: { gap: 8, paddingBottom: 8 },
+  list: { gap: 16 },
+  empty: { textAlign: "center", paddingVertical: 48, fontSize: 14, fontFamily: Font.regular },
 });

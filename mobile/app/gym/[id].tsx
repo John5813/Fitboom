@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getGymById, getGymSlots, bookGym } from "@/services/api";
 import Colors from "@/constants/Colors";
+import { Gold } from "@/components/ui";
 
 const { width } = Dimensions.get("window");
 
@@ -260,7 +261,7 @@ export default function GymDetailScreen() {
             style={styles.imageGradient}
           >
             <View style={styles.creditBadge}>
-              <Feather name="key" size={14} color="#fff" />
+              <Feather name="key" size={14} color={Gold.text} />
               <Text style={styles.creditBadgeText}>{gym.credits} {t("common.credit")}</Text>
             </View>
           </LinearGradient>
@@ -581,15 +582,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     alignSelf: "flex-end",
-    backgroundColor: Colors.primary,
+    // Kredit — tilla belgi (zal kartasi va vebdagi bilan bir xil)
+    backgroundColor: Gold.base,
+    borderWidth: 1,
+    borderColor: Gold.deep,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 6,
   },
   creditBadgeText: {
-    color: "#fff",
+    color: Gold.text,
     fontSize: 14,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Oxanium_700Bold",
   },
   content: { padding: 20, gap: 16 },
   nameRow: {

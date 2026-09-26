@@ -23,12 +23,14 @@ export default function CourseDetailScreen() {
 
   const { data, isLoading } = useQuery({
     queryKey: [`/collections/${id}`],
-    queryFn: () => request(`/collections/${id}`),
+    queryFn: () => request<any>(`/collections/${id}`),
     enabled: !!id,
   });
 
   const collection = data?.collection || data;
-  const videos = collection?.videos || data?.videos || [];
+  // Server videolarni `classes` nomi bilan qaytaradi (ilgari `videos` o'qilardi
+  // va kurs ichida birorta video ko'rinmasdi)
+  const videos = data?.classes || collection?.videos || data?.videos || [];
 
   const playVideo = (url: string) => {
     if (!url) return;
@@ -114,7 +116,7 @@ export default function CourseDetailScreen() {
                 {video.duration && (
                   <View style={styles.durationRow}>
                     <Feather name="clock" size={11} color={Colors.textSecondary} />
-                    <Text style={styles.durationText}>{video.duration}</Text>
+                    <Text style={styles.durationText}>{typeof video.duration === "number" ? `${video.duration} daq` : video.duration}</Text>
                   </View>
                 )}
                 {video.description && (

@@ -2,7 +2,9 @@ import React from "react";
 import {
   Pressable,
   Text,
+  TextInput,
   View,
+  type TextInputProps,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -207,6 +209,44 @@ export function Card({
       ]}
     >
       {children}
+    </View>
+  );
+}
+
+/** ui/input.tsx: h-9 rounded-md border-input bg-background px-3, matn 16px */
+export function Input({
+  style,
+  leftIcon: LeftIcon,
+  ...props
+}: TextInputProps & { leftIcon?: LucideIcon }) {
+  const { theme, isDark } = useTheme();
+  const border = isDark ? "#394C60" : "#C6D1DD"; // --input
+  return (
+    <View style={{ justifyContent: "center" }}>
+      {LeftIcon ? (
+        <View style={{ position: "absolute", left: 12, zIndex: 1 }} pointerEvents="none">
+          <LeftIcon size={16} color={theme.textSecondary} />
+        </View>
+      ) : null}
+      <TextInput
+        placeholderTextColor={theme.textSecondary}
+        {...props}
+        style={[
+          {
+            height: 40,
+            borderRadius: Radius.md,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: theme.background,
+            paddingHorizontal: 12,
+            paddingLeft: LeftIcon ? 40 : 12,
+            fontSize: 16,
+            fontFamily: Font.regular,
+            color: theme.text,
+          },
+          style,
+        ]}
+      />
     </View>
   );
 }

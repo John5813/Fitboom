@@ -51,7 +51,6 @@ function RootLayoutNav() {
       <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
       <Stack.Screen name="gym/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="courses/index" options={{ headerShown: false }} />
       <Stack.Screen name="courses/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="payment" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />

@@ -235,6 +235,13 @@ async function ensureTablesExist() {
 
     await backfillSchedule(client);
 
+    // Mobil ilova orqali QR tasdiqlangan bronlar ilgari faqat is_completed
+    // oldi, status "pending" qolib ketdi. Idempotent: faqat nomuvofiqlarni.
+    await tryDdl(client, 'bajarilgan bronlar statusi', `
+      UPDATE bookings SET status = 'completed'
+      WHERE is_completed = true AND status = 'pending'
+    `);
+
     /**
      * Indekslar.
      *
