@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -17,13 +18,18 @@ import Colors from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { verifyQr } from "@/services/api";
+import { useAccessPass } from "@/contexts/AccessPassContext";
+import { buildAccessPass } from "@shared/accessPass";
 
 export default function ScannerScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { refetchUser } = useAuth();
+  const { user, refetchUser } = useAuth();
+  const { show: showAccessPass, open: openAccessPass, pass: activePass } = useAccessPass();
   const { t } = useLanguage();
   const [permission, requestPermission] = useCameraPermissions();
+  // Tab ekranda bo'lmasa kamera o'chiq turadi (batareya va maxfiylik)
+  const isFocused = useIsFocused();
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
@@ -52,6 +58,17 @@ export default function ScannerScreen() {
 
     try {
       const res = await verifyQr(rawQrString);
+      // Jonli ruxsatnoma: administratorga ko'rsatiladi, yopilsa 1 soat
+      // davomida ekrandagi bulutcha orqali qayta ochiladi
+      showAccessPass(
+        buildAccessPass({
+          booking: res.booking,
+          gym: res.gym,
+          fallbackGymName: parsed.name,
+          userName: user?.name,
+          now: Date.now(),
+        }),
+      );
       setResult({
         success: true,
         message: res.message || `${parsed.name || t("bookings.gym_default")}${t("scanner.welcome_default")}`,
@@ -104,53 +121,28 @@ export default function ScannerScreen() {
 
   if (result) {
     if (result.success) {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
-      const dateStr = now.toLocaleDateString("uz-UZ", { day: "numeric", month: "long", year: "numeric" });
+      // To'liq ruxsatnoma AccessPassOverlay da; bu yerda uni qayta ochish
       return (
-        <View style={[styles.ticketContainer, { paddingTop: insets.top }]}>
-          <View style={styles.ticketCard}>
-            <View style={styles.ticketHeader}>
-              <Feather name="check-circle" size={56} color="#fff" />
-              <Text style={styles.ticketHeaderText}>{t("scanner.ticket_title")}</Text>
+        <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
+          <View style={styles.resultBox}>
+            <View style={[styles.resultIcon, { backgroundColor: "rgba(22,163,74,0.12)" }]}>
+              <Feather name="check-circle" size={48} color={Colors.primary} />
             </View>
-            <View style={styles.ticketBody}>
-              <Text style={styles.ticketGymName}>
-                {result.gymName || t("bookings.gym_default")}
-              </Text>
-              <Text style={styles.ticketWelcome}>{result.message}</Text>
-              <View style={styles.ticketDivider} />
-              <View style={styles.ticketTimeRow}>
-                <View style={styles.ticketTimeBlock}>
-                  <Feather name="clock" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.ticketTimeLabel}>{t("scanner.time_label")}</Text>
-                  <Text style={styles.ticketTimeValue}>{timeStr}</Text>
-                </View>
-                <View style={styles.ticketTimeSep} />
-                <View style={styles.ticketTimeBlock}>
-                  <Feather name="calendar" size={16} color={Colors.textSecondary} />
-                  <Text style={styles.ticketTimeLabel}>{t("scanner.date_label")}</Text>
-                  <Text style={styles.ticketTimeValue}>{dateStr}</Text>
-                </View>
-              </View>
-              <View style={styles.ticketDivider} />
-              <View style={styles.ticketStaffHint}>
-                <Feather name="user" size={15} color={Colors.primary} />
-                <Text style={styles.ticketStaffText}>{t("scanner.show_admin")}</Text>
-              </View>
-            </View>
+            <Text style={[styles.resultMessage, { color: Colors.text }]}>
+              {result.gymName || t("bookings.gym_default")}
+            </Text>
+            <Text style={[styles.permDesc, { marginTop: 4 }]}>{t("scanner.show_admin")}</Text>
+            {activePass && (
+              <TouchableOpacity style={styles.resetBtn} onPress={openAccessPass}>
+                <Feather name="shield" size={16} color="#fff" />
+                <Text style={styles.resetBtnText}>Ruxsatnomani ochish</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.navBtn} onPress={() => router.push("/(tabs)/bookings" as any)}>
+              <Feather name="arrow-left" size={16} color={Colors.primary} />
+              <Text style={styles.navBtnText}>{t("scanner.back_bookings")}</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.resetBtn} onPress={() => setResult(null)}>
-            <Feather name="refresh-cw" size={16} color="#fff" />
-            <Text style={styles.resetBtnText}>{t("scanner.rescan")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navBtn}
-            onPress={() => router.push("/(tabs)/bookings" as any)}
-          >
-            <Feather name="arrow-left" size={16} color={Colors.primary} />
-            <Text style={styles.navBtnText}>{t("scanner.back_bookings")}</Text>
-          </TouchableOpacity>
         </View>
       );
     }
@@ -170,6 +162,10 @@ export default function ScannerScreen() {
         </View>
       </View>
     );
+  }
+
+  if (!isFocused) {
+    return <View style={styles.container} />;
   }
 
   return (

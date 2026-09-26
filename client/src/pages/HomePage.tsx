@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { categoryLabels } from "@/lib/categories";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Video, MapPin, Clock, Settings, User, QrCode, Check, Info, CalendarCheck, ImageIcon, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Video, MapPin, Clock, Settings, User, QrCode, Check, Info, CalendarCheck, ImageIcon, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import CreditBalance from "@/components/CreditBalance";
 import GymCard from "@/components/GymCard";
 import GymFilters from "@/components/GymFilters";
@@ -14,6 +14,8 @@ import QRScanner from "@/components/QRScanner";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAccessPass } from "@/contexts/AccessPassContext";
+import { buildAccessPass } from "@shared/accessPass";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import type { Gym, GymWithRating, Booking } from "@shared/schema";
@@ -83,8 +85,7 @@ export default function HomePage() {
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-  const [successGymName, setSuccessGymName] = useState<string>("");
+  const { show: showAccessPass } = useAccessPass();
   const [showVisitHistory, setShowVisitHistory] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownData, setCountdownData] = useState<{
@@ -436,10 +437,15 @@ export default function HomePage() {
 
       if (result.success) {
         setIsScannerOpen(false);
+        // Jonli ruxsatnoma: administratorga ko'rsatiladi, yopilsa 1 soat
+        // davomida ekrandagi bulutcha orqali qayta ochiladi
+        showAccessPass(buildAccessPass({
+          booking: result.booking ?? selectedBooking,
+          gym: result.gym,
+          userName: user?.name,
+          now: Date.now(),
+        }));
         setSelectedBooking(null);
-        const gymName = result.gym?.name || "Zal";
-        setSuccessGymName(gymName);
-        setShowSuccessAnimation(true);
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       } else if (result.earlyArrival) {
         setIsScannerOpen(false);
@@ -741,31 +747,6 @@ export default function HomePage() {
       />
       <QRScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={handleQRScan} />
 
-      <Dialog open={showSuccessAnimation} onOpenChange={setShowSuccessAnimation}>
-        <DialogContent className="max-w-sm sm:rounded-2xl">
-          <div className="flex flex-col items-center text-center py-6">
-            <div className="h-24 w-24 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-5 animate-in zoom-in duration-300">
-              <CheckCircle2 className="h-14 w-14 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2" data-testid="text-success-title">
-              Muvaffaqiyatli kirdingiz!
-            </h3>
-            {successGymName && (
-              <p className="text-lg font-semibold text-foreground mb-3" data-testid="text-success-gym-name">
-                {successGymName}
-              </p>
-            )}
-            <div className="bg-muted rounded-lg p-4 w-full mb-6">
-              <p className="text-sm text-muted-foreground" data-testid="text-success-instruction">
-                Iltimos, bu oynani zal xodimiga ko'rsating
-              </p>
-            </div>
-            <Button onClick={() => setShowSuccessAnimation(false)} className="w-full" data-testid="button-success-ok">
-              Tushunarli
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={showCountdown} onOpenChange={setShowCountdown}>
         <DialogContent className="max-w-sm sm:rounded-2xl">

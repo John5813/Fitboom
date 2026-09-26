@@ -21,6 +21,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AccessPassProvider } from "@/contexts/AccessPassContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
@@ -93,7 +94,10 @@ export default function RootLayout() {
               <AuthProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <KeyboardProvider>
-                    <RootLayoutNav />
+                    {/* Kirish ruxsatnomasi va uning bulutchasi hamma ekranlar ustida */}
+                    <AccessPassProvider>
+                      <RootLayoutNav />
+                    </AccessPassProvider>
                   </KeyboardProvider>
                 </GestureHandlerRootView>
               </AuthProvider>

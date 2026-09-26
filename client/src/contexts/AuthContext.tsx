@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+import { ACCESS_PASS_STORAGE_KEY } from "@shared/accessPass";
 
 interface User {
   id: string;
@@ -80,6 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!user;
 
   const logout = async () => {
+    // Kirish ruxsatnomasi keyingi foydalanuvchiga ko'rinmasin
+    try {
+      localStorage.removeItem(ACCESS_PASS_STORAGE_KEY);
+    } catch {
+      /* saqlash imkoni yo'q */
+    }
     try {
       await apiRequest('/api/logout', 'POST');
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });

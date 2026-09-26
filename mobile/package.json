@@ -63,6 +63,7 @@
     "@tanstack/react-query-persist-client": "^5.100.8",
     "expo-camera": "^17.0.10",
     "expo-clipboard": "^8.0.8",
+    "expo-keep-awake": "~15.0.8",
     "lucide-react-native": "^1.48.0",
     "react-native-maps": "1.18.0",
     "react-native-qrcode-svg": "^6.3.21",

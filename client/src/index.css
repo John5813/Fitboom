@@ -437,3 +437,53 @@ body {
     padding-bottom: calc(40px + env(safe-area-inset-bottom));
   }
 }
+
+/* ═══════════ Zalga kirish ruxsatnomasi ═══════════ */
+
+@keyframes access-pass-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes access-pass-draw {
+  from { stroke-dashoffset: 48; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes access-pass-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes access-pass-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(200%); }
+}
+@keyframes access-pass-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes access-pass-bubble {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45), 0 10px 25px -5px rgba(20, 83, 45, 0.3); }
+  50% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0), 0 10px 25px -5px rgba(20, 83, 45, 0.3); }
+}
+
+.access-pass-pop { animation: access-pass-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.access-pass-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: access-pass-draw 0.45s ease-out 0.35s forwards;
+}
+/* Doimiy to'lqin — ekran jonli ekanini ko'rsatadi */
+.access-pass-ring { animation: access-pass-ring 2s ease-out 0.6s infinite; }
+.access-pass-ring-2 { animation-delay: 1.6s; }
+.access-pass-shimmer { animation: access-pass-shimmer 1.8s linear infinite; }
+.access-pass-live { animation: access-pass-live 1.2s ease-in-out infinite; }
+.access-pass-bubble { animation: access-pass-bubble 2.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .access-pass-pop,
+  .access-pass-ring,
+  .access-pass-shimmer,
+  .access-pass-bubble { animation: none; }
+  .access-pass-check { stroke-dashoffset: 0; animation: none; }
+  /* Soat baribir har soniyada yuradi — "jonli"lik shundan ham ko'rinadi */
+}

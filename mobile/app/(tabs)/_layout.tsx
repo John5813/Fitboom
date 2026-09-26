@@ -163,7 +163,8 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="gyms" />
-      <Tabs.Screen name="scanner" options={{ unmountOnBlur: true }} />
+      {/* unmountOnBlur React Navigation 7 da yo'q — kamera scanner.tsx da useIsFocused bilan o'chiriladi */}
+      <Tabs.Screen name="scanner" />
       <Tabs.Screen name="courses" />
       <Tabs.Screen name="bookings" />
       <Tabs.Screen name="profile" />

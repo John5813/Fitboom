@@ -10,6 +10,7 @@ import {
   getAccessToken,
 } from "@/services/api";
 import { router } from "expo-router";
+import { ACCESS_PASS_STORAGE_KEY } from "@shared/accessPass";
 
 interface User {
   id: string;
@@ -150,6 +151,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     await clearTokens();
     await AsyncStorage.removeItem("gymOwnerId");
+    // Kirish ruxsatnomasi keyingi foydalanuvchiga ko'rinmasin
+    await AsyncStorage.removeItem(ACCESS_PASS_STORAGE_KEY).catch(() => {});
   };
 
   return (
