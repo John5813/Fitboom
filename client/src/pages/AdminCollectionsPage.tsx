@@ -183,7 +183,7 @@ function CollectionFormDialog({
               <button
                 type="button"
                 onClick={() => setForm(f => ({ ...f, isFree: false }))}
-                className={`flex items-center justify-center gap-2 h-10 rounded-lg border text-sm font-medium transition-all ${!form.isFree ? 'bg-orange-500 text-white border-orange-500' : 'border-border hover:bg-muted'}`}
+                className={`flex items-center justify-center gap-2 h-10 rounded-lg border text-sm font-medium transition-all ${!form.isFree ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'}`}
               >
                 <Lock className="h-4 w-4" /> Pulli
               </button>

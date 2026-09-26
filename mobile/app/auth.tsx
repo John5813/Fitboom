@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: "rgba(249,115,22,0.10)",
+    backgroundColor: "rgba(217,167,81,0.12)",
   },
   decorCircle2: {
     position: "absolute",

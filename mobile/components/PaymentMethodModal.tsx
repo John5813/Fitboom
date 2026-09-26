@@ -12,9 +12,10 @@ import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { API_ORIGIN, MOBILE_API_URL } from "@/constants/api";
 
-const BASE_URL = "https://fitboom-absdefgx7.replit.app/api/mobile/v1";
-const PAY_BASE = "https://fitboom-absdefgx7.replit.app/mobile-pay";
+const BASE_URL = MOBILE_API_URL;
+const PAY_BASE = `${API_ORIGIN}/mobile-pay`;
 
 interface Props {
   visible: boolean;

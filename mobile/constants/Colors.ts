@@ -1,7 +1,8 @@
-const GREEN = "#16A34A";
-const GREEN_DARK = "#15803D";
-const GREEN_LIGHT = "rgba(22,163,74,0.10)";
-const AMBER = "#FBBF24";
+// Veb sayt bilan bir xil ranglar — constants/theme.ts dagi izohga qarang
+const PRIMARY = "#16A249"; // yashil
+const PRIMARY_DARK = "#12823B";
+const PRIMARY_LIGHT = "rgba(22,163,74,0.10)";
+const ACCENT = "#D8A84F"; // tilla
 
 const NAVY_900 = "#0B1229";
 const NAVY_800 = "#0F1A33";
@@ -35,21 +36,21 @@ export const Text = {
 };
 
 export default {
-  primary: GREEN,
-  primaryDark: GREEN_DARK,
-  primaryLight: GREEN_LIGHT,
-  accent: AMBER,
+  primary: PRIMARY,
+  primaryDark: PRIMARY_DARK,
+  primaryLight: PRIMARY_LIGHT,
+  accent: ACCENT,
 
-  background: "#FFFFFF",
-  surface: "#F8F9FA",
+  background: "#F8FAFC",
+  surface: "#F2F5F7",
   card: "#FFFFFF",
-  cardBorder: "#E5E7EB",
-  text: "#0F172A",
-  textSecondary: "#64748B",
-  border: "#E2E8F0",
+  cardBorder: "#E9EDF2",
+  text: "#29333D",
+  textSecondary: "#6C7F93",
+  border: "#DEE6ED",
 
   success: "#16A34A",
-  error: "#EF4444",
+  error: "#E23636",
   warning: "#F59E0B",
   info: "#0EA5E9",
 
@@ -64,15 +65,15 @@ export default {
   light: {
     text: "#0F172A",
     background: "#FFFFFF",
-    tint: GREEN,
-    tabIconDefault: "#94A3B8",
-    tabIconSelected: GREEN,
+    tint: PRIMARY,
+    tabIconDefault: "#6C7F93",
+    tabIconSelected: PRIMARY,
   },
   dark: {
     text: "#F8FAFC",
     background: NAVY_900,
-    tint: GREEN,
+    tint: PRIMARY,
     tabIconDefault: "#64748B",
-    tabIconSelected: GREEN,
+    tabIconSelected: PRIMARY,
   },
 };

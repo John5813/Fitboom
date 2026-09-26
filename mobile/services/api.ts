@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MOBILE_API_URL } from "@/constants/api";
 
-const BASE_URL = "https://fitboom-absdefgx7.replit.app/api/mobile/v1";
+const BASE_URL = MOBILE_API_URL;
 
 const ACCESS_TOKEN_KEY = "fitboom_access_token";
 const REFRESH_TOKEN_KEY = "fitboom_refresh_token";

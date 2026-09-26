@@ -16,8 +16,10 @@ import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getAccessToken } from "@/services/api";
+import Colors from "@/constants/Colors";
+import { MOBILE_API_URL } from "@/constants/api";
 
-const BASE_URL = "https://fitboom-absdefgx7.replit.app/api/mobile/v1";
+const BASE_URL = MOBILE_API_URL;
 
 const CARD_NUMBER = "9860 1701 1740 5213";
 const CARD_OWNER = "FitBoom To'lov";
@@ -170,7 +172,7 @@ export default function PartialPaymentModal({
           </View>
 
           <View style={styles.instructionBox}>
-            <Feather name="info" size={16} color="#16A34A" style={{ marginTop: 2 }} />
+            <Feather name="info" size={16} color={Colors.primary} style={{ marginTop: 2 }} />
             <Text style={styles.instructionText}>
               Quyidagi karta raqamiga{" "}
               <Text style={styles.instructionBold}>
@@ -222,7 +224,7 @@ export default function PartialPaymentModal({
                 style={styles.changeReceiptBtn}
                 onPress={pickReceipt}
               >
-                <Feather name="refresh-cw" size={14} color="#16A34A" />
+                <Feather name="refresh-cw" size={14} color={Colors.primary} />
                 <Text style={styles.changeReceiptText}>Rasmni almashtirish</Text>
               </TouchableOpacity>
             </View>
@@ -469,7 +471,7 @@ const styles = StyleSheet.create({
   changeReceiptText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: "#16A34A",
+    color: Colors.primary,
   },
 
   submitBtn: {

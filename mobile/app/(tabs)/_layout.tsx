@@ -1,22 +1,22 @@
 import { Tabs } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import React from "react";
-import {
-  Platform,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { Platform, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { Home, Dumbbell, QrCode, Video, Calendar, type LucideIcon } from "lucide-react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { haptics } from "@/hooks/useHaptics";
 
+/*
+ * Pastki menyu — vebdagi client/src/components/BottomNav.tsx bilan bir xil:
+ * bir xil ikonalar (lucide), o'lchamlar, ranglar va o'rtadagi QR tugma.
+ * Birini o'zgartirsangiz, ikkinchisini ham o'zgartiring.
+ */
+
 type TabDef = {
   name: string;
-  icon: React.ComponentProps<typeof Feather>["name"];
+  icon: LucideIcon;
   label: string;
   isCenter?: boolean;
 };
@@ -25,28 +25,24 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { theme, isDark } = useTheme();
-  const TAB_BOTTOM = Platform.OS === "web" ? 0 : insets.bottom;
-  const BRAND = theme.primary;
+  const bottomInset = Platform.OS === "web" ? 0 : insets.bottom;
 
   const tabs: TabDef[] = [
-    { name: "index",    icon: "home",        label: t("nav.home") },
-    { name: "gyms",     icon: "activity",    label: t("nav.gyms") },
-    { name: "scanner",  icon: "grid",        label: t("nav.scanner"), isCenter: true },
-    { name: "courses",  icon: "play-circle", label: t("nav.classes") },
-    { name: "bookings", icon: "calendar",    label: t("nav.bookings") },
+    { name: "index", icon: Home, label: t("nav.home") },
+    { name: "gyms", icon: Dumbbell, label: t("nav.gyms") },
+    { name: "scanner", icon: QrCode, label: t("nav.scanner"), isCenter: true },
+    { name: "courses", icon: Video, label: t("nav.classes") },
+    { name: "bookings", icon: Calendar, label: t("nav.bookings") },
   ];
-
-  const inactiveColor = isDark ? "#64748B" : "#999";
 
   return (
     <View
       style={[
         styles.bar,
         {
-          paddingBottom: TAB_BOTTOM,
-          height: 64 + TAB_BOTTOM,
-          backgroundColor: theme.card,
-          borderTopColor: theme.cardBorder,
+          paddingBottom: 8 + bottomInset,
+          backgroundColor: theme.background,
+          borderTopColor: theme.border,
         },
       ]}
     >
@@ -55,6 +51,8 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         if (!route) return null;
         const idx = state.routes.indexOf(route);
         const focused = state.index === idx;
+        const color = focused ? theme.primary : theme.textSecondary;
+        const Icon = tab.icon;
 
         const onPress = () => {
           haptics.select();
@@ -69,35 +67,22 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         };
 
         if (tab.isCenter) {
+          // Vebda: faol bo'lmasa bg-gray-900 (tungi rejimda bg-gray-100)
+          const circleBg = focused ? theme.primary : isDark ? "#F3F4F6" : "#111827";
+          const iconColor = focused ? "#FFFFFF" : isDark ? "#111827" : "#FFFFFF";
           return (
             <TouchableOpacity
               key={tab.name}
               onPress={onPress}
               style={styles.centerWrapper}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={tab.label}
             >
-              <View
-                style={[
-                  styles.centerCircle,
-                  { borderColor: theme.card },
-                  focused && {
-                    backgroundColor: BRAND,
-                    shadowColor: BRAND,
-                    shadowOpacity: 0.5,
-                  },
-                ]}
-              >
-                <Feather name={tab.icon} size={26} color="#fff" />
+              <View style={[styles.centerCircle, { backgroundColor: circleBg, borderColor: theme.background }]}>
+                <Icon size={24} color={iconColor} strokeWidth={2} />
               </View>
-              <Text
-                style={[
-                  styles.label,
-                  { color: inactiveColor },
-                  focused && { color: BRAND },
-                ]}
-              >
-                {tab.label}
-              </Text>
+              <Text style={[styles.label, { color, marginTop: 2 }]}>{tab.label}</Text>
             </TouchableOpacity>
           );
         }
@@ -108,19 +93,11 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             onPress={onPress}
             style={styles.tabItem}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={tab.label}
           >
-            <Feather
-              name={tab.icon}
-              size={21}
-              color={focused ? BRAND : inactiveColor}
-            />
-            <Text
-              style={[
-                styles.label,
-                { color: inactiveColor },
-                focused && { color: BRAND },
-              ]}
-            >
+            <Icon size={20} color={color} strokeWidth={focused ? 2.5 : 1.8} />
+            <Text style={[styles.label, { color }]} numberOfLines={1}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -131,48 +108,49 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
+  // Vebda: flex items-end justify-around px-1 pb-2 pt-1, border-t, soya yuqoriga
   bar: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    alignItems: "center",
+    alignItems: "flex-end",
+    justifyContent: "space-around",
     paddingHorizontal: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 12,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 8,
-    gap: 3,
+    gap: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   centerWrapper: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "flex-start",
-    marginTop: -28,
-    gap: 3,
+    marginTop: -16,
   },
   centerCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#222",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
+    borderWidth: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
     elevation: 10,
   },
   label: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
+    lineHeight: 12,
     textAlign: "center",
   },
 });

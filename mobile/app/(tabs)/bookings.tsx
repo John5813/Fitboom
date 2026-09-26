@@ -98,7 +98,7 @@ export default function BookingsScreen() {
       case "missed":
         return {
           label: t("bookings.status_missed"),
-          bg: "rgba(249,115,22,0.1)",
+          bg: "rgba(245,158,11,0.1)",
           color: "#F59E0B",
           stripe: "#F59E0B",
         };

@@ -183,10 +183,10 @@ export default function AdminAnalyticsPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <Card className="border shadow-sm">
             <CardContent className="p-0">
-              <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 p-4 border-b">
+              <div className="bg-gradient-to-r from-amber-500/10 to-red-500/10 p-4 border-b">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold flex items-center gap-2">
-                    <Calculator className="h-4 w-4 text-orange-600" />
+                    <Calculator className="h-4 w-4 text-amber-700" />
                     CAC — Mijoz narxi
                   </h3>
                   <div className="flex gap-1.5">
@@ -215,7 +215,7 @@ export default function AdminAnalyticsPage() {
               </div>
               <div className="p-4 space-y-3">
                 <div className="text-center py-3">
-                  <p className="text-3xl font-bold text-orange-600" data-testid="metric-cac">
+                  <p className="text-3xl font-bold text-amber-700" data-testid="metric-cac">
                     {cacData ? formatCurrency(cacData.cac) : "—"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">Bitta mijozni jalb qilish narxi</p>
@@ -317,7 +317,7 @@ export default function AdminAnalyticsPage() {
                       <div key={item.user.id} className="flex items-center justify-between px-3 py-2 bg-muted/30 rounded-lg border" data-testid={`top-user-${item.user.id}`}>
                         <div className="flex items-center gap-2.5">
                           <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                            idx === 0 ? 'bg-amber-500' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-600' : 'bg-muted-foreground/30'
+                            idx === 0 ? 'bg-amber-500' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-amber-800' : 'bg-muted-foreground/30'
                           }`}>
                             {idx + 1}
                           </div>

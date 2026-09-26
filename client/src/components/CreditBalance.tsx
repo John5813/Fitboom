@@ -60,7 +60,7 @@ export default function CreditBalance({ credits, onPurchase, creditExpiryDate }:
 
         <Button
           onClick={onPurchase}
-          className="h-10 shrink-0 rounded-xl border-0 bg-yellow-400 px-4 font-bold text-gray-900 shadow-md hover:bg-yellow-300"
+          className="h-10 shrink-0 rounded-xl border-0 bg-gradient-to-r from-[#f3d9a4] via-[#d9a751] to-[#b98537] px-4 font-bold text-[#1a1206] shadow-md hover:brightness-105"
           data-testid="button-topup-credits"
         >
           {isExpired ? t("profile.renew") : t("profile.topup")}

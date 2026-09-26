@@ -4,8 +4,8 @@
   "description": "FitBoom orqali shaharning eng yaxshi sport zallariga kredit tizimi bilan kiring",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#e11d48",
+  "background_color": "#07080d",
+  "theme_color": "#07080d",
   "orientation": "portrait",
   "categories": ["fitness", "health", "sports"],
   "icons": [

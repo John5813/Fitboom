@@ -11,8 +11,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { getAccessToken } from "@/services/api";
+import Colors from "@/constants/Colors";
+import { API_ORIGIN } from "@/constants/api";
 
-const MAP_BASE = "https://fitboom-absdefgx7.replit.app/map";
+const MAP_BASE = `${API_ORIGIN}/map`;
 
 interface Props {
   visible: boolean;
@@ -67,7 +69,7 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
 
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#16A34A" />
+            <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         ) : (
           <WebView
@@ -79,7 +81,7 @@ export default function MapWebViewModal({ visible, onClose }: Props) {
             startInLoadingState
             renderLoading={() => (
               <View style={styles.loadingBox}>
-                <ActivityIndicator size="large" color="#16A34A" />
+                <ActivityIndicator size="large" color={Colors.primary} />
               </View>
             )}
             javaScriptEnabled

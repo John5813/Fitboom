@@ -6,12 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  Pressable,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { AlertCircle, Globe, MapPin, Settings, User } from "lucide-react-native";
 import * as Location from "expo-location";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +27,8 @@ import PaymentSelectorModal from "@/components/PaymentSelectorModal";
 import MapWebViewModal from "@/components/MapWebViewModal";
 import { GymCardSkeleton } from "@/components/Skeleton";
 import { AnimatedListItem } from "@/components/AnimatedListItem";
-import Colors from "@/constants/Colors";
+import CreditBalance from "@/components/CreditBalance";
+import { Button, Card, Font, Gold, Radius } from "@/components/ui";
 
 const LANG_LABELS: Record<string, string> = { uz: "UZB", ru: "RUS", en: "ENG" };
 
@@ -106,7 +107,8 @@ export default function HomeScreen() {
       if (b.distanceKm === null) return -1;
       return a.distanceKm - b.distanceKm;
     });
-    setGyms(sorted.slice(0, 3));
+    // Vebda bosh sahifada 8 tagacha zal ko'rsatiladi
+    setGyms(sorted.slice(0, 8));
   }, [gymsData, userLat, userLng]);
 
   const onRefresh = async () => {
@@ -132,404 +134,239 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top"]}>
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: 110 },
-      ]}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={Colors.primary}
-        />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      {/* ─── Header ─── */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.logoText}>
-            <Text style={styles.logoFit}>Fit</Text>
-            <Text style={styles.logoBoom}>Boom</Text>
-          </Text>
-          <Text style={styles.logoSubtitle}>{t("home.subtitle")}</Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.langBtn}
-            onPress={() => setLanguage(nextLang())}
-            activeOpacity={0.7}
-          >
-            <Feather name="globe" size={13} color={Colors.textSecondary} />
-            <Text style={styles.langLabel}>{LANG_LABELS[language]}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => router.push("/(tabs)/profile" as any)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.avatarCircle}>
-              <Feather name="user" size={16} color={Colors.textSecondary} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ─── Kredit Kartasi ─── */}
-      <LinearGradient
-        colors={
-          isExpired
-            ? ["#ef4444", "#b91c1c"]
-            : [Colors.primary, Colors.primaryDark]
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.creditCard}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.creditCardTopRow}>
-          <View>
-            <Text style={styles.creditLabel}>{t("home.balance")}</Text>
-            <View style={styles.creditNumberRow}>
-              <Text style={styles.creditNumber}>{user?.credits ?? 0}</Text>
-              <Text style={styles.creditUnit}>kredit</Text>
-            </View>
+        {/*
+          Tuzilish vebdagi HomePage (home tab) bilan bir xil: sarlavha,
+          CreditBalance, "Sizga eng yaqin zallar" va GymCard ro'yxati.
+        */}
+        <View style={styles.header}>
+          <View style={styles.headerTitle}>
+            <Text style={styles.logo}>
+              <Text style={{ color: theme.text }}>Fit</Text>
+              <Text style={{ color: Gold.base }}>Boom</Text>
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{t("home.subtitle")}</Text>
           </View>
-          {daysLeft !== null && !isExpired && (
-            <View style={styles.daysPill}>
-              <Text style={styles.daysPillText}>
-                {daysLeft} {t("home.days_left")}
-              </Text>
-            </View>
-          )}
-          {isExpired && (
-            <View style={styles.daysPill}>
-              <Text style={styles.daysPillText}>{t("home.expired")}</Text>
-            </View>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={styles.topupBtn}
-          onPress={() => { setSelectorMode("topup"); setSelectorVisible(true); }}
-          activeOpacity={0.85}
-        >
-          <Feather name="plus" size={18} color={Colors.primary} />
-          <Text style={styles.topupBtnText}>
-            {isExpired ? t("home.renew") : t("home.topup")}
-          </Text>
-        </TouchableOpacity>
-      </LinearGradient>
-
-      {/* ─── Qoldiq To'lov Banner ─── */}
-      {partialBannerVisible && activePartialPayment && (
-        <View style={styles.partialBanner}>
-          <View style={styles.partialBannerLeft}>
-            <Feather name="alert-circle" size={20} color="#fff" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.partialBannerTitle}>{t("partial.title")}</Text>
-              <Text style={styles.partialBannerSub}>
-                {Number(activePartialPayment.remainingAmount).toLocaleString()} {t("partial.sub")}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.partialPayBtn}
-            onPress={() => { setSelectorMode("partial"); setSelectorVisible(true); }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ─── Yaqin Zallar ─── */}
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>{t("home.near_gyms")}</Text>
-          <Text style={styles.sectionSubtitle}>{t("home.sorted_by_distance")}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.viewAllBtn}
-          onPress={() => { haptics.light(); setMapModalVisible(true); }}
-        >
-          <Text style={styles.viewAll}>{t("home.view_all")}</Text>
-          <Feather name="arrow-right" size={14} color={Colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {gymsData === undefined ? (
-        <GymCardSkeleton count={3} />
-      ) : (
-        gyms.map((gym: any, idx: number) => (
-          <AnimatedListItem key={gym.id} index={Math.min(idx, 6)}>
-            <GymCard
-              gym={gym}
-              onPress={() => { haptics.light(); router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any); }}
-              onBook={() => { haptics.medium(); router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any); }}
+          <View style={styles.headerActions}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Globe}
+              iconSize={16}
+              onPress={() => setLanguage(nextLang())}
+              style={styles.langBtn}
+              textStyle={styles.langText}
+              accessibilityLabel="Til"
+            >
+              {LANG_LABELS[language]}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              icon={User}
+              iconSize={20}
+              onPress={() => router.push("/(tabs)/profile" as any)}
+              accessibilityLabel="Profil"
             />
-          </AnimatedListItem>
-        ))
-      )}
+            <Button
+              variant="ghost"
+              size="icon"
+              icon={Settings}
+              iconSize={20}
+              onPress={() => router.push("/(tabs)/profile" as any)}
+              accessibilityLabel="Sozlamalar"
+            />
+          </View>
+        </View>
 
-      <PaymentSelectorModal
-        visible={selectorVisible}
-        onClose={() => setSelectorVisible(false)}
-        onSelectCard={() => {
-          if (selectorMode === "partial") {
-            setPartialModalVisible(true);
-          } else {
-            setPaymentModalVisible(true);
-          }
-        }}
-      />
-      <PaymentMethodModal
-        visible={paymentModalVisible}
-        onClose={() => setPaymentModalVisible(false)}
-      />
-      {activePartialPayment && (
-        <PartialPaymentModal
-          visible={partialModalVisible}
-          onClose={() => setPartialModalVisible(false)}
-          paymentId={activePartialPayment.id}
-          remainingAmount={activePartialPayment.remainingAmount}
-          credits={activePartialPayment.credits}
-          onSuccess={() => {
-            dismissPayment(activePartialPayment!.id);
-            refetchCredits();
-            refetchUser();
+        <CreditBalance
+          credits={user?.credits ?? 0}
+          creditExpiryDate={user?.creditExpiryDate}
+          onPurchase={() => {
+            setSelectorMode("topup");
+            setSelectorVisible(true);
           }}
         />
-      )}
-      <MapWebViewModal
-        visible={mapModalVisible}
-        onClose={() => setMapModalVisible(false)}
-      />
-    </ScrollView>
+
+        {partialBannerVisible && activePartialPayment && (
+          <View style={styles.partialBanner}>
+            <View style={styles.partialBannerLeft}>
+              <AlertCircle size={20} color="#fff" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.partialBannerTitle}>{t("partial.title")}</Text>
+                <Text style={styles.partialBannerSub}>
+                  {Number(activePartialPayment.remainingAmount).toLocaleString()} {t("partial.sub")}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.partialPayBtn}
+              onPress={() => {
+                setSelectorMode("partial");
+                setSelectorVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.partialPayBtnText}>{t("partial.pay_btn")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View>
+          <View style={styles.sectionRow}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("home.near_gyms")}</Text>
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setMapModalVisible(true);
+              }}
+              style={styles.viewAll}
+              accessibilityRole="link"
+            >
+              <Text style={[styles.viewAllText, { color: theme.primary }]}>{t("home.view_all")} ›</Text>
+            </Pressable>
+          </View>
+          <Text style={[styles.sectionSub, { color: theme.textSecondary }]}>
+            {userLat !== null ? t("home.sorted_by_distance") : t("home.nearby_gyms_desc")}
+          </Text>
+
+          {gymsData === undefined ? (
+            <GymCardSkeleton count={3} />
+          ) : gyms.length > 0 ? (
+            <View style={styles.list}>
+              {gyms.map((gym: any, idx: number) => (
+                <AnimatedListItem key={gym.id} index={Math.min(idx, 6)}>
+                  <GymCard
+                    gym={gym}
+                    onPress={() => {
+                      haptics.light();
+                      router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any);
+                    }}
+                    onBook={() => {
+                      haptics.medium();
+                      router.push(`/gym/${gym.id}?distanceKm=${gym.distanceKm ?? ""}` as any);
+                    }}
+                  />
+                </AnimatedListItem>
+              ))}
+            </View>
+          ) : (
+            <Card style={styles.empty}>
+              <View style={styles.emptyIcon}>
+                <MapPin size={40} color="#EF4444" />
+              </View>
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t("home.no_gyms_yet")}</Text>
+            </Card>
+          )}
+        </View>
+
+        <PaymentSelectorModal
+          visible={selectorVisible}
+          onClose={() => setSelectorVisible(false)}
+          onSelectCard={() => {
+            if (selectorMode === "partial") {
+              setPartialModalVisible(true);
+            } else {
+              setPaymentModalVisible(true);
+            }
+          }}
+        />
+        <PaymentMethodModal visible={paymentModalVisible} onClose={() => setPaymentModalVisible(false)} />
+        {activePartialPayment && (
+          <PartialPaymentModal
+            visible={partialModalVisible}
+            onClose={() => setPartialModalVisible(false)}
+            paymentId={activePartialPayment.id}
+            remainingAmount={activePartialPayment.remainingAmount}
+            credits={activePartialPayment.credits}
+            onSuccess={() => {
+              dismissPayment(activePartialPayment!.id);
+              refetchCredits();
+              refetchUser();
+            }}
+          />
+        )}
+        <MapWebViewModal visible={mapModalVisible} onClose={() => setMapModalVisible(false)} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { paddingHorizontal: 16 },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  // Vebda: p-4 space-y-5, pastki menyu uchun pb-20
+  content: { padding: 16, gap: 20, paddingBottom: 110 },
 
-  /* Header */
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  logoText: { fontSize: 28, fontFamily: "Inter_700Bold" },
-  logoFit: { color: Colors.text },
-  logoBoom: { color: Colors.primary },
-  logoSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: "Inter_400Regular",
-    marginTop: 3,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-    marginTop: 6,
+    paddingTop: 4,
   },
-  langBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  langLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
-  },
-  iconBtn: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  /* Credit Card */
-  creditCard: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 28,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  creditCardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-  },
-  creditLabel: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_500Medium",
-    marginBottom: 4,
-  },
-  creditNumberRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 8,
-  },
-  creditNumber: {
-    fontSize: 38,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    lineHeight: 42,
-  },
-  creditUnit: {
-    fontSize: 18,
-    color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_500Medium",
-  },
-  daysPill: {
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  daysPillText: {
-    fontSize: 12,
-    color: "#fff",
-    fontFamily: "Inter_500Medium",
-  },
-  topupBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 14,
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  topupBtnText: {
-    color: Colors.primary,
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-  },
+  headerTitle: { flexShrink: 1 },
+  // font-display font-extrabold text-3xl leading-tight
+  logo: { fontSize: 30, lineHeight: 37, fontFamily: Font.displayExtra },
+  subtitle: { fontSize: 14, fontFamily: Font.regular, marginTop: 2 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  langBtn: { minHeight: 32, height: 32, paddingHorizontal: 8, gap: 8 },
+  langText: { fontSize: 12, fontFamily: Font.medium },
 
   partialBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#b91c1c",
-    borderRadius: 14,
+    borderRadius: Radius.xl,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 16,
     gap: 10,
   },
-  partialBannerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  partialBannerTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
+  partialBannerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  partialBannerTitle: { fontSize: 14, fontFamily: Font.bold, color: "#fff" },
   partialBannerSub: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: Font.regular,
     color: "rgba(255,255,255,0.85)",
     marginTop: 2,
   },
   partialPayBtn: {
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: Radius.md,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  partialPayBtnText: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: "#b91c1c",
-  },
+  partialPayBtnText: { fontSize: 13, fontFamily: Font.bold, color: "#b91c1c" },
 
-  /* Section */
-  sectionHeader: {
+  sectionRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 4,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  viewAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  viewAll: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-  },
+  // font-display font-bold text-xl
+  sectionTitle: { fontSize: 20, lineHeight: 28, fontFamily: Font.display, flexShrink: 1 },
+  viewAll: { paddingHorizontal: 8, paddingVertical: 8, marginRight: -8 },
+  viewAllText: { fontSize: 14, fontFamily: Font.medium },
+  sectionSub: { fontSize: 14, fontFamily: Font.regular, marginBottom: 16 },
+  list: { gap: 20 },
 
-  /* Empty */
-  emptyState: {
+  empty: { padding: 32, alignItems: "center", gap: 16 },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
-    paddingVertical: 40,
-    gap: 10,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
+    justifyContent: "center",
   },
-  emptyText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: "Inter_400Regular",
-  },
+  emptyText: { fontSize: 14, fontFamily: Font.regular, textAlign: "center" },
 });

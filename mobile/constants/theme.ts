@@ -25,9 +25,15 @@ export const Type = {
   small: { fontSize: 11, fontFamily: "Inter_500Medium" },
 };
 
-const PRIMARY = "#16A34A";
-const PRIMARY_DARK = "#15803D";
-const ACCENT = "#FBBF24";
+/*
+ * Ranglar veb saytdagi bilan bir xil (client/src/index.css, :root va .dark).
+ * Mijoz saytga ham, ilovaga ham kirsa bir xil ko'rinishni ko'rishi kerak —
+ * shuning uchun bu qiymatlarni alohida o'zgartirmang, avval vebdagisini
+ * o'zgartiring va shu yerga ko'chiring.
+ */
+const PRIMARY = "#16A249"; // hsl(142 76% 36%) — yashil
+const PRIMARY_DARK = "#12823B"; // hsl(142 76% 29%)
+const ACCENT = "#D8A84F"; // hsl(39 64% 58%) — tilla
 
 export type ThemeTokens = {
   primary: string;
@@ -54,37 +60,37 @@ export const lightTheme: ThemeTokens = {
   primaryDark: PRIMARY_DARK,
   primaryLight: "rgba(22,163,74,0.10)",
   accent: ACCENT,
-  background: "#FFFFFF",
-  surface: "#F8F9FA",
-  card: "#FFFFFF",
-  cardBorder: "#E5E7EB",
-  text: "#0F172A",
-  textSecondary: "#64748B",
-  border: "#E2E8F0",
+  background: "#F8FAFC", // --background
+  surface: "#F2F5F7", // --muted
+  card: "#FFFFFF", // --card
+  cardBorder: "#E9EDF2", // --card-border
+  text: "#29333D", // --foreground
+  textSecondary: "#6C7F93", // --muted-foreground
+  border: "#DEE6ED", // --border
   success: "#16A34A",
-  error: "#EF4444",
+  error: "#E23636", // --destructive
   warning: "#F59E0B",
-  info: "#0EA5E9",
+  info: "#368CE2",
   overlay: "rgba(15,23,42,0.5)",
   shadow: "rgba(15,23,42,0.08)",
 };
 
 export const darkTheme: ThemeTokens = {
-  primary: PRIMARY,
+  primary: "#24C25E", // .dark --primary
   primaryDark: PRIMARY_DARK,
-  primaryLight: "rgba(22,163,74,0.18)",
-  accent: ACCENT,
-  background: "#0B1229",
-  surface: "#0F1A33",
-  card: "#15213D",
-  cardBorder: "#1E2B47",
-  text: "#F1F5F9",
-  textSecondary: "#94A3B8",
-  border: "#1E2B47",
+  primaryLight: "rgba(34,197,94,0.18)",
+  accent: "#E2B25A",
+  background: "#111922",
+  surface: "#2D3843",
+  card: "#19242E",
+  cardBorder: "#283848",
+  text: "#F0F2F4",
+  textSecondary: "#9DA6AF",
+  border: "#243342",
   success: "#22C55E",
-  error: "#F87171",
+  error: "#DF4949",
   warning: "#FBBF24",
-  info: "#38BDF8",
+  info: "#6CA6E0",
   overlay: "rgba(0,0,0,0.6)",
   shadow: "rgba(0,0,0,0.4)",
 };

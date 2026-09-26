@@ -107,7 +107,7 @@ export default function ProfilePage() {
     if (!user?.creditExpiryDate || !user?.credits) return null;
     const days = Math.ceil((new Date(user.creditExpiryDate).getTime() - Date.now()) / 86400000);
     if (days < 0) return { text: "Muddati o'tgan", color: "text-red-500 bg-red-50 dark:bg-red-950/30" };
-    if (days <= 7) return { text: `${days} kun qoldi`, color: "text-orange-500 bg-orange-50 dark:bg-orange-950/30" };
+    if (days <= 7) return { text: `${days} kun qoldi`, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/30" };
     return { text: `${days} kun`, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30" };
   };
   const expiry = expiryText();
@@ -121,7 +121,7 @@ export default function ProfilePage() {
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(249,115,22,0.45) 0%, transparent 65%)",
+              "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(217,167,81,0.45) 0%, transparent 65%)",
           }}
         />
         <div className="absolute inset-0 bg-black/10" />
@@ -168,7 +168,7 @@ export default function ProfilePage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white shadow-lg flex items-center justify-center text-orange-500 active:scale-90 transition-transform disabled:opacity-60"
+              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white shadow-lg flex items-center justify-center text-primary active:scale-90 transition-transform disabled:opacity-60"
               data-testid="button-upload-image"
             >
               <Camera className="h-4 w-4" />
@@ -205,7 +205,7 @@ export default function ProfilePage() {
         <div className="bg-card rounded-2xl shadow-xl border grid grid-cols-3 divide-x overflow-hidden">
           <div className="flex flex-col items-center py-4 px-2">
             <div className="flex items-center gap-1">
-              <CreditCard className="h-4 w-4 text-orange-500" />
+              <CreditCard className="h-4 w-4 text-amber-600" />
               <span className="text-lg font-bold" data-testid="text-credits">{user?.credits ?? 0}</span>
             </div>
             <span className="text-[11px] text-muted-foreground mt-0.5">Kredit</span>
@@ -257,8 +257,8 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-3 px-4 py-3">
-              <div className="h-8 w-8 rounded-full bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center shrink-0">
-                <User className="h-4 w-4 text-orange-500" />
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-muted-foreground">Ism</p>

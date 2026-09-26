@@ -72,7 +72,7 @@ export default function CoursesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="h-16 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500" />
+        <div className="h-16 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950" />
         <div className="max-w-2xl mx-auto px-4 py-5 space-y-3">
           {[1, 2, 3].map(i => <div key={i} className="h-28 rounded-2xl bg-muted/50 animate-pulse" />)}
         </div>
@@ -88,7 +88,7 @@ export default function CoursesPage() {
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(249,115,22,0.4) 0%, transparent 65%)",
+              "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(217,167,81,0.4) 0%, transparent 65%)",
           }}
         />
         <div className="relative max-w-2xl mx-auto flex items-center gap-3">
@@ -100,13 +100,13 @@ export default function CoursesPage() {
           </button>
           <div className="flex-1">
             <h1 className="text-xl font-display font-bold">{t('courses.title')}</h1>
-            <p className="text-orange-200/70 text-sm">{collections.length} ta kurs mavjud</p>
+            <p className="text-amber-100/70 text-sm">{collections.length} ta kurs mavjud</p>
           </div>
           {user && (
-            <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm rounded-full px-3 py-1.5">
-              <CreditCard className="h-4 w-4 text-orange-300" />
+            <div className="flex items-center gap-1.5 bg-amber-400/15 border border-amber-300/30 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <CreditCard className="h-4 w-4 text-amber-300" />
               <span className="text-sm font-bold">{user.credits ?? 0}</span>
-              <span className="text-xs text-orange-200/80">kr</span>
+              <span className="text-xs text-amber-100/80">kr</span>
             </div>
           )}
         </div>
@@ -196,11 +196,11 @@ export default function CoursesPage() {
               </div>
 
               {/* Credit info */}
-              <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-950/30 rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 rounded-xl px-4 py-3">
                 <span className="text-sm text-muted-foreground">Kerakli kredit:</span>
                 <div className="flex items-center gap-1.5">
-                  <CreditCard className="h-4 w-4 text-orange-500" />
-                  <span className="font-bold text-orange-600">{confirmCollection.price} kredit</span>
+                  <CreditCard className="h-4 w-4 text-amber-600" />
+                  <span className="font-bold text-amber-700 dark:text-amber-400">{confirmCollection.price} kredit</span>
                 </div>
               </div>
 
@@ -223,7 +223,7 @@ export default function CoursesPage() {
                   Bekor qilish
                 </Button>
                 <Button
-                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                  className="flex-1"
                   disabled={purchaseMutation.isPending || (user?.credits ?? 0) < (confirmCollection.price ?? 0)}
                   onClick={() => purchaseMutation.mutate(confirmCollection.id)}
                 >
@@ -287,7 +287,7 @@ function CollectionCard({ col, onClick }: { col: CollectionWithMeta; onClick: ()
               ✓ Ochilgan
             </Badge>
           ) : (
-            <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400 border-0 text-[10px] h-5 px-2">
+            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border-0 text-[10px] h-5 px-2">
               <CreditCard className="h-2.5 w-2.5 mr-1" /> {col.price} kr
             </Badge>
           )}

@@ -40,7 +40,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md text-center space-y-4">
-          <AlertTriangle className="w-12 h-12 mx-auto text-orange-500" />
+          <AlertTriangle className="w-12 h-12 mx-auto text-amber-500" />
           <h1 className="text-xl font-semibold">Nimadir noto'g'ri ketdi</h1>
           <p className="text-sm text-muted-foreground">
             Sahifani yuklashda kutilmagan xatolik yuz berdi. Iltimos, sahifani yangilang.

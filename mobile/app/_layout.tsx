@@ -5,6 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+// Vebdagi --font-display: sarlavhalar, logo, kredit belgilari
+import { Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
@@ -62,6 +64,8 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    Oxanium_700Bold,
+    Oxanium_800ExtraBold,
   });
 
   useEffect(() => {

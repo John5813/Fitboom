@@ -102,7 +102,7 @@ export default function GymCard({
             </div>
           )}
           <Badge
-            className="absolute top-3 right-3 bg-primary text-primary-foreground border-primary-border font-display font-bold text-sm px-3 py-1"
+            className="absolute top-3 right-3 bg-[#d9a751] text-[#1a1206] border-[#b98537] font-display font-bold text-sm px-3 py-1"
             data-testid={`badge-credits-${id}`}
           >
             {credits} {t('profile.credits_count')}
@@ -206,7 +206,7 @@ export default function GymCard({
 
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge>{credits} {t('profile.credits_count')}</Badge>
+                <Badge className="bg-[#d9a751] text-[#1a1206] border-[#b98537]">{credits} {t('profile.credits_count')}</Badge>
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   {hours}

@@ -483,7 +483,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between gap-2 pt-1">
             <div>
               <h1 className="font-display font-extrabold text-3xl leading-tight">
-                <span className="text-foreground">Fit</span><span className="text-yellow-400">Boom</span>
+                <span className="text-foreground">Fit</span><span className="text-gold-gradient">Boom</span>
               </h1>
               <p className="text-muted-foreground text-sm mt-0.5">{t('home.welcome')}</p>
             </div>

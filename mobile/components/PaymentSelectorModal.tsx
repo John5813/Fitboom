@@ -34,10 +34,11 @@ const METHODS = [
   },
   {
     id: "card",
-    label: "Karta orqali",
+    // Vebdagi "Kartaga o'tkazish" bilan bir xil
+    label: "Kartaga o'tkazish",
     icon: "layers" as const,
-    color: "#16A34A",
-    bgColor: "#dcfce7",
+    color: "#5B5FEF",
+    bgColor: "rgba(91,95,239,0.12)",
     available: true,
   },
 ];
@@ -102,7 +103,7 @@ export default function PaymentSelectorModal({ visible, onClose, onSelectCard }:
 
                 {method.available ? (
                   <View style={styles.activeChevron}>
-                    <Feather name="chevron-right" size={18} color="#16A34A" />
+                    <Feather name="chevron-right" size={18} color="#5B5FEF" />
                   </View>
                 ) : (
                   <View style={styles.soonBadge}>
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: "#dcfce7",
+    backgroundColor: "rgba(91,95,239,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
